@@ -1,0 +1,37 @@
+{
+  "name": "@spiko/contracts",
+  "description": "",
+  "author": "Hadrien Croubois (@Amxx)",
+  "version": "0.0.1",
+  "license": "MIT",
+  "files": [
+    "/contracts/**/*.sol",
+    "/build/contracts/*.json"
+  ],
+  "scripts": {
+    "prepublish": "rimraf artifacts build cache generated",
+    "compile": "hardhat compile",
+    "coverage": "hardhat coverage",
+    "test": "hardhat test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spiko-tech/contracts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/spiko-tech/contracts/issues"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "@openzeppelin/contracts-upgradeable": "^4.9.2"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/hardhat-upgrades": "^1.26.0",
+    "debug": "^2.6.9",
+    "hardhat": "^2.7.1",
+    "lodash.defaultsdeep": "^4.6.1",
+    "solidity-coverage": "^0.8.3",
+    "yargs": "^17.2.1"
+  }
+}
