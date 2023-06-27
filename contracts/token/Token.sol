@@ -19,13 +19,15 @@ contract Token is
     UUPSUpgradeable,
     Multicall
 {
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAuthority public immutable authority;
 
     modifier restricted() {
-        require(authority.canCall(msg.sender, address(this), msg.sig), "unauthorised");
+        require(authority.canCall(msg.sender, address(this), msg.sig), "Restricted access");
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) {
         _disableInitializers();
 

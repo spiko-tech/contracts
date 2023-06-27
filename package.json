@@ -26,10 +26,13 @@
     "@openzeppelin/contracts-upgradeable": "^4.9.2"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomiclabs/hardhat-waffle": "^2.0.6",
     "@openzeppelin/hardhat-upgrades": "^1.26.0",
+    "chai": "^4.3.7",
     "debug": "^2.6.9",
-    "hardhat": "^2.7.1",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.16.0",
     "lodash.defaultsdeep": "^4.6.1",
     "solidity-coverage": "^0.8.3",
     "yargs": "^17.2.1"
