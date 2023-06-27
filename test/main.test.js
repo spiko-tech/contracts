@@ -180,10 +180,10 @@ describe('Main', function () {
                                         promise = this.token.connect(operator).transferFrom(from.address, to.address, amount);
                                         break;
                                     case 'transferAndCall':
-                                        promise = this.token.connect(from)['transferAndCall(address,uint256)'](this.mock.address, amount); // replace to with the mock
+                                        promise = this.token.connect(from)['transferAndCall(address,uint256)'](to.address, amount);
                                         break;
                                     case 'transferFromAndCall':
-                                        promise = this.token.connect(operator)['transferFromAndCall(address,address,uint256)'](from.address, this.mock.address, amount); // replace to with the mock
+                                        promise = this.token.connect(operator)['transferFromAndCall(address,address,uint256)'](from.address, to.address, amount);
                                         break;
                                 }
 

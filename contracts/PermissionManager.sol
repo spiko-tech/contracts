@@ -12,9 +12,9 @@ contract PermissionManager is IAuthority, Multicall {
     Masks.Mask public immutable ADMIN  = 0x00.toMask();
     Masks.Mask public immutable PUBLIC = 0xFF.toMask();
 
-    mapping(address user   =>                            Masks.Mask groups ) private _permissions;
-    mapping(address target => mapping(bytes4 selector => Masks.Mask groups)) private _restrictions;
-    mapping(uint8   group  =>                            Masks.Mask groups ) private _admin;
+    mapping(address =>                   Masks.Mask ) private _permissions;
+    mapping(address => mapping(bytes4 => Masks.Mask)) private _restrictions;
+    mapping(uint8   =>                   Masks.Mask ) private _admin;
 
     event GroupAdded(address indexed user, uint8 indexed group);
     event GroupRemoed(address indexed user, uint8 indexed group);

@@ -11,7 +11,7 @@
   "scripts": {
     "prepublish": "rimraf artifacts build cache generated",
     "compile": "hardhat compile",
-    "coverage": "hardhat coverage",
+    "coverage": "COVERAGE=true hardhat coverage",
     "test": "hardhat test"
   },
   "repository": {
