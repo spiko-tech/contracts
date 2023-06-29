@@ -22,7 +22,7 @@ contract PermissionManager is IAuthority, Multicall {
     event Requirements(address indexed target, bytes4 indexed selector, Masks.Mask groups);
 
     modifier onlyRole(Masks.Mask groups) {
-        require(!getGroups(msg.sender).intersect(groups).isEmpty(), "Missing permissions");
+        require(!getGroups(msg.sender).intersection(groups).isEmpty(), "Missing permissions");
         _;
     }
 
@@ -33,11 +33,11 @@ contract PermissionManager is IAuthority, Multicall {
 
     // Getters
     function canCall(address caller, address target, bytes4 selector) public view returns (bool) {
-        return !getGroups(caller).intersect(getRequirements(target, selector)).isEmpty();
+        return !getGroups(caller).intersection(getRequirements(target, selector)).isEmpty();
     }
 
     function getGroups(address user) public view returns (Masks.Mask) {
-        return _permissions[user].add(PUBLIC);
+        return _permissions[user].union(PUBLIC);
     }
 
     function getRequirements(address target, bytes4 selector) public view returns (Masks.Mask) {
@@ -54,12 +54,12 @@ contract PermissionManager is IAuthority, Multicall {
     }
 
     function _addGroup(address user, uint8 group) internal {
-        _permissions[user] = _permissions[user].add(group.toMask());
+        _permissions[user] = _permissions[user].union(group.toMask());
         emit GroupAdded(user, group);
     }
 
     function _remGroup(address user, uint8 group) internal {
-        _permissions[user] = _permissions[user].rem(group.toMask());
+        _permissions[user] = _permissions[user].difference(group.toMask());
         emit GroupRemoed(user, group);
     }
 
