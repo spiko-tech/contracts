@@ -39,6 +39,7 @@ contract Token is
         __ERC20Permit_init(_name);
     }
 
+    // should we check before minting that the `to` address is allowed to receive the tokens? Could be a good sanity check
     function mint(address to, uint256 amount) public restricted() {
         _mint(to, amount);
     }
