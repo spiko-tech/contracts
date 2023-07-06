@@ -17,7 +17,7 @@ contract PermissionManager is IAuthority, Multicall {
     mapping(uint8   =>                   Masks.Mask ) private _admin;
 
     event GroupAdded(address indexed user, uint8 indexed group);
-    event GroupRemoed(address indexed user, uint8 indexed group);
+    event GroupRemoved(address indexed user, uint8 indexed group);
     event GroupAdmins(uint8 indexed group, Masks.Mask admins);
     event Requirements(address indexed target, bytes4 indexed selector, Masks.Mask groups);
 
@@ -60,7 +60,7 @@ contract PermissionManager is IAuthority, Multicall {
 
     function _remGroup(address user, uint8 group) internal {
         _permissions[user] = _permissions[user].difference(group.toMask());
-        emit GroupRemoed(user, group);
+        emit GroupRemoved(user, group);
     }
 
     // Group admin management
