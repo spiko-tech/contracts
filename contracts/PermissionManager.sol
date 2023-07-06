@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./interfaces/IAuthority.sol";
 import "./utils/Mask.sol";
 
+// @Amxx do you think we should make the PermissionManager contract upgradeable, at least at first? 
 contract PermissionManager is IAuthority, Multicall {
     using Masks for *;
 
