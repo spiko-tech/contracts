@@ -46,6 +46,9 @@ contract PermissionManager is IAuthority, Multicall {
     }
 
     // Group management
+
+    // It's very likely we'll need to whitelist addresses in batch - would it be possible / more 
+    // gas-efficient - to allow here to whitelist an address[]? Same question for the removal
     function addGroup(address user, uint8 group) public onlyRole(_admin[group]) {
         _addGroup(user, group);
     }
