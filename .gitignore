@@ -5,3 +5,7 @@ coverage/
 coverage.json
 generated/
 node_modules/
+
+.*
+!.cache-1.json
+!.openzeppelin

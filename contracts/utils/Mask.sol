@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.20;
 
+/// @custom:security-contact TODO
 library Masks {
     using Masks for *;
 

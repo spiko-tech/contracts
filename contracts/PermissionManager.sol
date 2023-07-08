@@ -2,14 +2,25 @@
 
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./interfaces/IAuthority.sol";
 import "./utils/Mask.sol";
 
-contract PermissionManager is IAuthority, Multicall {
+/// @custom:security-contact TODO
+contract PermissionManager is
+    IAuthority,
+    Initializable,
+    UUPSUpgradeable,
+    Multicall
+{
     using Masks for *;
 
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
     Masks.Mask public immutable ADMIN  = 0x00.toMask();
+
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
     Masks.Mask public immutable PUBLIC = 0xFF.toMask();
 
     mapping(address =>                   Masks.Mask ) private _permissions;
@@ -26,7 +37,12 @@ contract PermissionManager is IAuthority, Multicall {
         _;
     }
 
-    constructor(address admin) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address admin) public initializer() {
         _setGroupAdmins(0, ADMIN);
         _addGroup(admin, 0);
     }
@@ -85,4 +101,7 @@ contract PermissionManager is IAuthority, Multicall {
         _restrictions[target][selector] = groups;
         emit Requirements(target, selector, groups);
     }
+
+    // upgradeability
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(ADMIN) {}
 }

@@ -26,6 +26,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.9.2"
   },
   "devDependencies": {
+    "@amxx/hre": "^0.1.0-rc.1",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomiclabs/hardhat-waffle": "^2.0.6",
     "@openzeppelin/hardhat-upgrades": "^1.26.0",
