@@ -6,6 +6,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { migrate     } = require('../scripts/migrate')
 
 const toHexString = i => '0x' + i.toString(16).padStart(64, 0);
+const toMask      = i => toHexString(1n << BigInt(i));
 const combine = (...masks) => toHexString(masks.reduce((acc, m) => acc | BigInt(m), 0n));
 
 const GROUPS = Array(256);
@@ -14,7 +15,7 @@ GROUPS[1]    = 'OPERATOR'
 GROUPS[2]    = 'WHITELISTER'
 GROUPS[3]    = 'WHITELISTED'
 GROUPS[255]  = 'PUBLIC';
-const MASKS  = GROUPS.map((_, i) => toHexString(1n << BigInt(i)));
+const MASKS  = GROUPS.map((_, i) => toMask(i));
 Object.assign(GROUPS, Object.fromEntries(GROUPS.map((key, i) => [ key, i ]).filter(Boolean)));
 Object.assign(MASKS, Object.fromEntries(GROUPS.map((key, i) => [ key, MASKS[i] ]).filter(Boolean)));
 
@@ -34,9 +35,8 @@ async function fixture() {
     );
 
     // set group admins
-    await contracts.manager.connect(accounts.admin      ).setGroupAdmins(GROUPS.OPERATOR,    [ GROUPS.ADMIN       ]);
-    await contracts.manager.connect(accounts.admin      ).setGroupAdmins(GROUPS.WHITELISTER, [ GROUPS.ADMIN       ]);
-    await contracts.manager.connect(accounts.admin      ).setGroupAdmins(GROUPS.WHITELISTED, [ GROUPS.WHITELISTER ]);
+    await contracts.manager.connect(accounts.admin).setGroupAdmins(GROUPS.WHITELISTED, [ GROUPS.WHITELISTER ]);
+
 
     // populate groups
     await contracts.manager.connect(accounts.admin      ).addGroup(accounts.operator.address,    GROUPS.OPERATOR);
@@ -46,7 +46,8 @@ async function fixture() {
 
     // restricted functions
     const perms = Object.entries({
-        upgradeTo: [ GROUPS.ADMIN       ],
+        // Not needed: admin has all power by default
+        // upgradeTo: [ GROUPS.ADMIN       ],
         mint:      [ GROUPS.OPERATOR    ],
         burn:      [ GROUPS.OPERATOR    ],
         pause:     [ GROUPS.OPERATOR    ],
@@ -89,11 +90,11 @@ describe('Main', function () {
 
     it('functions have requirements', async function () {
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'))).to.be.equal(combine(MASKS.ADMIN));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(MASKS.WHITELISTED));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(MASKS.ADMIN, MASKS.WHITELISTED));
     });
 
     describe('Token', function () {
@@ -231,6 +232,200 @@ describe('Main', function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).transfer(this.accounts.bruce.address, 0))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(this.accounts.alice.address, this.accounts.bruce.address, 0);
                 });
+            });
+        });
+    });
+
+    describe('Permission Manager', function () {
+        const { address: caller } = ethers.Wallet.createRandom();
+        const { address: target } = ethers.Wallet.createRandom();
+        const selector            = ethers.utils.hexlify(ethers.utils.randomBytes(4));
+        const group               = 17;
+        const groups              = [ 42, 69 ];
+
+        describe('canCall', function () {
+            describe ('simple case: one group', async function() {
+                for (const withRequirements of [ true, false ])
+                for (const withPermission   of [ true, false ])
+                {
+                    it([ 'Requirements:', withRequirements ? 'set' : 'unset', '&', 'Permissions:', withPermission ? 'set' : 'unset' ].join(' '), async function () {
+                        // set permissions and requirements
+                        withRequirements && await this.contracts.manager.setRequirements(target, [ selector ], [ group ]);
+                        withPermission   && await this.contracts.manager.addGroup(caller, group);
+
+                        // check can call
+                        expect(await this.contracts.manager.canCall(caller, target, selector)).to.be.equal(withRequirements && withPermission);
+                    });
+                }
+            });
+
+            describe ('complexe case: one of many groups', async function() {
+                it('some intersection', async function() {
+                    this.userGroups = [ 32, 42, 94, 128 ]; // User has all these groups
+                    this.targetGroups = [ 17, 35, 42, 69, 91 ]; // Target accepts any of these groups
+                });
+
+                it('no intersection', async function() {
+                    this.userGroups = [ 32, 50, 94, 128 ]; // User has all these groups
+                    this.targetGroups = [ 17, 35, 42, 69, 91 ]; // Target accepts any of these groups
+                });
+
+                afterEach(async function () {
+                    // set permissions and requirements
+                    await Promise.all([
+                        this.contracts.manager.setRequirements(target, [ selector ], this.targetGroups),
+                        ...this.userGroups.map(group => this.contracts.manager.addGroup(caller, group)),
+                    ]);
+
+                    // check can call
+                    expect(await this.contracts.manager.canCall(caller, target, selector)).to.be.equal(this.userGroups.some(g => this.targetGroups.includes(g)));
+                });
+            });
+        });
+
+        describe('addGroup', function () {
+            it('authorized', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupAdded').withArgs(this.accounts.alice.address, group);
+            });
+
+            it('restricted', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.other).addGroup(this.accounts.alice.address, group))
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+            });
+
+            it('with role admin', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice.address, group))
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(MASKS.WHITELISTER, MASKS.PUBLIC), MASKS.ADMIN);
+
+                await this.contracts.manager.setGroupAdmins(group, [ GROUPS.WHITELISTER ]);
+
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupAdded').withArgs(this.accounts.alice.address, group);
+            });
+
+            it('effect', async function () {
+                expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
+                    MASKS.PUBLIC,
+                    MASKS.WHITELISTED,
+                ));
+
+                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupAdded').withArgs(this.accounts.alice.address, group);
+
+                expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
+                    MASKS.PUBLIC,
+                    MASKS.WHITELISTED,
+                    toMask(group),
+                ));
+            });
+        });
+
+        describe('remGroup', function () {
+            beforeEach(async function () {
+                await this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice.address, group)
+            });
+
+            it('authorized', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(this.accounts.alice.address, group);
+            });
+
+            it('restricted', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.other).remGroup(this.accounts.alice.address, group))
+                .be.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+            });
+
+            it('with role admin', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice.address, group))
+                .be.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(MASKS.WHITELISTER, MASKS.PUBLIC), MASKS.ADMIN);
+
+                await this.contracts.manager.setGroupAdmins(group, [ GROUPS.WHITELISTER ]);
+
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(this.accounts.alice.address, group);
+            });
+
+            it('effect', async function () {
+                expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
+                    MASKS.PUBLIC,
+                    MASKS.WHITELISTED,
+                    toMask(group),
+                ));
+
+                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(this.accounts.alice.address, group))
+                .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(this.accounts.alice.address, group);
+
+                expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
+                    MASKS.PUBLIC,
+                    MASKS.WHITELISTED,
+                ));
+            });
+        });
+
+        describe('setGroupAdmins', function () {
+            it('authorized', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.admin).setGroupAdmins(group, groups))
+                .to.emit(this.contracts.manager, 'GroupAdmins').withArgs(group, combine(...groups.map(toMask)));
+            });
+
+            it('restricted', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.other).setGroupAdmins(group, groups))
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+            });
+
+            it('effect', async function () {
+                // Set some previous value
+                await this.contracts.manager.connect(this.accounts.admin).setGroupAdmins(group, [ group ]);
+
+                // Check previous value is set
+                expect(await this.contracts.manager.getGroupAdmins(group)).to.be.equal(combine(
+                    MASKS.ADMIN,
+                    toMask(group),
+                ));
+
+                // Set some new values
+                await expect(this.contracts.manager.connect(this.accounts.admin).setGroupAdmins(group, groups))
+                .to.emit(this.contracts.manager, 'GroupAdmins').withArgs(group, combine(...groups.map(toMask)));
+
+                // Check the new values are set, and the previous is removed
+                expect(await this.contracts.manager.getGroupAdmins(group)).to.be.equal(combine(
+                    MASKS.ADMIN,
+                    ...groups.map(toMask),
+                ));
+            });
+        });
+
+        describe('setRequirements', function () {
+            it('authorized', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.admin).setRequirements(target, [ selector ], groups))
+                .to.emit(this.contracts.manager, 'Requirements').withArgs(target, selector, combine(...groups.map(toMask)));
+            });
+
+            it('restricted', async function () {
+                await expect(this.contracts.manager.connect(this.accounts.other).setRequirements(target, [ selector ], groups))
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+            });
+
+            it('effect', async function () {
+                // Set some previous value
+                await this.contracts.manager.connect(this.accounts.admin).setRequirements(target, [ selector ], [ group ]);
+
+                // Check previous value is set
+                expect(await this.contracts.manager.getRequirements(target, selector)).to.be.equal(combine(
+                    MASKS.ADMIN,
+                    toMask(group),
+                ));
+
+                // Set some new values
+                await expect(this.contracts.manager.connect(this.accounts.admin).setRequirements(target, [ selector ], groups))
+                .to.emit(this.contracts.manager, 'Requirements').withArgs(target, selector, combine(...groups.map(toMask)));
+
+                // Check the new values are set, and the previous is removed
+                expect(await this.contracts.manager.getRequirements(target, selector)).to.be.equal(combine(
+                    MASKS.ADMIN,
+                    ...groups.map(toMask),
+                ));
             });
         });
     });

@@ -28,12 +28,20 @@ contract PermissionManager is
     mapping(uint8   =>                   Masks.Mask ) private _admin;
 
     event GroupAdded(address indexed user, uint8 indexed group);
-    event GroupRemoed(address indexed user, uint8 indexed group);
+    event GroupRemoved(address indexed user, uint8 indexed group);
     event GroupAdmins(uint8 indexed group, Masks.Mask admins);
     event Requirements(address indexed target, bytes4 indexed selector, Masks.Mask groups);
 
-    modifier onlyRole(Masks.Mask groups) {
-        require(!getGroups(msg.sender).intersection(groups).isEmpty(), "Missing permissions");
+    error MissingPermissions(address user, Masks.Mask permissions, Masks.Mask restriction);
+
+    modifier onlyRole(Masks.Mask restriction) {
+        address    caller      = msg.sender;
+        Masks.Mask permissions = getGroups(caller);
+
+        if (permissions.intersection(restriction).isEmpty()) {
+            revert MissingPermissions(caller, permissions, restriction);
+        }
+
         _;
     }
 
@@ -56,16 +64,20 @@ contract PermissionManager is
         return _permissions[user].union(PUBLIC);
     }
 
+    function getGroupAdmins(uint8 group) public view returns (Masks.Mask) {
+        return _admin[group].union(ADMIN); // Admin have power over all groups
+    }
+
     function getRequirements(address target, bytes4 selector) public view returns (Masks.Mask) {
-        return _restrictions[target][selector];
+        return _restrictions[target][selector].union(ADMIN); // Admins can call an function
     }
 
     // Group management
-    function addGroup(address user, uint8 group) public onlyRole(_admin[group]) {
+    function addGroup(address user, uint8 group) public onlyRole(getGroupAdmins(group)) {
         _addGroup(user, group);
     }
 
-    function remGroup(address user, uint8 group) public onlyRole(_admin[group]) {
+    function remGroup(address user, uint8 group) public onlyRole(getGroupAdmins(group)) {
         _remGroup(user, group);
     }
 
@@ -76,7 +88,7 @@ contract PermissionManager is
 
     function _remGroup(address user, uint8 group) internal {
         _permissions[user] = _permissions[user].difference(group.toMask());
-        emit GroupRemoed(user, group);
+        emit GroupRemoved(user, group);
     }
 
     // Group admin management
