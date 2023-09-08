@@ -9,30 +9,22 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./extensions/ERC1363Upgradeable.sol";
-import "../interfaces/IAuthority.sol";
+import "../permissions/PermissionManaged.sol";
 
 /// @custom:security-contact TODO
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 contract Token is
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
     ERC20PermitUpgradeable,
     ERC1363Upgradeable,
+    PermissionManaged,
     UUPSUpgradeable,
     Multicall
 {
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAuthority public immutable authority;
-
-    modifier restricted() {
-        require(authority.canCall(msg.sender, address(this), msg.sig), "Restricted access");
-        _;
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAuthority _authority) {
+    constructor(IAuthority _authority) PermissionManaged(_authority) {
         _disableInitializers();
-
-        authority = _authority;
     }
 
     function initialize(string calldata _name, string calldata _symbol) public initializer() {

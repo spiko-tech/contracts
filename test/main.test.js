@@ -87,8 +87,10 @@ describe('Main', function () {
     });
 
     it('post deployment state', async function () {
-        expect(await this.contracts.manager.ADMIN()).to.be.equal(MASKS.ADMIN);
-        expect(await this.contracts.manager.PUBLIC()).to.be.equal(MASKS.PUBLIC);
+        expect(await this.contracts.manager.ADMIN()).to.be.equal(GROUPS.ADMIN);
+        expect(await this.contracts.manager.PUBLIC()).to.be.equal(GROUPS.PUBLIC);
+        expect(await this.contracts.manager.ADMIN_MASK()).to.be.equal(MASKS.ADMIN);
+        expect(await this.contracts.manager.PUBLIC_MASK()).to.be.equal(MASKS.PUBLIC);
 
         expect(await this.contracts.token.authority()).to.be.equal(this.contracts.manager.address);
         expect(await this.contracts.token.name()).to.be.equal(this.config.tokens.find(Boolean).name);

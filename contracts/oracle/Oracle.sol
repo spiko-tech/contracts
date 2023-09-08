@@ -9,12 +9,13 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "../interfaces/IAuthority.sol";
+import "../permissions/PermissionManaged.sol";
 
 /// @custom:security-contact TODO
 contract Oracle is
     AggregatorV3Interface,
     Initializable,
+    PermissionManaged,
     UUPSUpgradeable,
     Multicall
 {
@@ -22,8 +23,6 @@ contract Oracle is
     using Checkpoints  for Checkpoints.Trace224;
     using SafeCast     for *;
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAuthority           public immutable authority;
     IERC20Metadata       public           token;
     uint256              public constant  version  = 0; // TODO: confirm
     uint8                public constant  decimals = 18; // TODO: confirm
@@ -32,16 +31,9 @@ contract Oracle is
 
     event Update(uint32 timepoint, int256 price, uint256 round);
 
-    modifier restricted() {
-        require(authority.canCall(msg.sender, address(this), msg.sig), "Restricted access");
-        _;
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAuthority _authority) {
+    constructor(IAuthority _authority) PermissionManaged(_authority) {
         _disableInitializers();
-
-        authority = _authority;
     }
 
     function initialize(IERC20Metadata _token, string calldata denomination) public initializer() {
