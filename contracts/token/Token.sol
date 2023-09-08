@@ -32,22 +32,15 @@ contract Token is
         __ERC20Permit_init(_name);
     }
 
+    /****************************************************************************************************************
+     *                                               Admin operations                                               *
+     ****************************************************************************************************************/
     function mint(address to, uint256 amount) public restricted() {
         _mint(to, amount);
     }
 
     function burn(address from, uint256 amount) public restricted() {
         _burn(from, amount);
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
-        // sender must be whitelisted, unless its a mint (sender is 0) or its a burn (admin can burn from non-whitelisted account)
-        require(from == address(0) || to == address(0) || authority.canCall(from, address(this), IERC20.transfer.selector), "unauthorized from");
-
-        // receiver must be whitelisted, unless its a burn (receiver is 0)
-        require(to == address(0) || authority.canCall(to,   address(this), IERC20.transfer.selector), "unauthorized to");
-
-        super._beforeTokenTransfer(from, to, amount);
     }
 
     function pause() public restricted() {
@@ -58,7 +51,33 @@ contract Token is
         _unpause();
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        require(authority.canCall(msg.sender, address(this), UUPSUpgradeable.upgradeTo.selector), "unauthorized from");
+    /****************************************************************************************************************
+     *                                           Token transfer whitelist                                           *
+     ****************************************************************************************************************/
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+        // sender must be whitelisted, unless its a mint (sender is 0) or its a burn (admin can burn from non-whitelisted account)
+        require(
+            from == address(0) ||
+            to   == address(0) ||
+            authority.canCall(from, address(this), IERC20.transfer.selector),
+            "unauthorized from"
+        );
+
+        // receiver must be whitelisted, unless its a burn (receiver is 0)
+        require(
+            to == address(0) ||
+            authority.canCall(to, address(this), IERC20.transfer.selector),
+            "unauthorized to"
+        );
+
+        super._beforeTokenTransfer(from, to, amount);
+    }
+
+    /****************************************************************************************************************
+     *                                                 UUPS upgrade                                                 *
+     ****************************************************************************************************************/
+    function _authorizeUpgrade(address implementation) internal view override {
+        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        super._authorizeUpgrade(implementation);
     }
 }

@@ -108,9 +108,10 @@ contract Oracle is
     }
 
     /****************************************************************************************************************
-     *                                                    ADMIN                                                     *
+     *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
-    function _authorizeUpgrade(address) internal view override {
-        require(authority.canCall(msg.sender, address(this), UUPSUpgradeable.upgradeTo.selector), "unauthorized from");
+    function _authorizeUpgrade(address implementation) internal view override {
+        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        super._authorizeUpgrade(implementation);
     }
 }
