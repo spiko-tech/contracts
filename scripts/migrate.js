@@ -27,20 +27,35 @@ async function migrate(config = {}, opts = {}) {
             { ...opts, kind: 'uups' },
         ));
 
-    const token   = await ethers.getContractFactory('Token')
-        .then(factory => migration.migrate(
-            'token',
-            factory,
-            [ config?.token?.name, config?.token?.symbol ],
-            { ...opts, kind: 'uups', constructorArgs: [ manager.address ] },
-        ));
+    const tokens  = {};
+    const oracles = {};
+
+    for (const { name, symbol, quote } of config?.tokens || []) {
+        // deploy token
+        tokens[symbol] = await ethers.getContractFactory('Token')
+            .then(factory => migration.migrate(
+                `token-${symbol}`,
+                factory,
+                [ name, symbol ],
+                { ...opts, kind: 'uups', constructorArgs: [ manager.address ] },
+            ));
+        // deploy oracle (if quote is set)
+        oracles[symbol] = quote && await ethers.getContractFactory('Oracle')
+            .then(factory => migration.migrate(
+                `oracle-${symbol}`,
+                factory,
+                [ tokens[symbol].address, quote ],
+                { ...opts, kind: 'uups', constructorArgs: [ manager.address ] },
+            ));
+    }
 
     return {
         config,
         deployer,
         contracts: {
             manager,
-            token,
+            tokens,
+            oracles,
         },
     }
 }

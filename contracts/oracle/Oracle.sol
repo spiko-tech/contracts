@@ -4,39 +4,49 @@ pragma solidity ^0.8.20;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "@openzeppelin/contracts/utils/ShortStrings.sol";
-
 import "../interfaces/IAuthority.sol";
 
 /// @custom:security-contact TODO
-contract PermissionedOracle is AggregatorV3Interface, Multicall
+contract Oracle is
+    AggregatorV3Interface,
+    Initializable,
+    UUPSUpgradeable,
+    Multicall
 {
     // TODO: use Trace208
     using Checkpoints  for Checkpoints.Trace224;
-    using ShortStrings for *;
     using SafeCast     for *;
 
-    IAuthority           public  immutable authority;
-    IERC20Metadata       public  immutable token;
-    uint256              private immutable _version;
-    uint8                private immutable _decimals;
-    ShortString          private immutable _description;
-    Checkpoints.Trace224 private           _history;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IAuthority           public immutable authority;
+    IERC20Metadata       public           token;
+    uint256              public constant  version  = 0; // TODO: confirm
+    uint8                public constant  decimals = 18; // TODO: confirm
+    string               public           description; // set per-instance at initialization
+    Checkpoints.Trace224 private          _history;
+
+    event Update(uint32 timepoint, int256 price, uint256 round);
 
     modifier restricted() {
         require(authority.canCall(msg.sender, address(this), msg.sig), "Restricted access");
         _;
     }
 
-    constructor(IAuthority _authority, IERC20Metadata _token) {
-        authority    = _authority;
-        token        = _token;
-        _version     = 0;                                                        // TODO: confirm
-        _decimals    = 18;                                                       // TODO: confirm
-        _description = string.concat(_token.symbol(), " / USD").toShortString(); // TODO: confirm
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(IAuthority _authority) {
+        _disableInitializers();
+
+        authority = _authority;
+    }
+
+    function initialize(IERC20Metadata _token, string calldata denomination) public initializer() {
+        token       = _token;
+        description = string.concat(_token.symbol(), " / ", denomination);
     }
 
     /****************************************************************************************************************
@@ -50,18 +60,21 @@ contract PermissionedOracle is AggregatorV3Interface, Multicall
         return _history.upperLookup(_timepoint).toInt256();
     }
 
-    function publishPrice(uint224 price, uint32 timepoint) public restricted() {
+    function publishPrice(uint224 price, uint32 timepoint) public restricted() returns (uint80) {
+        uint80 roundId = _history.length().toUint80();
         _history.push(timepoint, price);
 
-        // TODO: emit event?
+        emit Update(timepoint, price.toInt256(), roundId);
+
+        return roundId;
     }
 
     /****************************************************************************************************************
      *                                            AggregatorV3Interface                                             *
      ****************************************************************************************************************/
-    function version()     public view returns (uint256)       { return _version;                }
-    function decimals()    public view returns (uint8)         { return _decimals;               }
-    function description() public view returns (string memory) { return _description.toString(); }
+    // function version() public pure returns (uint256); -- implemented by a public variable
+    // function decimals() public pure returns (uint8); -- implemented by a public variable
+    // function description() public view returns (string memory); -- implemented by a public variable
 
     function getRoundData(uint80 _roundId)
         public
@@ -98,5 +111,12 @@ contract PermissionedOracle is AggregatorV3Interface, Multicall
         )
     {
         return getRoundData(_history.length().toUint80() - 1);
+    }
+
+    /****************************************************************************************************************
+     *                                                    ADMIN                                                     *
+     ****************************************************************************************************************/
+    function _authorizeUpgrade(address) internal view override {
+        require(authority.canCall(msg.sender, address(this), UUPSUpgradeable.upgradeTo.selector), "unauthorized from");
     }
 }

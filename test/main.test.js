@@ -34,9 +34,12 @@ async function fixture() {
         { noCache: true, noConfirm: true },
     );
 
+    contracts.token  = Object.values(contracts.tokens).find(Boolean);
+    contracts.oracle = Object.values(contracts.oracles).find(Boolean);
+    expect(await contracts.oracle.token()).to.be.equal(contracts.token.address, "Invalid configuration for testing");
+
     // set group admins
     await contracts.manager.connect(accounts.admin).setGroupAdmins(GROUPS.WHITELISTED, [ GROUPS.WHITELISTER ]);
-
 
     // populate groups
     await contracts.manager.connect(accounts.admin      ).addGroup(accounts.operator.address,    GROUPS.OPERATOR);
@@ -45,23 +48,35 @@ async function fixture() {
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.bruce.address,       GROUPS.WHITELISTED);
 
     // restricted functions
-    const perms = Object.entries({
-        // Not needed: admin has all power by default
-        // upgradeTo: [ GROUPS.ADMIN       ],
-        mint:      [ GROUPS.OPERATOR    ],
-        burn:      [ GROUPS.OPERATOR    ],
-        pause:     [ GROUPS.OPERATOR    ],
-        unpause:   [ GROUPS.OPERATOR    ],
-        transfer:  [ GROUPS.WHITELISTED ],
-    }).reduce((acc, [ k, v ]) => { acc[v] ??= []; acc[v].push(contracts.token.interface.getSighash(k)); return acc; }, {});
+    // const makePerms = (target, fnToGroupList) => Object.entries(fnToGroupList).reduce((acc, [ k, v ]) => { acc[v] ??= []; acc[v].push(target.interface.getSighash(k)); return acc; }, {});
+
+
+    const settings = {
+        token: {
+            upgradeTo: [ GROUPS.ADMIN       ],
+            mint:      [ GROUPS.OPERATOR    ],
+            burn:      [ GROUPS.OPERATOR    ],
+            pause:     [ GROUPS.OPERATOR    ],
+            unpause:   [ GROUPS.OPERATOR    ],
+            transfer:  [ GROUPS.WHITELISTED ],
+        },
+        oracle: {
+            upgradeTo:    [ GROUPS.ADMIN    ],
+            publishPrice: [ GROUPS.OPERATOR ],
+        },
+    }
 
     await contracts.manager.multicall(
-        Object.entries(perms).map(([ group, selectors ]) => contracts.manager.interface.encodeFunctionData('setRequirements', [
-            contracts.token.address,
-            selectors,
-            [ group ],
-        ]))
-    );
+        Object.entries(settings)
+        .flatMap(([ name, fns ]) =>
+            Object.entries(
+                Object.entries(fns)
+                .reduce((acc, [ sig, group ]) => { acc[group] ??= []; acc[group].push(contracts[name].interface.getSighash(sig)); return acc; }, {})
+            )
+            .map(([ group, selectors ]) =>
+                contracts.manager.interface.encodeFunctionData('setRequirements', [ contracts[name].address, selectors, [ group ]])
+            )
+    ));
 
     return { accounts, contracts, config };
 }
@@ -72,11 +87,20 @@ describe('Main', function () {
     });
 
     it('post deployment state', async function () {
-        expect(await this.contracts.token.name()).to.be.equal(this.config.token.name);
-        expect(await this.contracts.token.symbol()).to.be.equal(this.config.token.symbol);
-        expect(await this.contracts.token.totalSupply()).to.be.equal(0);
         expect(await this.contracts.manager.ADMIN()).to.be.equal(MASKS.ADMIN);
         expect(await this.contracts.manager.PUBLIC()).to.be.equal(MASKS.PUBLIC);
+
+        expect(await this.contracts.token.authority()).to.be.equal(this.contracts.manager.address);
+        expect(await this.contracts.token.name()).to.be.equal(this.config.tokens.find(Boolean).name);
+        expect(await this.contracts.token.symbol()).to.be.equal(this.config.tokens.find(Boolean).symbol);
+        expect(await this.contracts.token.decimals()).to.be.equal(18);
+        expect(await this.contracts.token.totalSupply()).to.be.equal(0);
+
+        expect(await this.contracts.oracle.authority()).to.be.equal(this.contracts.manager.address);
+        expect(await this.contracts.oracle.token()).to.be.equal(this.contracts.token.address);
+        expect(await this.contracts.oracle.version()).to.be.equal(0);
+        expect(await this.contracts.oracle.decimals()).to.be.equal(18);
+        expect(await this.contracts.oracle.description()).to.be.equal(`${this.config.tokens.find(Boolean).symbol} / ${this.config.tokens.find(Boolean).quote}`);
     });
 
     it('accounts have permissions', async function () {
@@ -127,13 +151,20 @@ describe('Main', function () {
                 });
 
                 it('unauthorized caller (need operator)', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.alice).burn(this.accounts.alice.address, 1000))
+                    await expect(this.contracts.token.connect(this.accounts.alice).burn(this.accounts.alice.address, 100))
                     .to.be.revertedWith('Restricted access');
                 });
 
-                it('unauthorized from (need whitelisted)', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.chris.address, 1000))
-                    .to.be.revertedWith('unauthorized from');
+                it('can burn from not-whitelisted account', async function () {
+                    // whitelist, mint, blacklist
+                    await Promise.all([
+                        this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.chris.address, GROUPS.WHITELISTED),
+                        this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris.address, 1000),
+                        this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris.address, GROUPS.WHITELISTED),
+                    ]);
+
+                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.chris.address, 100))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(this.accounts.chris.address, ethers.constants.AddressZero, 100);
                 });
             });
 
@@ -427,6 +458,20 @@ describe('Main', function () {
                     ...groups.map(toMask),
                 ));
             });
+        });
+    });
+
+    describe('Oracle', function () {
+        describe('publish price', function () {
+            it.skip('authorized');
+            it.skip('unauthorized caller (need operator)');
+            it.skip('updates last entry');
+        });
+        describe('getters', function () {
+            it.skip('getRoundData');
+            it.skip('latestRoundData');
+            it.skip('getHistoricalPrice');
+            it.skip('getLatestPrice');
         });
     });
 });

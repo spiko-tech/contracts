@@ -1,6 +1,9 @@
 {
-    "token": {
-        "name": "Token Name",
-        "symbol": "Sym"
-    }
+    "tokens": [
+        {
+            "name": "Token Name",
+            "symbol": "Sym",
+            "quote": "USD"
+        }
+    ]
 }

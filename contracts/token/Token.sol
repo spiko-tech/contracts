@@ -49,8 +49,12 @@ contract Token is
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
-        require(from == address(0) || authority.canCall(from, address(this), IERC20.transfer.selector), "unauthorized from");
-        require(to   == address(0) || authority.canCall(to,   address(this), IERC20.transfer.selector), "unauthorized to");
+        // sender must be whitelisted, unless its a mint (sender is 0) or its a burn (admin can burn from non-whitelisted account)
+        require(from == address(0) || to == address(0) || authority.canCall(from, address(this), IERC20.transfer.selector), "unauthorized from");
+
+        // receiver must be whitelisted, unless its a burn (receiver is 0)
+        require(to == address(0) || authority.canCall(to,   address(this), IERC20.transfer.selector), "unauthorized to");
+
         super._beforeTokenTransfer(from, to, amount);
     }
 
