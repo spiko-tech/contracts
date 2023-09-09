@@ -110,8 +110,7 @@ contract Oracle is
     /****************************************************************************************************************
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
-    function _authorizeUpgrade(address implementation) internal view override {
+    function _authorizeUpgrade(address) internal view override {
         _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
-        super._authorizeUpgrade(implementation);
     }
 }

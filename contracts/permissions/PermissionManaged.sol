@@ -19,7 +19,7 @@ abstract contract PermissionManaged {
         authority = _authority;
     }
 
-    function _checkRestricted(bytes4 selector) internal {
+    function _checkRestricted(bytes4 selector) internal view {
         require(authority.canCall(msg.sender, address(this), selector), "Restricted access");
     }
 }
