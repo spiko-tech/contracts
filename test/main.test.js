@@ -1,8 +1,9 @@
 require('chai').use(require('ethereum-waffle').solidity);
+require('@amxx/hre/scripts/index')
 
 const { expect      } = require('chai');
 const { ethers      } = require('hardhat');
-const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
 const { migrate     } = require('../scripts/migrate')
 
 const toHexString = i => '0x' + i.toString(16).padStart(64, 0);
@@ -48,9 +49,6 @@ async function fixture() {
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.bruce.address,       GROUPS.WHITELISTED);
 
     // restricted functions
-    // const makePerms = (target, fnToGroupList) => Object.entries(fnToGroupList).reduce((acc, [ k, v ]) => { acc[v] ??= []; acc[v].push(target.interface.getSighash(k)); return acc; }, {});
-
-
     const settings = {
         token: {
             upgradeTo: [ GROUPS.ADMIN       ],
@@ -63,6 +61,11 @@ async function fixture() {
         oracle: {
             upgradeTo:    [ GROUPS.ADMIN    ],
             publishPrice: [ GROUPS.OPERATOR ],
+        },
+        redemption: {
+            upgradeTo:         [ GROUPS.ADMIN    ],
+            executeRedemption: [ GROUPS.OPERATOR ],
+            registerOutput:    [ GROUPS.OPERATOR ],
         },
     }
 
@@ -465,15 +468,90 @@ describe('Main', function () {
 
     describe('Oracle', function () {
         describe('publish price', function () {
-            it.skip('authorized');
-            it.skip('unauthorized caller (need operator)');
-            it.skip('updates last entry');
+            it('authorized', async function () {
+                const roundId   = 0;
+                const value     = 17;
+                const timepoint = 42;
+
+                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(0);
+                await expect(this.contracts.oracle.latestRoundData()).to.be.reverted;
+
+                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
+
+                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
+
+                const latestRoundData = await this.contracts.oracle.latestRoundData();
+                expect(latestRoundData.roundId        ).to.be.equal(roundId  );
+                expect(latestRoundData.answer         ).to.be.equal(value    );
+                expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
+                expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
+                expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
+
+                const getRoundData = await this.contracts.oracle.getRoundData(roundId);
+                expect(getRoundData.roundId        ).to.be.equal(roundId  );
+                expect(getRoundData.answer         ).to.be.equal(value    );
+                expect(getRoundData.startedAt      ).to.be.equal(timepoint);
+                expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
+                expect(getRoundData.answeredInRound).to.be.equal(roundId  );
+            });
+
+            it('unauthorized caller (need operator)', async function () {
+                await expect(this.contracts.oracle.connect(this.accounts.other).publishPrice(42, 17))
+                .to.be.revertedWith('Restricted access');
+            });
+
+            it('updates last entry', async function () {
+                const rounds = [
+                    { timepoint: 17, value: 1 },
+                    { timepoint: 42, value: 6 },
+                    { timepoint: 69, value: 3 },
+                    { timepoint: 81, value: 9 },
+                ];
+
+                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
+                    expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                    .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
+
+                    expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
+
+                    const latestRoundData = await this.contracts.oracle.latestRoundData();
+                    expect(latestRoundData.roundId        ).to.be.equal(roundId  );
+                    expect(latestRoundData.answer         ).to.be.equal(value    );
+                    expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
+                    expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
+                    expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
+                }
+
+                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
+                    const getRoundData = await this.contracts.oracle.getRoundData(roundId);
+                    expect(getRoundData.roundId        ).to.be.equal(roundId  );
+                    expect(getRoundData.answer         ).to.be.equal(value    );
+                    expect(getRoundData.startedAt      ).to.be.equal(timepoint);
+                    expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
+                    expect(getRoundData.answeredInRound).to.be.equal(roundId  );
+                }
+            });
         });
-        describe('getters', function () {
-            it.skip('getRoundData');
-            it.skip('latestRoundData');
-            it.skip('getHistoricalPrice');
-            it.skip('getLatestPrice');
+
+        it('getHistoricalPrice', async function () {
+            const rounds = [
+                { timepoint: 17, value: 1 },
+                { timepoint: 42, value: 6 },
+                { timepoint: 69, value: 3 },
+                { timepoint: 81, value: 9 },
+            ];
+
+            // Fill the oracle with data
+            for (const { timepoint, value } of rounds) {
+                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value));
+            }
+
+            // Perform lookups
+            for (const t of Array.range(rounds.at(-1).timepoint + 2)) {
+                expect(await this.contracts.oracle.getHistoricalPrice(t))
+                .to.be.equal(rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0);
+            }
         });
     });
 });

@@ -54,7 +54,7 @@ contract Oracle is
 
     // Note: we are not using block.timestamp for the timepoint because of the mining delay for the update transaction
     // and the fact that prices represent a value at a specific "update" time (according to regulation).
-    function publishPrice(uint224 price, uint32 timepoint) public restricted() returns (uint80) {
+    function publishPrice(uint32 timepoint, uint224 price) public restricted() returns (uint80) {
         uint80 roundId = _history.length().toUint80();
         _history.push(timepoint, price);
 

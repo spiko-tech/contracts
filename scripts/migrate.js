@@ -27,6 +27,14 @@ async function migrate(config = {}, opts = {}) {
             { ...opts, kind: 'uups' },
         ));
 
+    const redemption = await ethers.getContractFactory('Redemption')
+        .then(factory => migration.migrate(
+            'redemption',
+            factory,
+            [],
+            { ...opts, kind: 'uups', constructorArgs: [ manager.address ] },
+        ));
+
     const tokens  = {};
     const oracles = {};
 
@@ -54,6 +62,7 @@ async function migrate(config = {}, opts = {}) {
         deployer,
         contracts: {
             manager,
+            redemption,
             tokens,
             oracles,
         },
