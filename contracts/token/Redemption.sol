@@ -61,7 +61,7 @@ contract Redemption is
      * @dev HELPER: produce redemption request hash from the input parameters
      */
     function hashRedemptionId(address user, IERC20 input, IERC20 output, uint256 inputValue, bytes32 salt) public pure returns (bytes32) {
-        return keccak256(abi.encode(user, input, output, inputValue, salt));
+        return keccak256(abi.encodePacked(user, input, output, inputValue, salt));
     }
 
     /****************************************************************************************************************
@@ -83,13 +83,13 @@ contract Redemption is
         (IERC20 output, bytes32 salt) = abi.decode(data, (IERC20, bytes32));
 
         // Check that output is set → input is registered
-        require(_outputs[input].contains(address(output)), "Input/Output pair is not authorized.");
+        require(_outputs[input].contains(address(output)), "Input/Output pair is not authorized");
 
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, value, salt);
 
         // Check that operation id is not yet used
-        require(details[id].status == Status.NULL, "ID already used.");
+        require(details[id].status == Status.NULL, "ID already used");
 
         // Register details
         details[id] = Details({ status: Status.PENDING, deadline: block.timestamp.toUint48() + MAX_DELAY });

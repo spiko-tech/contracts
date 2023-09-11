@@ -1,14 +1,11 @@
 require('chai').use(require('ethereum-waffle').solidity);
-require('@amxx/hre/scripts/index')
 
-const { expect      } = require('chai');
-const { ethers      } = require('hardhat');
+const { expect            } = require('chai');
+const { ethers            } = require('hardhat');
 const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
-const { migrate     } = require('../scripts/migrate')
-
-const toHexString = i => '0x' + i.toString(16).padStart(64, 0);
-const toMask      = i => toHexString(1n << BigInt(i));
-const combine = (...masks) => toHexString(masks.reduce((acc, m) => acc | BigInt(m), 0n));
+const { deploy            } = require('@amxx/hre/scripts/index');
+const { migrate           } = require('../scripts/migrate');
+const { Enum, toMask, combine } = require('./helpers');
 
 const GROUPS = Array(256);
 GROUPS[0]    = 'ADMIN'
@@ -19,6 +16,8 @@ GROUPS[255]  = 'PUBLIC';
 const MASKS  = GROUPS.map((_, i) => toMask(i));
 Object.assign(GROUPS, Object.fromEntries(GROUPS.map((key, i) => [ key, i ]).filter(Boolean)));
 Object.assign(MASKS, Object.fromEntries(GROUPS.map((key, i) => [ key, MASKS[i] ]).filter(Boolean)));
+
+const STATUS = Enum('NULL', 'PENDING', 'EXECUTED', 'CANCELED');
 
 async function fixture() {
     const accounts       = await ethers.getSigners();
@@ -47,6 +46,7 @@ async function fixture() {
     await contracts.manager.connect(accounts.admin      ).addGroup(accounts.whitelister.address, GROUPS.WHITELISTER);
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.alice.address,       GROUPS.WHITELISTED);
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.bruce.address,       GROUPS.WHITELISTED);
+    await contracts.manager.connect(accounts.whitelister).addGroup(contracts.redemption.address, GROUPS.WHITELISTED);
 
     // restricted functions
     const settings = {
@@ -552,6 +552,136 @@ describe('Main', function () {
                 expect(await this.contracts.oracle.getHistoricalPrice(t))
                 .to.be.equal(rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0);
             }
+        });
+    });
+
+    describe.only('Redemption', function () {
+        const hashId = ({ user, input, output, value, salt }) => ethers.utils.solidityKeccak256([
+            'address',
+            'address',
+            'address',
+            'uint256',
+            'bytes32',
+        ], [
+            user?.address ?? user,
+            input?.address ?? input,
+            output?.address ?? output,
+            value,
+            salt,
+        ]);
+
+        beforeEach(async function () {
+            // create mock
+            this.mock = {};
+            this.mock.token = await deploy('ERC20Mock');
+
+            // mint tokens
+            await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice.address, 1000);
+            await this.mock.token.mint(this.accounts.operator.address, 1000);
+
+            // set authorized output token
+            await this.contracts.redemption.registerOutput(
+                this.contracts.token.address,
+                this.mock.token.address,
+                true,
+            );
+        });
+
+        describe('initiate redemption', function () {
+            it('success', async function () {
+                const user   = this.accounts.alice;
+                const input  = this.contracts.token;
+                const output = this.mock.token;
+                const value  = 100;
+                const salt   = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                const id     = hashId({ user, input, output, value, salt });
+
+                const before = await this.contracts.redemption.details(id);
+                expect(before.status).to.be.equal(STATUS.NULL);
+                expect(before.deadline).to.be.equal(0);
+
+                expect(await this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    value,
+                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                ))
+                .to.emit(this.contracts.token, 'Transfer').withArgs(user.address, this.contracts.redemption.address, value)
+                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(id, user.address, input.address, output.address, value, salt);
+
+                const timepoint = await time.latest();
+
+                const after = await this.contracts.redemption.details(id);
+                expect(after.status).to.be.equal(STATUS.PENDING);
+                expect(after.deadline).to.be.equal(timepoint + time.duration.days(7));
+            });
+
+            it('duplicated id', async function () {
+                const user   = this.accounts.alice;
+                const input  = this.contracts.token;
+                const output = this.mock.token;
+                const value = 100;
+                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+                // first call is ok
+                await this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    value,
+                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                );
+
+                // reusing the same operation details with the same salt is not ok
+                await expect(this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    value,
+                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                )).to.be.revertedWith('ID already used')
+            });
+
+            it('unauthorized output', async function () {
+                const user   = this.accounts.alice;
+                const input  = this.contracts.token;
+                const output = this.accounts.other;
+                const value = 100;
+                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+                await expect(this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    value,
+                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                )).to.be.revertedWith('Input/Output pair is not authorized');
+            });
+
+            it('direct call to onTransferReceived', async function () {
+                const user   = this.accounts.alice;
+                const input  = this.contracts.token;
+                const output = this.mock.token;
+                const value = 100;
+                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+                await expect(this.contracts.redemption.connect(user).onTransferReceived(
+                    user.address,
+                    user.address,
+                    value,
+                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                )).to.be.revertedWith('Input/Output pair is not authorized');
+            });
+        });
+
+        describe('execute redemption', function () {
+            it.skip('authorized');
+            it.skip('unauthorized');
+            it.skip('invalid operation');
+            it.skip('too late');
+        });
+
+        describe('cancel redemption', function () {
+            it.skip('invalid operation');
+            it.skip('too early');
+        });
+
+        describe('admin', function () {
+            it.skip('admin enable output');
+            it.skip('admin disable output');
         });
     });
 });
