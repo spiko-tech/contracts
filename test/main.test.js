@@ -10,8 +10,9 @@ const { Enum, toMask, combine } = require('./helpers');
 const GROUPS = Array(256);
 GROUPS[0]    = 'ADMIN'
 GROUPS[1]    = 'OPERATOR'
-GROUPS[2]    = 'WHITELISTER'
-GROUPS[3]    = 'WHITELISTED'
+GROUPS[2]    = 'BURNER'
+GROUPS[3]    = 'WHITELISTER'
+GROUPS[4]    = 'WHITELISTED'
 GROUPS[255]  = 'PUBLIC';
 const MASKS  = GROUPS.map((_, i) => toMask(i));
 Object.assign(GROUPS, Object.fromEntries(GROUPS.map((key, i) => [ key, i ]).filter(Boolean)));
@@ -44,6 +45,7 @@ async function fixture() {
     // populate groups
     await contracts.manager.connect(accounts.admin      ).addGroup(accounts.operator.address,    GROUPS.OPERATOR);
     await contracts.manager.connect(accounts.admin      ).addGroup(accounts.whitelister.address, GROUPS.WHITELISTER);
+    await contracts.manager.connect(accounts.admin      ).addGroup(contracts.redemption.address, GROUPS.BURNER);
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.alice.address,       GROUPS.WHITELISTED);
     await contracts.manager.connect(accounts.whitelister).addGroup(accounts.bruce.address,       GROUPS.WHITELISTED);
     await contracts.manager.connect(accounts.whitelister).addGroup(contracts.redemption.address, GROUPS.WHITELISTED);
@@ -51,12 +53,12 @@ async function fixture() {
     // restricted functions
     const settings = {
         token: {
-            upgradeTo: [ GROUPS.ADMIN       ],
-            mint:      [ GROUPS.OPERATOR    ],
-            burn:      [ GROUPS.OPERATOR    ],
-            pause:     [ GROUPS.OPERATOR    ],
-            unpause:   [ GROUPS.OPERATOR    ],
-            transfer:  [ GROUPS.WHITELISTED ],
+            upgradeTo: [ GROUPS.ADMIN                   ],
+            mint:      [ GROUPS.OPERATOR                ],
+            burn:      [ GROUPS.OPERATOR, GROUPS.BURNER ],
+            pause:     [ GROUPS.OPERATOR                ],
+            unpause:   [ GROUPS.OPERATOR                ],
+            transfer:  [ GROUPS.WHITELISTED             ],
         },
         oracle: {
             upgradeTo:    [ GROUPS.ADMIN    ],
@@ -67,19 +69,23 @@ async function fixture() {
             executeRedemption: [ GROUPS.OPERATOR ],
             registerOutput:    [ GROUPS.OPERATOR ],
         },
-    }
+    };
 
     await contracts.manager.multicall(
-        Object.entries(settings)
-        .flatMap(([ name, fns ]) =>
-            Object.entries(
+        Object.values(
+            Object.entries(settings)
+            .flatMap(([ name, fns ]) =>
                 Object.entries(fns)
-                .reduce((acc, [ sig, group ]) => { acc[group] ??= []; acc[group].push(contracts[name].interface.getSighash(sig)); return acc; }, {})
+                .map(([ sig, groups ]) => [ contracts[name].address, contracts[name].interface.getSighash(sig), groups ])
             )
-            .map(([ group, selectors ]) =>
-                contracts.manager.interface.encodeFunctionData('setRequirements', [ contracts[name].address, selectors, [ group ]])
-            )
-    ));
+            .reduce((acc, [ address, selector, groups ]) => {
+                const key = `${address}-${combine(...groups)}`;
+                acc[key] ??= { address, groups, selectors: [] };
+                acc[key].selectors.push(selector);
+                return acc;
+            }, {})
+        ).map(({ address, selectors, groups }) => contracts.manager.interface.encodeFunctionData('setRequirements', [ address, selectors, groups ]))
+    );
 
     return { accounts, contracts, config };
 }
@@ -118,12 +124,20 @@ describe('Main', function () {
     });
 
     it('functions have requirements', async function () {
+        // token
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'))).to.be.equal(combine(MASKS.ADMIN));
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR, MASKS.BURNER));
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
         expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(MASKS.ADMIN, MASKS.WHITELISTED));
+        // oracle
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'   ))).to.be.equal(combine(MASKS.ADMIN));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        // redemption
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'        ))).to.be.equal(combine(MASKS.ADMIN));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
     });
 
     describe('Token', function () {
@@ -555,21 +569,7 @@ describe('Main', function () {
         });
     });
 
-    describe.only('Redemption', function () {
-        const hashId = ({ user, input, output, value, salt }) => ethers.utils.solidityKeccak256([
-            'address',
-            'address',
-            'address',
-            'uint256',
-            'bytes32',
-        ], [
-            user?.address ?? user,
-            input?.address ?? input,
-            output?.address ?? output,
-            value,
-            salt,
-        ]);
-
+    describe('Redemption', function () {
         beforeEach(async function () {
             // create mock
             this.mock = {};
@@ -578,6 +578,7 @@ describe('Main', function () {
             // mint tokens
             await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice.address, 1000);
             await this.mock.token.mint(this.accounts.operator.address, 1000);
+            await this.mock.token.connect(this.accounts.operator).approve(this.contracts.redemption.address, ethers.constants.MaxUint256);
 
             // set authorized output token
             await this.contracts.redemption.registerOutput(
@@ -585,93 +586,150 @@ describe('Main', function () {
                 this.mock.token.address,
                 true,
             );
+
+            // make operation
+            this.makeOp = (overrides = {}) => {
+                const user   = overrides?.user   ?? this.accounts.alice;
+                const input  = overrides?.input  ?? this.contracts.token;
+                const output = overrides?.output ?? this.mock.token;
+                const value  = overrides?.value  ?? 100;
+                const salt   = overrides?.salt   ?? ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                const id     = ethers.utils.solidityKeccak256(
+                    [ 'address', 'address', 'address', 'uint256', 'bytes32' ],
+                    [ user?.address ?? user, input?.address ?? input, output?.address ?? output, value, salt ],
+                );
+                const data   = ethers.utils.defaultAbiCoder.encode(
+                    [ 'address', 'bytes32' ],
+                    [ output?.address ?? output, salt ],
+                );
+                return { user, input, output, value, salt, id, data };
+            }
         });
 
         describe('initiate redemption', function () {
             it('success', async function () {
-                const user   = this.accounts.alice;
-                const input  = this.contracts.token;
-                const output = this.mock.token;
-                const value  = 100;
-                const salt   = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-                const id     = hashId({ user, input, output, value, salt });
+                const op = this.makeOp();
 
-                const before = await this.contracts.redemption.details(id);
-                expect(before.status).to.be.equal(STATUS.NULL);
-                expect(before.deadline).to.be.equal(0);
+                const { status: statusBefore, deadline: deadlineBefore } = await this.contracts.redemption.details(op.id);
+                expect(statusBefore).to.be.equal(STATUS.NULL);
+                expect(deadlineBefore).to.be.equal(0);
 
-                expect(await this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
-                    this.contracts.redemption.address,
-                    value,
-                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
-                ))
-                .to.emit(this.contracts.token, 'Transfer').withArgs(user.address, this.contracts.redemption.address, value)
-                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(id, user.address, input.address, output.address, value, salt);
+                expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data))
+                .to.emit(op.input,                  'Transfer'           ).withArgs(op.user.address, this.contracts.redemption.address, op.value)
+                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, op.user.address, op.input.address, op.output.address, op.value, op.salt);
 
                 const timepoint = await time.latest();
 
-                const after = await this.contracts.redemption.details(id);
-                expect(after.status).to.be.equal(STATUS.PENDING);
-                expect(after.deadline).to.be.equal(timepoint + time.duration.days(7));
+                const { status: statusAfter, deadline: deadlineAfter } = await this.contracts.redemption.details(op.id);
+                expect(statusAfter).to.be.equal(STATUS.PENDING);
+                expect(deadlineAfter).to.be.equal(timepoint + time.duration.days(7));
             });
 
             it('duplicated id', async function () {
-                const user   = this.accounts.alice;
-                const input  = this.contracts.token;
-                const output = this.mock.token;
-                const value = 100;
-                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                const op = this.makeOp();
 
                 // first call is ok
-                await this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
-                    this.contracts.redemption.address,
-                    value,
-                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
-                );
+                await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data);
 
                 // reusing the same operation details with the same salt is not ok
-                await expect(this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
-                    this.contracts.redemption.address,
-                    value,
-                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
-                )).to.be.revertedWith('ID already used')
+                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data))
+                .to.be.revertedWith('ID already used')
             });
 
             it('unauthorized output', async function () {
-                const user   = this.accounts.alice;
-                const input  = this.contracts.token;
-                const output = this.accounts.other;
-                const value = 100;
-                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                const op = this.makeOp({ output: this.accounts.other });
 
-                await expect(this.contracts.token.connect(user)['transferAndCall(address,uint256,bytes)'](
-                    this.contracts.redemption.address,
-                    value,
-                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
-                )).to.be.revertedWith('Input/Output pair is not authorized');
+                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data))
+                .to.be.revertedWith('Input/Output pair is not authorized');
             });
 
             it('direct call to onTransferReceived', async function () {
-                const user   = this.accounts.alice;
-                const input  = this.contracts.token;
-                const output = this.mock.token;
-                const value = 100;
-                const salt  = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                const op = this.makeOp({ input: this.accounts.alice });
 
-                await expect(this.contracts.redemption.connect(user).onTransferReceived(
-                    user.address,
-                    user.address,
-                    value,
-                    ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [output.address, salt]),
+                await expect(this.contracts.redemption.connect(op.user).onTransferReceived(
+                    op.user.address,
+                    op.user.address,
+                    op.value,
+                    op.data,
                 )).to.be.revertedWith('Input/Output pair is not authorized');
             });
         });
 
         describe('execute redemption', function () {
-            it.skip('authorized');
-            it.skip('unauthorized');
-            it.skip('invalid operation');
-            it.skip('too late');
+            beforeEach(async function () {
+                this.operation = this.makeOp();
+
+                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    this.operation.value,
+                    this.operation.data,
+                );
+
+                this.operation.deadline = (await time.latest()) + time.duration.days(7);
+            });
+
+            it('authorized', async function () {
+                const outputValue = 420;
+
+                const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
+                expect(statusBefore).to.be.equal(STATUS.PENDING);
+
+                expect(await this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
+                    this.operation.user.address,
+                    this.operation.input.address,
+                    this.operation.output.address,
+                    this.operation.value,
+                    outputValue,
+                    this.operation.salt,
+                ))
+                .to.emit(this.operation.input,      'Transfer'          ).withArgs(this.contracts.redemption.address, ethers.constants.AddressZero, this.operation.value)
+                .to.emit(this.operation.output,     'Transfer'          ).withArgs(this.accounts.operator.address,    this.operation.user.address,  outputValue)
+                .to.emit(this.contracts.redemption, 'RedemptionExecuted').withArgs(this.operation.id, outputValue);
+
+                const { status: statusAfter } = await this.contracts.redemption.details(this.operation.id);
+                expect(statusAfter).to.be.equal(STATUS.EXECUTED);
+            });
+
+            it('unauthorized', async function () {
+                const outputValue = 1;
+
+                await expect(this.contracts.redemption.connect(this.accounts.other).executeRedemption(
+                    this.operation.user.address,
+                    this.operation.input.address,
+                    this.operation.output.address,
+                    this.operation.value,
+                    outputValue,
+                    this.operation.salt,
+                )).to.be.revertedWith('Restricted access');
+            });
+
+            it('invalid operation', async function () {
+                const outputValue = 420;
+
+                await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
+                    this.accounts.other.address, // invalid user
+                    this.operation.input.address,
+                    this.operation.output.address,
+                    this.operation.value,
+                    outputValue,
+                    this.operation.salt,
+                )).to.be.revertedWith('Operation is not pending');
+            });
+
+            it('too late', async function () {
+                const outputValue = 420;
+
+                await time.increase(time.duration.days(10));
+
+                await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
+                    this.operation.user.address,
+                    this.operation.input.address,
+                    this.operation.output.address,
+                    this.operation.value,
+                    outputValue,
+                    this.operation.salt,
+                )).to.be.revertedWith('Deadline passed');
+            });
         });
 
         describe('cancel redemption', function () {
