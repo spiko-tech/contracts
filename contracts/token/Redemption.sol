@@ -37,10 +37,10 @@ contract Redemption is
     mapping(bytes32 => Details                 ) public          details;
     mapping(IERC20  => EnumerableSet.AddressSet) private         _outputs;
 
-    event RedemptionInitiated(bytes32 indexed id, address indexed user, IERC20 indexed input, IERC20 output, uint256 inputValue, bytes32 salt);
-    event RedemptionExecuted(bytes32 indexed id, uint256 outputValue);
+    event RedemptionInitiated(bytes32 indexed id, address indexed user, IERC20 indexed input, address output, uint256 inputValue, bytes32 salt);
+    event RedemptionExecuted(bytes32 indexed id, bytes data);
     event RedemptionCanceled(bytes32 indexed id);
-    event EnableOutput(IERC20 indexed input, IERC20 indexed output, bool enable);
+    event EnableOutput(IERC20 indexed input, address output, bool enable);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) PermissionManaged(_authority) {
@@ -60,7 +60,7 @@ contract Redemption is
     /**
      * @dev HELPER: produce redemption request hash from the input parameters
      */
-    function hashRedemptionId(address user, IERC20 input, IERC20 output, uint256 inputValue, bytes32 salt) public pure returns (bytes32) {
+    function hashRedemptionId(address user, IERC20 input, address output, uint256 inputValue, bytes32 salt) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(user, input, output, inputValue, salt));
     }
 
@@ -80,10 +80,13 @@ contract Redemption is
     ) external returns (bytes4) {
         // Fetch input params
         IERC20 input  = IERC20(msg.sender);
-        (IERC20 output, bytes32 salt) = abi.decode(data, (IERC20, bytes32));
+        (address output, bytes32 salt) = abi.decode(data, (address, bytes32));
 
-        // Check that output is set → input is registered
-        require(_outputs[input].contains(address(output)), "Input/Output pair is not authorized");
+        // Check that output is fiat (address(0)), or if the output is registered for the input
+        require(
+            output == address(0) || _outputs[input].contains(output),
+            "Input/Output pair is not authorized"
+        );
 
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, value, salt);
@@ -106,10 +109,10 @@ contract Redemption is
     function executeRedemption(
         address user,
         IERC20  input,
-        IERC20  output,
+        address output,
         uint256 inputValue,
-        uint256 outputValue,
-        bytes32 salt
+        bytes32 salt,
+        bytes calldata data
     ) external restricted() {
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, inputValue, salt);
@@ -121,13 +124,11 @@ contract Redemption is
         // Mark operation as execution
         details[id].status = Status.EXECUTED;
 
-        // Burn input tokens, and send output token to user.
-        // TODO: where do the output tokens come from ?
+        // Burn input tokens.
         Token(address(input)).burn(address(this), inputValue);
-        output.safeTransferFrom(msg.sender, user, outputValue);
 
         // Emit event
-        emit RedemptionExecuted(id, outputValue);
+        emit RedemptionExecuted(id, data);
     }
 
     /**
@@ -136,8 +137,8 @@ contract Redemption is
      */
     function cancelRedemption(
         address user,
-        IERC20 input,
-        IERC20 output,
+        IERC20  input,
+        address output,
         uint256 inputValue,
         bytes32 salt
     ) external {
@@ -164,11 +165,11 @@ contract Redemption is
     /**
      * @dev ADMIN: configure which output (stablecoin) is used for redemptions of a given input.
      */
-    function registerOutput(IERC20 input, IERC20 output, bool enable) external restricted() {
+    function registerOutput(IERC20 input, address output, bool enable) external restricted() {
         if (enable) {
-            _outputs[input].add(address(output));
+            _outputs[input].add(output);
         } else {
-            _outputs[input].remove(address(output));
+            _outputs[input].remove(output);
         }
 
         emit EnableOutput(input, output, enable);

@@ -571,19 +571,15 @@ describe('Main', function () {
 
     describe('Redemption', function () {
         beforeEach(async function () {
-            // create mock
-            this.mock = {};
-            this.mock.token = await deploy('ERC20Mock');
+            ({ address: this.output } = ethers.Wallet.createRandom());
 
             // mint tokens
             await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice.address, 1000);
-            await this.mock.token.mint(this.accounts.operator.address, 1000);
-            await this.mock.token.connect(this.accounts.operator).approve(this.contracts.redemption.address, ethers.constants.MaxUint256);
 
             // set authorized output token
             await this.contracts.redemption.registerOutput(
                 this.contracts.token.address,
-                this.mock.token.address,
+                this.output,
                 true,
             );
 
@@ -591,7 +587,7 @@ describe('Main', function () {
             this.makeOp = (overrides = {}) => {
                 const user   = overrides?.user   ?? this.accounts.alice;
                 const input  = overrides?.input  ?? this.contracts.token;
-                const output = overrides?.output ?? this.mock.token;
+                const output = overrides?.output ?? this.output;
                 const value  = overrides?.value  ?? 100;
                 const salt   = overrides?.salt   ?? ethers.utils.hexlify(ethers.utils.randomBytes(32));
                 const id     = ethers.utils.solidityKeccak256(
@@ -616,7 +612,7 @@ describe('Main', function () {
 
                 expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data))
                 .to.emit(op.input,                  'Transfer'           ).withArgs(op.user.address, this.contracts.redemption.address, op.value)
-                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, op.user.address, op.input.address, op.output.address, op.value, op.salt);
+                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, op.user.address, op.input.address, op.output, op.value, op.salt);
 
                 const timepoint = await time.latest();
 
@@ -669,7 +665,7 @@ describe('Main', function () {
             });
 
             it('authorized', async function () {
-                const outputValue = 420;
+                const data = ethers.utils.hexlify(ethers.utils.randomBytes(64));
 
                 const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
                 expect(statusBefore).to.be.equal(STATUS.PENDING);
@@ -677,57 +673,56 @@ describe('Main', function () {
                 expect(await this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
                     this.operation.user.address,
                     this.operation.input.address,
-                    this.operation.output.address,
+                    this.operation.output,
                     this.operation.value,
-                    outputValue,
                     this.operation.salt,
+                    data,
                 ))
                 .to.emit(this.operation.input,      'Transfer'          ).withArgs(this.contracts.redemption.address, ethers.constants.AddressZero, this.operation.value)
-                .to.emit(this.operation.output,     'Transfer'          ).withArgs(this.accounts.operator.address,    this.operation.user.address,  outputValue)
-                .to.emit(this.contracts.redemption, 'RedemptionExecuted').withArgs(this.operation.id, outputValue);
+                .to.emit(this.contracts.redemption, 'RedemptionExecuted').withArgs(this.operation.id, data);
 
                 const { status: statusAfter } = await this.contracts.redemption.details(this.operation.id);
                 expect(statusAfter).to.be.equal(STATUS.EXECUTED);
             });
 
             it('unauthorized', async function () {
-                const outputValue = 1;
+                const data = ethers.utils.hexlify(ethers.utils.randomBytes(64));
 
                 await expect(this.contracts.redemption.connect(this.accounts.other).executeRedemption(
                     this.operation.user.address,
                     this.operation.input.address,
-                    this.operation.output.address,
+                    this.operation.output,
                     this.operation.value,
-                    outputValue,
                     this.operation.salt,
+                    data,
                 )).to.be.revertedWith('Restricted access');
             });
 
             it('invalid operation', async function () {
-                const outputValue = 420;
+                const data = ethers.utils.hexlify(ethers.utils.randomBytes(64));
 
                 await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
                     this.accounts.other.address, // invalid user
                     this.operation.input.address,
-                    this.operation.output.address,
+                    this.operation.output,
                     this.operation.value,
-                    outputValue,
                     this.operation.salt,
+                    data,
                 )).to.be.revertedWith('Operation is not pending');
             });
 
             it('too late', async function () {
-                const outputValue = 420;
+                const data = ethers.utils.hexlify(ethers.utils.randomBytes(64));
 
                 await time.increase(time.duration.days(10));
 
                 await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
                     this.operation.user.address,
                     this.operation.input.address,
-                    this.operation.output.address,
+                    this.operation.output,
                     this.operation.value,
-                    outputValue,
                     this.operation.salt,
+                    data,
                 )).to.be.revertedWith('Deadline passed');
             });
         });
