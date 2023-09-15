@@ -564,6 +564,7 @@ describe('Main', function () {
         describe('initiate redemption', function () {
             it('success', async function () {
                 const op = this.makeOp();
+                expect(await this.contracts.redemption.outputsFor(op.input.address)).to.include(op.output);
 
                 const { status: statusBefore, deadline: deadlineBefore } = await this.contracts.redemption.details(op.id);
                 expect(statusBefore).to.be.equal(STATUS.NULL);
@@ -607,6 +608,25 @@ describe('Main', function () {
                     op.value,
                     op.data,
                 )).to.be.revertedWith('Input/Output pair is not authorized');
+            });
+
+            it('to fiat', async function () {
+                const op = this.makeOp({ output: ethers.constants.AddressZero });
+                expect(await this.contracts.redemption.outputsFor(op.input.address)).to.not.include(op.output);
+
+                const { status: statusBefore, deadline: deadlineBefore } = await this.contracts.redemption.details(op.id);
+                expect(statusBefore).to.be.equal(STATUS.NULL);
+                expect(deadlineBefore).to.be.equal(0);
+
+                expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption.address, op.value, op.data))
+                .to.emit(op.input,                  'Transfer'           ).withArgs(op.user.address, this.contracts.redemption.address, op.value)
+                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, op.user.address, op.input.address, op.output, op.value, op.salt);
+
+                const timepoint = await time.latest();
+
+                const { status: statusAfter, deadline: deadlineAfter } = await this.contracts.redemption.details(op.id);
+                expect(statusAfter).to.be.equal(STATUS.PENDING);
+                expect(deadlineAfter).to.be.equal(timepoint + time.duration.days(7));
             });
         });
 
@@ -688,8 +708,59 @@ describe('Main', function () {
         });
 
         describe('cancel redemption', function () {
-            it.skip('invalid operation');
-            it.skip('too early');
+            beforeEach(async function () {
+                this.operation = this.makeOp();
+
+                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
+                    this.contracts.redemption.address,
+                    this.operation.value,
+                    this.operation.data,
+                );
+
+                this.operation.deadline = (await time.latest()) + time.duration.days(7);
+            });
+
+            it('anyone can cancel', async function () {
+                await time.increase(time.duration.days(10));
+
+                const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
+                expect(statusBefore).to.be.equal(STATUS.PENDING);
+
+                expect(await this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
+                    this.operation.user.address,
+                    this.operation.input.address,
+                    this.operation.output,
+                    this.operation.value,
+                    this.operation.salt,
+                ))
+                .to.emit(this.operation.input,      'Transfer'          ).withArgs(this.contracts.redemption.address, this.operation.user.address, this.operation.value)
+                .to.emit(this.contracts.redemption, 'RedemptionCanceled').withArgs(this.operation.id);
+
+                const { status: statusAfter } = await this.contracts.redemption.details(this.operation.id);
+                expect(statusAfter).to.be.equal(STATUS.CANCELED);
+            });
+
+            it('invalid operation', async function () {
+                await time.increase(time.duration.days(10));
+
+                await expect(this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
+                    this.accounts.other.address, // invalid user
+                    this.operation.input.address,
+                    this.operation.output,
+                    this.operation.value,
+                    this.operation.salt,
+                )).to.be.revertedWith('Operation is not pending');
+            });
+
+            it('too late', async function () {
+                await expect(this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
+                    this.operation.user.address,
+                    this.operation.input.address,
+                    this.operation.output,
+                    this.operation.value,
+                    this.operation.salt,
+                )).to.be.revertedWith('Deadline not passed');
+            });
         });
 
         describe('admin', function () {
