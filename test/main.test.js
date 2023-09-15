@@ -1,22 +1,10 @@
 require('chai').use(require('ethereum-waffle').solidity);
 
-const { expect            } = require('chai');
-const { ethers            } = require('hardhat');
-const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
-const { deploy            } = require('@amxx/hre/scripts/index');
-const { migrate           } = require('../scripts/migrate');
+const { expect                } = require('chai');
+const { ethers                } = require('hardhat');
+const { loadFixture, time     } = require('@nomicfoundation/hardhat-network-helpers');
+const { migrate               } = require('../scripts/migrate');
 const { Enum, toMask, combine } = require('./helpers');
-
-const GROUPS = Array(256);
-GROUPS[0]    = 'ADMIN'
-GROUPS[1]    = 'OPERATOR'
-GROUPS[2]    = 'BURNER'
-GROUPS[3]    = 'WHITELISTER'
-GROUPS[4]    = 'WHITELISTED'
-GROUPS[255]  = 'PUBLIC';
-const MASKS  = GROUPS.map((_, i) => toMask(i));
-Object.assign(GROUPS, Object.fromEntries(GROUPS.map((key, i) => [ key, i ]).filter(Boolean)));
-Object.assign(MASKS, Object.fromEntries(GROUPS.map((key, i) => [ key, MASKS[i] ]).filter(Boolean)));
 
 const STATUS = Enum('NULL', 'PENDING', 'EXECUTED', 'CANCELED');
 
@@ -30,64 +18,28 @@ async function fixture() {
     accounts.chris       = accounts.shift();
     accounts.other       = accounts.shift();
 
-    const { contracts, config } = await migrate(
-        { deployer: accounts.admin },
+    const { contracts, config, roles } = await migrate(
+        {
+            deployer: accounts.admin,
+            roles: {
+                admin:                  { members: [ accounts.admin.address                                       ] },
+                'operator-exceptional': { members: [ accounts.operator.address                                    ] },
+                'operator-daily':       { members: [ accounts.operator.address                                    ] },
+                'operator-oracle':      { members: [ accounts.operator.address                                    ] },
+                'burner':               { members: [ 'redemption'                                                 ] },
+                whitelister:            { members: [ accounts.whitelister.address                                 ] },
+                whitelisted:            { members: [ accounts.alice.address, accounts.bruce.address, 'redemption' ] },
+            },
+        },
         { noCache: true, noConfirm: true },
     );
 
+    // get token + oracle
     contracts.token  = Object.values(contracts.tokens).find(Boolean);
     contracts.oracle = Object.values(contracts.oracles).find(Boolean);
     expect(await contracts.oracle.token()).to.be.equal(contracts.token.address, "Invalid configuration for testing");
 
-    // set group admins
-    await contracts.manager.connect(accounts.admin).setGroupAdmins(GROUPS.WHITELISTED, [ GROUPS.WHITELISTER ]);
-
-    // populate groups
-    await contracts.manager.connect(accounts.admin      ).addGroup(accounts.operator.address,    GROUPS.OPERATOR);
-    await contracts.manager.connect(accounts.admin      ).addGroup(accounts.whitelister.address, GROUPS.WHITELISTER);
-    await contracts.manager.connect(accounts.admin      ).addGroup(contracts.redemption.address, GROUPS.BURNER);
-    await contracts.manager.connect(accounts.whitelister).addGroup(accounts.alice.address,       GROUPS.WHITELISTED);
-    await contracts.manager.connect(accounts.whitelister).addGroup(accounts.bruce.address,       GROUPS.WHITELISTED);
-    await contracts.manager.connect(accounts.whitelister).addGroup(contracts.redemption.address, GROUPS.WHITELISTED);
-
-    // restricted functions
-    const settings = {
-        token: {
-            upgradeTo: [ GROUPS.ADMIN                   ],
-            mint:      [ GROUPS.OPERATOR                ],
-            burn:      [ GROUPS.OPERATOR, GROUPS.BURNER ],
-            pause:     [ GROUPS.OPERATOR                ],
-            unpause:   [ GROUPS.OPERATOR                ],
-            transfer:  [ GROUPS.WHITELISTED             ],
-        },
-        oracle: {
-            upgradeTo:    [ GROUPS.ADMIN    ],
-            publishPrice: [ GROUPS.OPERATOR ],
-        },
-        redemption: {
-            upgradeTo:         [ GROUPS.ADMIN    ],
-            executeRedemption: [ GROUPS.OPERATOR ],
-            registerOutput:    [ GROUPS.OPERATOR ],
-        },
-    };
-
-    await contracts.manager.multicall(
-        Object.values(
-            Object.entries(settings)
-            .flatMap(([ name, fns ]) =>
-                Object.entries(fns)
-                .map(([ sig, groups ]) => [ contracts[name].address, contracts[name].interface.getSighash(sig), groups ])
-            )
-            .reduce((acc, [ address, selector, groups ]) => {
-                const key = `${address}-${combine(...groups)}`;
-                acc[key] ??= { address, groups, selectors: [] };
-                acc[key].selectors.push(selector);
-                return acc;
-            }, {})
-        ).map(({ address, selectors, groups }) => contracts.manager.interface.encodeFunctionData('setRequirements', [ address, selectors, groups ]))
-    );
-
-    return { accounts, contracts, config };
+    return { accounts, contracts, config, ...roles };
 }
 
 describe('Main', function () {
@@ -96,14 +48,14 @@ describe('Main', function () {
     });
 
     it('post deployment state', async function () {
-        expect(await this.contracts.manager.ADMIN()).to.be.equal(GROUPS.ADMIN);
-        expect(await this.contracts.manager.PUBLIC()).to.be.equal(GROUPS.PUBLIC);
-        expect(await this.contracts.manager.ADMIN_MASK()).to.be.equal(MASKS.ADMIN);
-        expect(await this.contracts.manager.PUBLIC_MASK()).to.be.equal(MASKS.PUBLIC);
+        expect(await this.contracts.manager.ADMIN()).to.be.equal(this.IDS.admin);
+        expect(await this.contracts.manager.PUBLIC()).to.be.equal(this.IDS.public);
+        expect(await this.contracts.manager.ADMIN_MASK()).to.be.equal(this.MASKS.admin);
+        expect(await this.contracts.manager.PUBLIC_MASK()).to.be.equal(this.MASKS.public);
 
         expect(await this.contracts.token.authority()).to.be.equal(this.contracts.manager.address);
-        expect(await this.contracts.token.name()).to.be.equal(this.config.tokens.find(Boolean).name);
-        expect(await this.contracts.token.symbol()).to.be.equal(this.config.tokens.find(Boolean).symbol);
+        expect(await this.contracts.token.name()).to.be.equal(this.config.contracts.tokens.find(Boolean).name);
+        expect(await this.contracts.token.symbol()).to.be.equal(this.config.contracts.tokens.find(Boolean).symbol);
         expect(await this.contracts.token.decimals()).to.be.equal(18);
         expect(await this.contracts.token.totalSupply()).to.be.equal(0);
 
@@ -111,33 +63,34 @@ describe('Main', function () {
         expect(await this.contracts.oracle.token()).to.be.equal(this.contracts.token.address);
         expect(await this.contracts.oracle.version()).to.be.equal(0);
         expect(await this.contracts.oracle.decimals()).to.be.equal(18);
-        expect(await this.contracts.oracle.description()).to.be.equal(`${this.config.tokens.find(Boolean).symbol} / ${this.config.tokens.find(Boolean).quote}`);
+        expect(await this.contracts.oracle.description()).to.be.equal(`${this.config.contracts.tokens.find(Boolean).symbol} / ${this.config.contracts.tokens.find(Boolean).quote}`);
     });
 
     it('accounts have permissions', async function () {
-        expect(await this.contracts.manager.getGroups(this.accounts.admin.address      )).to.be.equal(combine(MASKS.PUBLIC, MASKS.ADMIN));
-        expect(await this.contracts.manager.getGroups(this.accounts.operator.address   )).to.be.equal(combine(MASKS.PUBLIC, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getGroups(this.accounts.whitelister.address)).to.be.equal(combine(MASKS.PUBLIC, MASKS.WHITELISTER));
-        expect(await this.contracts.manager.getGroups(this.accounts.alice.address      )).to.be.equal(combine(MASKS.PUBLIC, MASKS.WHITELISTED));
-        expect(await this.contracts.manager.getGroups(this.accounts.bruce.address      )).to.be.equal(combine(MASKS.PUBLIC, MASKS.WHITELISTED));
-        expect(await this.contracts.manager.getGroups(this.accounts.chris.address      )).to.be.equal(combine(MASKS.PUBLIC));
+        expect(await this.contracts.manager.getGroups(this.contracts.redemption.address)).to.be.equal(combine(this.MASKS.public, this.MASKS.burner, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.admin.address      )).to.be.equal(combine(this.MASKS.public, this.MASKS.admin));
+        expect(await this.contracts.manager.getGroups(this.accounts.operator.address   )).to.be.equal(combine(this.MASKS.public, this.MASKS['operator-daily'], this.MASKS['operator-exceptional'], this.MASKS['operator-oracle']));
+        expect(await this.contracts.manager.getGroups(this.accounts.whitelister.address)).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelister));
+        expect(await this.contracts.manager.getGroups(this.accounts.alice.address      )).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.bruce.address      )).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.chris.address      )).to.be.equal(combine(this.MASKS.public));
     });
 
     it('functions have requirements', async function () {
         // token
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'))).to.be.equal(combine(MASKS.ADMIN));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR, MASKS.BURNER));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(MASKS.ADMIN, MASKS.WHITELISTED));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
         // oracle
-        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'   ))).to.be.equal(combine(MASKS.ADMIN));
-        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'   ))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
         // redemption
-        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'        ))).to.be.equal(combine(MASKS.ADMIN));
-        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
-        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(MASKS.ADMIN, MASKS.OPERATOR));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'        ))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
     });
 
     describe('Token', function () {
@@ -177,9 +130,9 @@ describe('Main', function () {
                 it('can burn from not-whitelisted account', async function () {
                     // whitelist, mint, blacklist
                     await Promise.all([
-                        this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.chris.address, GROUPS.WHITELISTED),
+                        this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.chris.address, this.IDS.whitelisted),
                         this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris.address, 1000),
-                        this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris.address, GROUPS.WHITELISTED),
+                        this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris.address, this.IDS.whitelisted),
                     ]);
 
                     await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.chris.address, 100))
@@ -215,8 +168,8 @@ describe('Main', function () {
 
                                 // set approval if needed + configure sender and receiver
                                 operator && await this.contracts.token.connect(from).approve(operator.address, amount);
-                                await this.contracts.manager.connect(this.accounts.whitelister)[fromAuthorized ? 'addGroup' : 'remGroup'](from.address, GROUPS.WHITELISTED);
-                                await this.contracts.manager.connect(this.accounts.whitelister)[toAuthorized   ? 'addGroup' : 'remGroup'](to.address,   GROUPS.WHITELISTED);
+                                await this.contracts.manager.connect(this.accounts.whitelister)[fromAuthorized ? 'addGroup' : 'remGroup'](from.address, this.IDS.whitelisted);
+                                await this.contracts.manager.connect(this.accounts.whitelister)[toAuthorized   ? 'addGroup' : 'remGroup'](to.address,   this.IDS.whitelisted);
 
                                 let promise = null;
                                 switch(fn) {
@@ -341,14 +294,14 @@ describe('Main', function () {
 
             it('restricted', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.other).addGroup(this.accounts.alice.address, group))
-                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
             });
 
             it('with role admin', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice.address, group))
-                .to.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(MASKS.WHITELISTER, MASKS.PUBLIC), MASKS.ADMIN);
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(this.MASKS.whitelister, this.MASKS.public), this.MASKS.admin);
 
-                await this.contracts.manager.setGroupAdmins(group, [ GROUPS.WHITELISTER ]);
+                await this.contracts.manager.setGroupAdmins(group, [ this.IDS.whitelister ]);
 
                 await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice.address, group))
                 .to.emit(this.contracts.manager, 'GroupAdded').withArgs(this.accounts.alice.address, group);
@@ -356,16 +309,16 @@ describe('Main', function () {
 
             it('effect', async function () {
                 expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
-                    MASKS.PUBLIC,
-                    MASKS.WHITELISTED,
+                    this.MASKS.public,
+                    this.MASKS.whitelisted,
                 ));
 
                 await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice.address, group))
                 .to.emit(this.contracts.manager, 'GroupAdded').withArgs(this.accounts.alice.address, group);
 
                 expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
-                    MASKS.PUBLIC,
-                    MASKS.WHITELISTED,
+                    this.MASKS.public,
+                    this.MASKS.whitelisted,
                     toMask(group),
                 ));
             });
@@ -383,14 +336,14 @@ describe('Main', function () {
 
             it('restricted', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.other).remGroup(this.accounts.alice.address, group))
-                .be.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+                .be.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
             });
 
             it('with role admin', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice.address, group))
-                .be.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(MASKS.WHITELISTER, MASKS.PUBLIC), MASKS.ADMIN);
+                .be.revertedWith('MissingPermissions').withArgs(this.accounts.whitelister.address, combine(this.MASKS.whitelister, this.MASKS.public), this.MASKS.admin);
 
-                await this.contracts.manager.setGroupAdmins(group, [ GROUPS.WHITELISTER ]);
+                await this.contracts.manager.setGroupAdmins(group, [ this.IDS.whitelister ]);
 
                 await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice.address, group))
                 .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(this.accounts.alice.address, group);
@@ -398,8 +351,8 @@ describe('Main', function () {
 
             it('effect', async function () {
                 expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
-                    MASKS.PUBLIC,
-                    MASKS.WHITELISTED,
+                    this.MASKS.public,
+                    this.MASKS.whitelisted,
                     toMask(group),
                 ));
 
@@ -407,8 +360,8 @@ describe('Main', function () {
                 .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(this.accounts.alice.address, group);
 
                 expect(await this.contracts.manager.getGroups(this.accounts.alice.address)).to.be.equal(combine(
-                    MASKS.PUBLIC,
-                    MASKS.WHITELISTED,
+                    this.MASKS.public,
+                    this.MASKS.whitelisted,
                 ));
             });
         });
@@ -421,7 +374,7 @@ describe('Main', function () {
 
             it('restricted', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.other).setGroupAdmins(group, groups))
-                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
             });
 
             it('effect', async function () {
@@ -430,7 +383,7 @@ describe('Main', function () {
 
                 // Check previous value is set
                 expect(await this.contracts.manager.getGroupAdmins(group)).to.be.equal(combine(
-                    MASKS.ADMIN,
+                    this.MASKS.admin,
                     toMask(group),
                 ));
 
@@ -440,7 +393,7 @@ describe('Main', function () {
 
                 // Check the new values are set, and the previous is removed
                 expect(await this.contracts.manager.getGroupAdmins(group)).to.be.equal(combine(
-                    MASKS.ADMIN,
+                    this.MASKS.admin,
                     ...groups.map(toMask),
                 ));
             });
@@ -454,7 +407,7 @@ describe('Main', function () {
 
             it('restricted', async function () {
                 await expect(this.contracts.manager.connect(this.accounts.other).setRequirements(target, [ selector ], groups))
-                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, MASKS.PUBLIC, MASKS.ADMIN);
+                .to.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
             });
 
             it('effect', async function () {
@@ -463,7 +416,7 @@ describe('Main', function () {
 
                 // Check previous value is set
                 expect(await this.contracts.manager.getRequirements(target, selector)).to.be.equal(combine(
-                    MASKS.ADMIN,
+                    this.MASKS.admin,
                     toMask(group),
                 ));
 
@@ -473,7 +426,7 @@ describe('Main', function () {
 
                 // Check the new values are set, and the previous is removed
                 expect(await this.contracts.manager.getRequirements(target, selector)).to.be.equal(combine(
-                    MASKS.ADMIN,
+                    this.MASKS.admin,
                     ...groups.map(toMask),
                 ));
             });
