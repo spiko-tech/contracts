@@ -108,7 +108,7 @@ describe('Main', function () {
 
                 it('unauthorized to (need whitelisted)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris.address, 1000))
-                    .to.be.revertedWith('unauthorized to');
+                    .to.be.revertedWith('UnauthorizedTo').withArgs(this.contracts.token.address, this.accounts.chris.address);
                 });
             });
 
@@ -187,9 +187,9 @@ describe('Main', function () {
                                         break;
                                 }
 
-                                (fromAuthorized && toAuthorized)
-                                    ? await expect(promise).to.emit(this.contracts.token, 'Transfer').withArgs(from.address, to.address, amount)
-                                    : await expect(promise).to.be.revertedWith((!fromAuthorized && 'unauthorized from') || (!toAuthorized && 'unauthorized to'));
+                                await (fromAuthorized && toAuthorized)
+                                    ? expect(promise).to.emit(this.contracts.token, 'Transfer').withArgs(from.address, to.address, amount)
+                                    : expect(promise).to.be.revertedWith((!fromAuthorized && 'UnauthorizedFrom') || (!toAuthorized && 'UnauthorizedTo')).withArgs(this.contracts.token.address, (!fromAuthorized && from.address) || (!toAuthorized && to.address));
                             });
                         }
                     });
