@@ -1,7 +1,7 @@
 require('chai').use(require('ethereum-waffle').solidity);
 
 const { expect                } = require('chai');
-const { ethers                } = require('hardhat');
+const { ethers, upgrades      } = require('hardhat');
 const { loadFixture, time     } = require('@nomicfoundation/hardhat-network-helpers');
 const { migrate               } = require('../scripts/migrate');
 const { Enum, toMask, combine } = require('./helpers');
@@ -37,7 +37,7 @@ async function fixture() {
     // get token + oracle
     contracts.token  = Object.values(contracts.tokens).find(Boolean);
     contracts.oracle = Object.values(contracts.oracles).find(Boolean);
-    expect(await contracts.oracle.token()).to.be.equal(contracts.token.address, "Invalid configuration for testing");
+    expect(await contracts.oracle.token()).to.be.equal(contracts.token.address, 'Invalid configuration for testing');
 
     return { accounts, contracts, config, ...roles };
 }
@@ -239,6 +239,100 @@ describe('Main', function () {
         });
     });
 
+    describe('Oracle', function () {
+        describe('publish price', function () {
+            it('authorized', async function () {
+                const roundId   = 0;
+                const value     = 17;
+                const timepoint = 42;
+
+                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(0);
+                await expect(this.contracts.oracle.latestRoundData()).to.be.reverted;
+
+                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
+
+                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
+
+                const latestRoundData = await this.contracts.oracle.latestRoundData();
+                expect(latestRoundData.roundId        ).to.be.equal(roundId  );
+                expect(latestRoundData.answer         ).to.be.equal(value    );
+                expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
+                expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
+                expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
+
+                const getRoundData = await this.contracts.oracle.getRoundData(roundId);
+                expect(getRoundData.roundId        ).to.be.equal(roundId  );
+                expect(getRoundData.answer         ).to.be.equal(value    );
+                expect(getRoundData.startedAt      ).to.be.equal(timepoint);
+                expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
+                expect(getRoundData.answeredInRound).to.be.equal(roundId  );
+            });
+
+            it('unauthorized caller (need operator)', async function () {
+                await expect(this.contracts.oracle.connect(this.accounts.other).publishPrice(42, 17))
+                .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'));
+            });
+
+            it('updates last entry', async function () {
+                const rounds = [
+                    { timepoint: 17, value: 1 },
+                    { timepoint: 42, value: 6 },
+                    { timepoint: 69, value: 3 },
+                    { timepoint: 81, value: 9 },
+                ];
+
+                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
+                    expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                    .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
+
+                    expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
+
+                    const latestRoundData = await this.contracts.oracle.latestRoundData();
+                    expect(latestRoundData.roundId        ).to.be.equal(roundId  );
+                    expect(latestRoundData.answer         ).to.be.equal(value    );
+                    expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
+                    expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
+                    expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
+                }
+
+                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
+                    const getRoundData = await this.contracts.oracle.getRoundData(roundId);
+                    expect(getRoundData.roundId        ).to.be.equal(roundId  );
+                    expect(getRoundData.answer         ).to.be.equal(value    );
+                    expect(getRoundData.startedAt      ).to.be.equal(timepoint);
+                    expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
+                    expect(getRoundData.answeredInRound).to.be.equal(roundId  );
+                }
+            });
+        });
+
+        it('getHistoricalPrice', async function () {
+            const rounds = [
+                { timepoint: 17, value: 1 },
+                { timepoint: 42, value: 6 },
+                { timepoint: 69, value: 3 },
+                { timepoint: 81, value: 9 },
+            ];
+
+            // Fill the oracle with data
+            for (const { timepoint, value } of rounds) {
+                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value));
+            }
+
+            // Perform lookups
+            for (const t of Array.range(rounds.at(-1).timepoint + 2)) {
+                expect(await this.contracts.oracle.getHistoricalPrice(t))
+                .to.be.equal(rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0);
+            }
+        });
+
+        it('get non-existing data', async function () {
+            await expect(this.contracts.oracle.getRoundData(42))
+            .to.be.revertedWith('No checkpoint for roundId');
+        });
+    });
+
     describe('Permission Manager', function () {
         const { address: caller } = ethers.Wallet.createRandom();
         const { address: target } = ethers.Wallet.createRandom();
@@ -430,95 +524,6 @@ describe('Main', function () {
                     ...groups.map(toMask),
                 ));
             });
-        });
-    });
-
-    describe('Oracle', function () {
-        describe('publish price', function () {
-            it('authorized', async function () {
-                const roundId   = 0;
-                const value     = 17;
-                const timepoint = 42;
-
-                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(0);
-                await expect(this.contracts.oracle.latestRoundData()).to.be.reverted;
-
-                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
-                .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
-
-                expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
-
-                const latestRoundData = await this.contracts.oracle.latestRoundData();
-                expect(latestRoundData.roundId        ).to.be.equal(roundId  );
-                expect(latestRoundData.answer         ).to.be.equal(value    );
-                expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
-                expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
-                expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
-
-                const getRoundData = await this.contracts.oracle.getRoundData(roundId);
-                expect(getRoundData.roundId        ).to.be.equal(roundId  );
-                expect(getRoundData.answer         ).to.be.equal(value    );
-                expect(getRoundData.startedAt      ).to.be.equal(timepoint);
-                expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
-                expect(getRoundData.answeredInRound).to.be.equal(roundId  );
-            });
-
-            it('unauthorized caller (need operator)', async function () {
-                await expect(this.contracts.oracle.connect(this.accounts.other).publishPrice(42, 17))
-                .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'));
-            });
-
-            it('updates last entry', async function () {
-                const rounds = [
-                    { timepoint: 17, value: 1 },
-                    { timepoint: 42, value: 6 },
-                    { timepoint: 69, value: 3 },
-                    { timepoint: 81, value: 9 },
-                ];
-
-                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
-                    expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
-                    .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
-
-                    expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
-
-                    const latestRoundData = await this.contracts.oracle.latestRoundData();
-                    expect(latestRoundData.roundId        ).to.be.equal(roundId  );
-                    expect(latestRoundData.answer         ).to.be.equal(value    );
-                    expect(latestRoundData.startedAt      ).to.be.equal(timepoint);
-                    expect(latestRoundData.updatedAt      ).to.be.equal(timepoint);
-                    expect(latestRoundData.answeredInRound).to.be.equal(roundId  );
-                }
-
-                for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
-                    const getRoundData = await this.contracts.oracle.getRoundData(roundId);
-                    expect(getRoundData.roundId        ).to.be.equal(roundId  );
-                    expect(getRoundData.answer         ).to.be.equal(value    );
-                    expect(getRoundData.startedAt      ).to.be.equal(timepoint);
-                    expect(getRoundData.updatedAt      ).to.be.equal(timepoint);
-                    expect(getRoundData.answeredInRound).to.be.equal(roundId  );
-                }
-            });
-        });
-
-        it('getHistoricalPrice', async function () {
-            const rounds = [
-                { timepoint: 17, value: 1 },
-                { timepoint: 42, value: 6 },
-                { timepoint: 69, value: 3 },
-                { timepoint: 81, value: 9 },
-            ];
-
-            // Fill the oracle with data
-            for (const { timepoint, value } of rounds) {
-                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value));
-            }
-
-            // Perform lookups
-            for (const t of Array.range(rounds.at(-1).timepoint + 2)) {
-                expect(await this.contracts.oracle.getHistoricalPrice(t))
-                .to.be.equal(rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0);
-            }
         });
     });
 
@@ -745,6 +750,109 @@ describe('Main', function () {
                     .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(this.contracts.token.address, other, false);
 
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+                });
+            });
+        });
+    });
+
+    describe('Upgradeability', function () {
+        describe('re-initialize', function () {
+            it('manager', async function () {
+                await expect(this.contracts.manager.initialize(this.accounts.admin.address))
+                .to.be.revertedWith('Initializable: contract is already initialized');
+            });
+
+            it('token', async function () {
+                await expect(this.contracts.token.initialize('Other Name', 'Other Symbol'))
+                .to.be.revertedWith('Initializable: contract is already initialized');
+            });
+
+            it('oracle', async function () {
+                await expect(this.contracts.oracle.initialize(this.contracts.token.address, 'EUR'))
+                .to.be.revertedWith('Initializable: contract is already initialized');
+            });
+
+            // Redemption doesn't have an initializer
+        });
+
+        describe('upgrade', function () {
+            describe('manager', async function () {
+                it('authorized', async function () {
+                    await ethers.getContractFactory('PermissionManager', this.accounts.admin).then(factory => upgrades.upgradeProxy(
+                        this.contracts.manager,
+                        factory,
+                        { redeployImplementation: 'always' },
+                    ));
+                });
+
+                it('unauthorized', async function () {
+                    await expect(
+                        ethers.getContractFactory('PermissionManager', this.accounts.other).then(factory => upgrades.upgradeProxy(
+                            this.contracts.manager,
+                            factory,
+                            { redeployImplementation: 'always' },
+                        ))
+                    ).to.be.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
+                });
+            });
+
+            describe('token', async function () {
+                it('authorized', async function () {
+                    await ethers.getContractFactory('Token', this.accounts.admin).then(factory => upgrades.upgradeProxy(
+                        this.contracts.token,
+                        factory,
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                    ));
+                });
+
+                it('unauthorized', async function () {
+                    await expect(
+                        ethers.getContractFactory('Token', this.accounts.other).then(factory => upgrades.upgradeProxy(
+                            this.contracts.token,
+                            factory,
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        ))
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'));
+                });
+            });
+
+            describe('oracle', async function () {
+                it('authorized', async function () {
+                    await ethers.getContractFactory('Oracle', this.accounts.admin).then(factory => upgrades.upgradeProxy(
+                        this.contracts.oracle,
+                        factory,
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                    ));
+                });
+
+                it('unauthorized', async function () {
+                    await expect(
+                        ethers.getContractFactory('Oracle', this.accounts.other).then(factory => upgrades.upgradeProxy(
+                            this.contracts.oracle,
+                            factory,
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        ))
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'));
+                });
+            });
+
+            describe('redemption', async function () {
+                it('authorized', async function () {
+                    await ethers.getContractFactory('Redemption', this.accounts.admin).then(factory => upgrades.upgradeProxy(
+                        this.contracts.redemption,
+                        factory,
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                    ));
+                });
+
+                it('unauthorized', async function () {
+                    await expect(
+                        ethers.getContractFactory('Redemption', this.accounts.other).then(factory => upgrades.upgradeProxy(
+                            this.contracts.redemption,
+                            factory,
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        ))
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'));
                 });
             });
         });
