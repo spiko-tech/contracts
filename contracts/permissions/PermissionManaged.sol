@@ -9,6 +9,8 @@ import "../interfaces/IAuthority.sol";
 abstract contract PermissionManaged {
     IAuthority public immutable authority;
 
+    error RestrictedAccess(address caller, address target, bytes4 selector);
+
     modifier restricted() {
         _checkRestricted(msg.sig);
         _;
@@ -20,6 +22,8 @@ abstract contract PermissionManaged {
     }
 
     function _checkRestricted(bytes4 selector) internal view {
-        require(authority.canCall(msg.sender, address(this), selector), "Restricted access");
+        if (!authority.canCall(msg.sender, address(this), selector)) {
+            revert RestrictedAccess(msg.sender, address(this), selector);
+        }
     }
 }

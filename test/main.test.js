@@ -103,7 +103,7 @@ describe('Main', function () {
 
                 it('unauthorized caller (need operator)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).mint(this.accounts.alice.address, 1000))
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.alice.address, this.contracts.token.address, this.contracts.token.interface.getSighash('mint'));
                 });
 
                 it('unauthorized to (need whitelisted)', async function () {
@@ -124,7 +124,7 @@ describe('Main', function () {
 
                 it('unauthorized caller (need operator)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).burn(this.accounts.alice.address, 100))
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.alice.address, this.contracts.token.address, this.contracts.token.interface.getSighash('burn'));
                 });
 
                 it('can burn from not-whitelisted account', async function () {
@@ -203,7 +203,7 @@ describe('Main', function () {
 
                 it('unauthorized caller (need operator)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).pause())
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.alice.address, this.contracts.token.address, this.contracts.token.interface.getSighash('pause'));
                 });
 
                 it('pausing disables transfers', async function () {
@@ -226,7 +226,7 @@ describe('Main', function () {
 
                 it('unauthorized caller (need operator)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).unpause())
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.alice.address, this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'));
                 });
 
                 it('unpausing re-enables transfers', async function () {
@@ -465,7 +465,7 @@ describe('Main', function () {
 
             it('unauthorized caller (need operator)', async function () {
                 await expect(this.contracts.oracle.connect(this.accounts.other).publishPrice(42, 17))
-                .to.be.revertedWith('Restricted access');
+                .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'));
             });
 
             it('updates last entry', async function () {
@@ -649,7 +649,8 @@ describe('Main', function () {
                     this.operation.value,
                     this.operation.salt,
                     data,
-                )).to.be.revertedWith('Restricted access');
+                ))
+                .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'));
             });
 
             it('invalid operation', async function () {
@@ -703,7 +704,7 @@ describe('Main', function () {
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
 
                     await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token.address, other, true))
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'));
 
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
                 });
@@ -732,7 +733,7 @@ describe('Main', function () {
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
 
                     await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token.address, output, false))
-                    .to.be.revertedWith('Restricted access');
+                    .to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'));
 
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
                 });
