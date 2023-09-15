@@ -1,3 +1,5 @@
+const DEBUG = require('debug')('compilation');
+
 require('dotenv').config();
 
 const argv = require('yargs')()
@@ -11,7 +13,7 @@ const argv = require('yargs')()
     hardfork:      { type: 'string', default: 'london' },
     mode:          { type: 'string', choices: ['production', 'development'], default: 'production' },
     runs:          { type: 'number', default: 200 },
-    enableIR:      { type: 'boolean', default: false },
+    viaIr:         { type: 'boolean', default: false },
     revertStrings: { type: 'string', choices: ['default', 'strip'], default: 'default' },
     // chain
     fork:          { type: 'string', },
@@ -37,11 +39,12 @@ module.exports = {
       {
         version: argv.compiler,
         settings: {
+          evmVersion: argv.hardfork,
           optimizer: {
             enabled: argv.mode === 'production' || argv.report,
             runs: argv.runs,
           },
-          viaIR: argv.enableIR,
+          viaIR: argv.viaIr,
           debug: {
             revertStrings: argv.revertStrings,
           },
@@ -59,35 +62,22 @@ module.exports = {
   },
 };
 
+DEBUG(JSON.stringify(module.exports.solidity.compilers, null, 2))
+
 const accounts = [
   argv.mnemonic   && { mnemonic: argv.mnemonic },
   argv.privateKey && [argv.privateKey],
 ].find(Boolean);
 
+const networkNames = [
+  'mainnet',
+  'goerli',
+  'sepolia',
+];
+
 Object.assign(
   module.exports.networks,
-  accounts && Object.fromEntries([
-    // main
-    'mainnet', 'ropsten', 'rinkeby', 'goerli', 'kovan',
-    // binance smart chain
-    'bsc', 'bscTestnet',
-    // huobi eco chain
-    'heco', 'hecoTestnet',
-    // fantom mainnet
-    'opera', 'ftmTestnet',
-    // optimism
-    'optimisticEthereum', 'optimisticKovan',
-    // polygon
-    'polygon', 'polygonMumbai',
-    // arbitrum
-    'arbitrumOne', 'arbitrumTestnet',
-    // avalanche
-    'avalanche', 'avalancheFujiTestnet',
-    // moonbeam
-    'moonbeam', 'moonriver', 'moonbaseAlpha',
-    // xdai
-    'xdai', 'sokol',
-  ].map(name => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)),
+  accounts && Object.fromEntries(networkNames.map(name => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)),
   argv.slow && { hardhat: { mining: { auto: false, interval: [3000, 6000] } } }, // Simulate a slow chain locally
   argv.fork && { hardhat: { forking: { url: argv.fork } } }, // Simulate a mainnet fork
 );
