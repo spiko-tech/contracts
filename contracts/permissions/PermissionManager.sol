@@ -5,10 +5,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./interfaces/IAuthority.sol";
-import "./utils/Mask.sol";
+import "../interfaces/IAuthority.sol";
+import "../utils/Mask.sol";
 
 /// @custom:security-contact TODO
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
 contract PermissionManager is
     IAuthority,
     Initializable,
@@ -17,11 +18,10 @@ contract PermissionManager is
 {
     using Masks for *;
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
-    Masks.Mask public immutable ADMIN  = 0x00.toMask();
-
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
-    Masks.Mask public immutable PUBLIC = 0xFF.toMask();
+    uint8      public constant  ADMIN       = 0x00;
+    uint8      public constant  PUBLIC      = 0xFF;
+    Masks.Mask public immutable ADMIN_MASK  = ADMIN.toMask();
+    Masks.Mask public immutable PUBLIC_MASK = PUBLIC.toMask();
 
     mapping(address =>                   Masks.Mask ) private _permissions;
     mapping(address => mapping(bytes4 => Masks.Mask)) private _restrictions;
@@ -35,11 +35,10 @@ contract PermissionManager is
     error MissingPermissions(address user, Masks.Mask permissions, Masks.Mask restriction);
 
     modifier onlyRole(Masks.Mask restriction) {
-        address    caller      = msg.sender;
-        Masks.Mask permissions = getGroups(caller);
+        Masks.Mask permissions = getGroups(msg.sender);
 
         if (permissions.intersection(restriction).isEmpty()) {
-            revert MissingPermissions(caller, permissions, restriction);
+            revert MissingPermissions(msg.sender, permissions, restriction);
         }
 
         _;
@@ -51,7 +50,6 @@ contract PermissionManager is
     }
 
     function initialize(address admin) public initializer() {
-        _setGroupAdmins(0, ADMIN);
         _addGroup(admin, 0);
     }
 
@@ -61,15 +59,15 @@ contract PermissionManager is
     }
 
     function getGroups(address user) public view returns (Masks.Mask) {
-        return _permissions[user].union(PUBLIC);
+        return _permissions[user].union(PUBLIC_MASK);
     }
 
     function getGroupAdmins(uint8 group) public view returns (Masks.Mask) {
-        return _admin[group].union(ADMIN); // Admin have power over all groups
+        return _admin[group].union(ADMIN_MASK); // Admin have power over all groups
     }
 
     function getRequirements(address target, bytes4 selector) public view returns (Masks.Mask) {
-        return _restrictions[target][selector].union(ADMIN); // Admins can call an function
+        return _restrictions[target][selector].union(ADMIN_MASK); // Admins can call an function
     }
 
     // Group management
@@ -92,7 +90,7 @@ contract PermissionManager is
     }
 
     // Group admin management
-    function setGroupAdmins(uint8 group, uint8[] calldata admins) public onlyRole(ADMIN) {
+    function setGroupAdmins(uint8 group, uint8[] calldata admins) public onlyRole(ADMIN_MASK) {
         _setGroupAdmins(group, admins.toMask());
     }
 
@@ -102,7 +100,7 @@ contract PermissionManager is
     }
 
     // Requirement management
-    function setRequirements(address target, bytes4[] calldata selectors, uint8[] calldata groups) public onlyRole(ADMIN) {
+    function setRequirements(address target, bytes4[] calldata selectors, uint8[] calldata groups) public onlyRole(ADMIN_MASK) {
         Masks.Mask mask = groups.toMask();
         for (uint256 i = 0; i < selectors.length; ++i) {
             _setRequirements(target, selectors[i], mask);
@@ -115,5 +113,5 @@ contract PermissionManager is
     }
 
     // upgradeability
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(ADMIN) {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(ADMIN_MASK) {}
 }

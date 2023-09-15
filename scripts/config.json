@@ -1,6 +1,50 @@
 {
-    "token": {
-        "name": "Token Name",
-        "symbol": "Sym"
+    "contracts": {
+        "tokens": [
+            {
+                "name": "Token Name",
+                "symbol": "Sym",
+                "quote": "USD"
+            }
+        ],
+        "fns": {
+            "tokens[]-mint":                [ "operator-daily"                 ],
+            "tokens[]-burn":                [ "operator-exceptional", "burner" ],
+            "tokens[]-pause":               [ "operator-exceptional"           ],
+            "tokens[]-unpause":             [ "operator-exceptional"           ],
+            "tokens[]-transfer":            [ "whitelisted"                    ],
+            "oracles[]-publishPrice":       [ "operator-oracle"                ],
+            "redemption-executeRedemption": [ "operator-daily"                 ],
+            "redemption-registerOutput":    [ "operator-exceptional"           ]
+        }
+    },
+    "roles": {
+        "admin": {
+            "members": []
+        },
+        "operator-exceptional": {
+            "admins": [ "admin" ],
+            "members": []
+        },
+        "operator-daily": {
+            "admins": [ "admin" ],
+            "members": []
+        },
+        "operator-oracle": {
+            "admins": [ "admin" ],
+            "members": []
+        },
+        "burner": {
+            "admins": [ "admin" ],
+            "members": [ "redemption" ]
+        },
+        "whitelister": {
+            "admins": [ "admin" ],
+            "members": []
+        },
+        "whitelisted": {
+            "admins": [ "whitelister" ],
+            "members": [ "redemption" ]
+        }
     }
 }
