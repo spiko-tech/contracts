@@ -570,35 +570,36 @@ describe('Main', function () {
     });
 
     describe('Redemption', function () {
-        beforeEach(async function () {
-            ({ address: this.output } = ethers.Wallet.createRandom());
+        const { address: output } = ethers.Wallet.createRandom();
 
+        beforeEach(async function () {
             // mint tokens
             await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice.address, 1000);
 
             // set authorized output token
             await this.contracts.redemption.registerOutput(
                 this.contracts.token.address,
-                this.output,
+                output,
                 true,
             );
 
             // make operation
             this.makeOp = (overrides = {}) => {
-                const user   = overrides?.user   ?? this.accounts.alice;
-                const input  = overrides?.input  ?? this.contracts.token;
-                const output = overrides?.output ?? this.output;
-                const value  = overrides?.value  ?? 100;
-                const salt   = overrides?.salt   ?? ethers.utils.hexlify(ethers.utils.randomBytes(32));
-                const id     = ethers.utils.solidityKeccak256(
+                const result = {};
+                result.user   = overrides?.user   ?? this.accounts.alice;
+                result.input  = overrides?.input  ?? this.contracts.token;
+                result.output = overrides?.output ?? output;
+                result.value  = overrides?.value  ?? 100;
+                result.salt   = overrides?.salt   ?? ethers.utils.hexlify(ethers.utils.randomBytes(32));
+                result.id     = ethers.utils.solidityKeccak256(
                     [ 'address', 'address', 'address', 'uint256', 'bytes32' ],
-                    [ user?.address ?? user, input?.address ?? input, output?.address ?? output, value, salt ],
+                    [ result.user?.address ?? result.user, result.input?.address ?? result.input, result.output?.address ?? result.output, result.value, result.salt ],
                 );
-                const data   = ethers.utils.defaultAbiCoder.encode(
+                result.data   = ethers.utils.defaultAbiCoder.encode(
                     [ 'address', 'bytes32' ],
-                    [ output?.address ?? output, salt ],
+                    [ result.output?.address ?? result.output, result.salt ],
                 );
-                return { user, input, output, value, salt, id, data };
+                return result;
             }
         });
 
@@ -733,8 +734,65 @@ describe('Main', function () {
         });
 
         describe('admin', function () {
-            it.skip('admin enable output');
-            it.skip('admin disable output');
+            const { address: other } = ethers.Wallet.createRandom();
+
+            describe('enable output', function () {
+                it('authorized', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token.address, other, true))
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(this.contracts.token.address, other, true);
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output, other ]);
+                });
+
+                it('unauthorized', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token.address, other, true))
+                    .to.be.revertedWith('Restricted access');
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+                });
+
+                it('no-effect', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token.address, output, true))
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(this.contracts.token.address, output, true);
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+                });
+            });
+
+            describe('disable output', function () {
+                it('authorized', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token.address, output, false))
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(this.contracts.token.address, output, false);
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ ]);
+                });
+
+                it('unauthorized', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token.address, output, false))
+                    .to.be.revertedWith('Restricted access');
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+                });
+
+                it('no-effect', async function () {
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+
+                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token.address, other, false))
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(this.contracts.token.address, other, false);
+
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token.address)).to.be.deep.equal([ output ]);
+                });
+            });
         });
     });
 });
