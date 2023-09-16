@@ -69,73 +69,105 @@ async function migrate(config = {}, opts = {}) {
     }
 
     // HELPER
-    const getContractByName = name =>
-        name.endsWith('[]')
-        ? Object.values(contracts[name.slice(0, -2)])
-        : [ contracts[name] ];
+    const getContractByName = name => name.endsWith('[]') ? Object.values(contracts[name.slice(0, -2)]) : [ contracts[name] ];
+    const getAddresses      = name => ethers.utils.isAddress(name) ? [ ethers.utils.getAddress(name) ] : getContractByName(name).map(({ address }) => address);
+    const asyncFilter       = (promise, expected, yes, no) => Promise.resolve(promise).then(result => (typeof(expected) == 'function' ? expected(result) : result == expected) ? yes : no);
 
     // GROUP MANAGEMENT
     const ROLES  = Object.keys(config.roles);
-    const ADMIN  = ROLES[0];
-    const IDS    = Object.fromEntries(ROLES.map((role, i) => [ role, i         ]));
-    const MASKS  = Object.fromEntries(ROLES.map((role, i) => [ role, toMask(i) ]));
-    IDS.public   = 255;
-    IDS.PUBLIC   = 255;
-    MASKS.public = toMask(255);
-    MASKS.PUBLIC = toMask(255);
+    const IDS    = Object.assign(Object.fromEntries(ROLES.map((role, i) => [ role, i         ])), { admin: 0,         ADMIN: 0,         public: 255,         PUBLIC: 255         });
+    const MASKS  = Object.assign(Object.fromEntries(ROLES.map((role, i) => [ role, toMask(i) ])), { admin: toMask(0), ADMIN: toMask(0), public: toMask(255), PUBLIC: toMask(255) });
 
     // CHECKS
-    expect([ 'admin', 'ADMIN' ]).to.include(ADMIN, 'First role must be admin or ADMIN');
+    expect([ 'admin', 'ADMIN' ]).to.include(ROLES[0], 'First role must be admin or ADMIN');
     expect(ROLES).to.include.members([].concat(
         ...Object.values(config.roles).map(({ admins = [] }) => admins),
         ...Object.values(config.contracts.fns),
     ), `One roles was not properly declared`);
 
     // CONFIGURATION
-    const txs = await Promise.all([].concat(
-        // Configure role admins
+    // Configure role admins
+    const roleConfigOps =
         Object.entries(config.roles)
             .filter(([ _, { admins } ]) => admins)
-            .map(([ role, { admins } ]) => contracts.manager.getGroupAdmins(IDS[role]).then(current =>
-                current == combine(MASKS[ADMIN], ...admins.map(admin => MASKS[admin]))
-                    ? []
-                    : [ contracts.manager.interface.encodeFunctionData('setGroupAdmins', [ IDS[role], admins.map(admin => IDS[admin]) ]) ]
-            )),
+            .map(([ role, { admins } ]) => asyncFilter(
+                contracts.manager.getGroupAdmins(IDS[role]),
+                combine(MASKS.ADMIN, ...admins.map(admin => MASKS[admin])),
+                null,
+                { fn: 'setGroupAdmins', args: [ IDS[role], admins.map(admin => IDS[admin]) ] },
+            ));
 
-        // Set requirements
+    // Set requirements
+    const fnRequirementOps =
         Object.values(
             Object.entries(config?.contracts?.fns ?? [])
-            .map(([ id, roles ]) => ({
-                name: id.split('-')[0],
-                fn: id.split('-')[1],
-                roles: roles,
-            }))
-            .flatMap(({ name, fn, roles}) => getContractByName(name).map(({ address, interface }) => ({
-                address,
-                selector: interface.getSighash(fn),
-                groups: roles.map(role => IDS[role]),
-            })))
-            .reduce((acc, { address, selector, groups }) => {
-                const key = `${address}-${combine(...groups)}`;
-                acc[key] ??= { address, groups, selectors: [] };
-                acc[key].selectors.push(selector);
-                return acc;
-            }, {})
+                .map(([ id, roles ]) => ({
+                    name: id.split('-')[0],
+                    fn: id.split('-')[1],
+                    roles: roles,
+                }))
+                .flatMap(({ name, fn, roles}) => getContractByName(name).map(({ address, interface }) => ({
+                    address,
+                    selector: interface.getSighash(fn),
+                    groups: roles.map(role => IDS[role]),
+                })))
+                .reduce((acc, { address, selector, groups }) => {
+                    const key = `${address}-${combine(...groups)}`;
+                    acc[key] ??= { address, groups, selectors: [] };
+                    acc[key].selectors.push(selector);
+                    return acc;
+                }, {})
         )
-        .map(({ address, selectors, groups }) => contracts.manager.interface.encodeFunctionData('setRequirements', [ address, selectors, groups ])),
+        .map(({ address, selectors, groups }) =>
+            Promise.all(selectors.map(selector => asyncFilter(
+                contracts.manager.getRequirements(address, selector),
+                combine(...groups.map(toMask)),
+                [],
+                [ selector ],
+            )))
+            .then(blocks => [].concat(...blocks))
+            .then(selectors => selectors.length && { fn: 'setRequirements', args: [ address, selectors, groups ] })
+        );
 
-        // Add members to groups
-        Object.entries(config.roles).flatMap(([ role, { members = [] }]) =>
-            members
-            .flatMap(user => ethers.utils.isAddress(user) ? [ user ] : getContractByName(user).map(({ address }) => address))
-            .map(address => contracts.manager.interface.encodeFunctionData('addGroup', [ address, IDS[role] ]))
-        ),
-    )).then(blocks => [].concat(...blocks));
+    // Add members to groups
+    const membershipOps =
+        Object.entries(config.roles)
+            .flatMap(([ role, { members = [] }]) =>
+                members
+                    .flatMap(getAddresses)
+                    .unique()
+                    .map(address => asyncFilter(
+                        contracts.manager.getGroups(address),
+                        groups => BigInt(groups) & BigInt(MASKS[role]),
+                        null,
+                        { fn: 'addGroup', args: [ address, IDS[role] ] },
+                    ))
+            );
 
-    if (txs.length) {
-        DEBUG(`${txs.length} configurations operations`);
-        await contracts.manager.multicall(txs).then(tx => tx.wait());
-    }
+    // Deployer renounce admin
+    const admins = Object.values(config.roles)[0].members
+        .flatMap(getAddresses)
+        .unique();
+
+    const renounceOps = !admins.includes(deployer.address) && admins.length && { fn: 'remGroup', args: [ deployer.address, IDS.ADMIN ]};
+
+    // all configuration operations
+    const allOps = await Promise.all([
+        ...roleConfigOps,
+        ...fnRequirementOps,
+        ...membershipOps,
+        renounceOps,
+    ]).then(fns => fns.filter(Boolean));
+
+    DEBUG('Configuration calls:')
+    allOps.forEach(({ fn, args }) => DEBUG(`- ${fn}(${args.map(JSON.stringify).join(', ')})`));
+
+    await contracts.manager.multicall(allOps.map(({ fn, args }) => contracts.manager.interface.encodeFunctionData(fn, args)))
+        .then(txPromise => txPromise.wait())
+        .then(({ events }) => {
+            DEBUG('Events:');
+            events.forEach(({ event, args }) => DEBUG(`- ${event}: ${args.join(', ')}`));
+        });
 
     return {
         config,
