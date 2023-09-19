@@ -78,17 +78,17 @@ describe('Main', function () {
 
     it('functions have requirements', async function () {
         // token
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'))).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'     ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'     ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'    ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'  ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer' ))).to.be.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeToAndCall'))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('mint'            ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('burn'            ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('pause'           ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('unpause'         ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token.address, this.contracts.token.interface.getSighash('transfer'        ))).to.be.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
         // oracle
-        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'   ))).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeToAndCall'))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'    ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
         // redemption
-        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'        ))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeToAndCall' ))).to.be.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
     });
@@ -210,7 +210,7 @@ describe('Main', function () {
                     await this.contracts.token.connect(this.accounts.operator).pause();
 
                     await expect(this.contracts.token.connect(this.accounts.alice).transfer(this.accounts.bruce.address, 0))
-                    .to.be.revertedWith('ERC20Pausable: token transfer while paused');
+                    .to.be.revertedWith('EnforcedPause');
                 });
             });
 
@@ -830,29 +830,37 @@ describe('Main', function () {
         describe('re-initialize', function () {
             it('manager', async function () {
                 await expect(this.contracts.manager.initialize(this.accounts.admin.address))
-                .to.be.revertedWith('Initializable: contract is already initialized');
+                .to.be.revertedWith('InvalidInitialization');
             });
 
             it('token', async function () {
                 await expect(this.contracts.token.initialize('Other Name', 'Other Symbol'))
-                .to.be.revertedWith('Initializable: contract is already initialized');
+                .to.be.revertedWith('InvalidInitialization');
             });
 
             it('oracle', async function () {
                 await expect(this.contracts.oracle.initialize(this.contracts.token.address, 'EUR'))
-                .to.be.revertedWith('Initializable: contract is already initialized');
+                .to.be.revertedWith('InvalidInitialization');
             });
 
             // Redemption doesn't have an initializer
         });
 
         describe('upgrade', function () {
+            // Note: since 5.0.0, upgradeTo is no longer available. We need to force the plugin to use upgradeToAndCall.
+            // This is done by using a call. Unfortunatelly, the current version of the plugin doesn't allow us to provide
+            // and empty call, because the call is encoded by the plugin. We use a view/pure function to trick the plugin
+            // into executing upgradeToAndCall with something that has no effect.
+
+            // Also, we need that since 5.0.0 is not well supported by hardhat-upgrades 1.x
+            const unsafeAllow = ['state-variable-assignment', 'missing-public-upgradeto'];
+
             describe('manager', async function () {
                 it('authorized', async function () {
                     await ethers.getContractFactory('PermissionManager', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.manager,
                         factory,
-                        { redeployImplementation: 'always' },
+                        { redeployImplementation: 'always', kind: 'uups', unsafeAllow, call: { fn: 'getGroupAdmins', args: [0] } },
                     ));
                 });
 
@@ -861,7 +869,7 @@ describe('Main', function () {
                         ethers.getContractFactory('PermissionManager', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.manager,
                             factory,
-                            { redeployImplementation: 'always' },
+                            { redeployImplementation: 'always', kind: 'uups', unsafeAllow, call: { fn: 'getGroupAdmins', args: [0] } },
                         ))
                     ).to.be.revertedWith('MissingPermissions').withArgs(this.accounts.other.address, this.MASKS.public, this.MASKS.admin);
                 });
@@ -872,7 +880,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Token', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.token,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'name' },
                     ));
                 });
 
@@ -881,9 +889,9 @@ describe('Main', function () {
                         ethers.getContractFactory('Token', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.token,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'name' },
                         ))
-                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeTo'));
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.token.address, this.contracts.token.interface.getSighash('upgradeToAndCall'));
                 });
             });
 
@@ -892,7 +900,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Oracle', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.oracle,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'token' },
                     ));
                 });
 
@@ -901,9 +909,9 @@ describe('Main', function () {
                         ethers.getContractFactory('Oracle', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.oracle,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'token' },
                         ))
-                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeTo'));
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('upgradeToAndCall'));
                 });
             });
 
@@ -912,7 +920,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Redemption', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.redemption,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                        { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'MAX_DELAY' },
                     ));
                 });
 
@@ -921,9 +929,9 @@ describe('Main', function () {
                         ethers.getContractFactory('Redemption', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.redemption,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ] },
+                            { redeployImplementation: 'always', constructorArgs: [ this.contracts.manager.address ], kind: 'uups', unsafeAllow, call: 'MAX_DELAY' },
                         ))
-                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'));
+                    ).to.be.revertedWith('RestrictedAccess').withArgs(this.accounts.other.address, this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeToAndCall'));
                 });
             });
         });

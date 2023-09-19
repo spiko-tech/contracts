@@ -179,6 +179,6 @@ contract Redemption is
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
-        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
     }
 }

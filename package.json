@@ -23,20 +23,20 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.6.1",
-    "@openzeppelin/contracts": "^4.9.2",
-    "@openzeppelin/contracts-upgradeable": "^4.9.2"
+    "@openzeppelin/contracts": "^5.0.0-rc.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0-rc.0"
   },
   "devDependencies": {
     "@amxx/hre": "^0.1.0-rc.1",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
     "@nomiclabs/hardhat-waffle": "^2.0.6",
-    "@openzeppelin/hardhat-upgrades": "^1.26.0",
-    "chai": "^4.3.7",
-    "debug": "^2.6.9",
+    "@openzeppelin/hardhat-upgrades": "^1.28.0",
+    "chai": "^4.3.8",
+    "debug": "^4.3.4",
     "ethers": "^5.7.2",
-    "hardhat": "^2.16.0",
+    "hardhat": "^2.17.3",
     "lodash.defaultsdeep": "^4.6.1",
-    "solidity-coverage": "^0.8.3",
+    "solidity-coverage": "^0.8.4",
     "yargs": "^17.2.1"
   }
 }

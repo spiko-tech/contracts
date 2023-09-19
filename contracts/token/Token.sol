@@ -57,7 +57,7 @@ contract Token is
     /****************************************************************************************************************
      *                                           Token transfer whitelist                                           *
      ****************************************************************************************************************/
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+    function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
         // sender must be whitelisted, unless its a mint (sender is 0) or its a burn (admin can burn from non-whitelisted account)
         if (from != address(0) && to != address(0) && !authority.canCall(from, address(this), IERC20.transfer.selector)) {
             revert UnauthorizedFrom(address(this), from);
@@ -68,13 +68,13 @@ contract Token is
             revert UnauthorizedTo(address(this), to);
         }
 
-        super._beforeTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
     }
 
     /****************************************************************************************************************
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
-        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
     }
 }

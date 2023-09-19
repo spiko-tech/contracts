@@ -1,5 +1,5 @@
 const { expect }           = require('chai');
-const { ethers }           = require('hardhat');
+const { ethers, upgrades } = require('hardhat');
 const defaultsDeep         = require('lodash.defaultsdeep');
 const { MigrationManager } = require('@amxx/hre/scripts');
 const { toMask, combine }  = require('../test/helpers');
@@ -11,6 +11,9 @@ require('dotenv').config();
 async function migrate(config = {}, opts = {}) {
     config = defaultsDeep(config, DEFAULT);
 
+    // TODO: remove when we can use a newer version of the upgrade plugin
+    upgrades.silenceWarnings();
+    opts.unsafeAllow = ['state-variable-assignment', 'missing-public-upgradeto']; // Needed when using OZ 5.0.0
     opts.noCache   ??= process.env.FORCE;
     opts.noConfirm ??= process.env.FORCE;
 
