@@ -33,6 +33,18 @@ argv.coverage && require('solidity-coverage');
 argv.etherscan && require('@nomiclabs/hardhat-etherscan');
 argv.report && require('hardhat-gas-reporter');
 
+
+const accounts = [
+  argv.mnemonic   && { mnemonic: argv.mnemonic },
+  argv.privateKey && [argv.privateKey],
+].find(Boolean);
+
+const networkNames = [
+  'mainnet',
+  'goerli',
+  'sepolia',
+];
+
 module.exports = {
   solidity: {
     compilers: [
@@ -54,27 +66,15 @@ module.exports = {
   },
   networks: {},
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
   },
   gasReporter: {
     currency: 'USD',
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    coinmarketcap: argv.coinmarketcap,
   },
 };
 
 DEBUG(JSON.stringify(module.exports.solidity.compilers, null, 2))
-
-const accounts = [
-  argv.mnemonic   && { mnemonic: argv.mnemonic },
-  argv.privateKey && [argv.privateKey],
-].find(Boolean);
-
-const networkNames = [
-  'mainnet',
-  'goerli',
-  'sepolia',
-];
-
 Object.assign(
   module.exports.networks,
   accounts && Object.fromEntries(networkNames.map(name => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)),
