@@ -2,9 +2,14 @@
     "contracts": {
         "tokens": [
             {
-                "name": "Token Name",
-                "symbol": "Sym",
+                "name": "Spiko USD",
+                "symbol": "spUSD",
                 "quote": "USD"
+            },
+            {
+                "name": "Spiko EUR",
+                "symbol": "spEUR",
+                "quote": "EUR"
             }
         ],
         "fns": {
@@ -14,8 +19,7 @@
             "tokens[]-unpause":             [ "operator-exceptional"           ],
             "tokens[]-transfer":            [ "whitelisted"                    ],
             "oracles[]-publishPrice":       [ "operator-oracle"                ],
-            "redemption-executeRedemption": [ "operator-daily"                 ],
-            "redemption-registerOutput":    [ "operator-exceptional"           ]
+            "redemption-executeRedemption": [ "operator-daily"                 ]
         }
     },
     "roles": {
@@ -24,15 +28,15 @@
         },
         "operator-exceptional": {
             "admins": [ "admin" ],
-            "members": []
+            "members": ["0x8A60Ba7784F34bD8Fd35575cf3fDc68BfFb9DBf8"]
         },
         "operator-daily": {
             "admins": [ "admin" ],
-            "members": []
+            "members": ["0xBA6752EEf2f0385227b8f498c9ba0Dc3D7a5649f"]
         },
         "operator-oracle": {
             "admins": [ "admin" ],
-            "members": []
+            "members": ["0xe50d1c59c16e0bd2C2E60dF42Aa566D6b054A5fc"]
         },
         "burner": {
             "admins": [ "admin" ],
@@ -40,11 +44,14 @@
         },
         "whitelister": {
             "admins": [ "admin" ],
-            "members": []
+            "members": ["0xc5CC10B03937a135C6334a10Ce740f3aEF104F6A"]
         },
         "whitelisted": {
             "admins": [ "whitelister" ],
-            "members": [ "redemption" ]
+            "members": [ "redemption", 
+                        "0x2E757Dc3cea931dE182B0bEC293E3f7ad8a39d30", 
+                        "0xd0B9Ab988b6432F6beCdD5EEe2dB360eD608Eb9e", 
+                        "0x95e5f528b108855F07e8F918050eba57ee723D8f"]
         }
     }
 }
