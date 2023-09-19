@@ -48,10 +48,12 @@
         },
         "whitelisted": {
             "admins": [ "whitelister" ],
-            "members": [ "redemption", 
-                        "0x2E757Dc3cea931dE182B0bEC293E3f7ad8a39d30", 
-                        "0xd0B9Ab988b6432F6beCdD5EEe2dB360eD608Eb9e", 
-                        "0x95e5f528b108855F07e8F918050eba57ee723D8f"]
+            "members": [
+                "redemption",
+                "0x2E757Dc3cea931dE182B0bEC293E3f7ad8a39d30",
+                "0xd0B9Ab988b6432F6beCdD5EEe2dB360eD608Eb9e",
+                "0x95e5f528b108855F07e8F918050eba57ee723D8f"
+            ]
         }
     }
 }
