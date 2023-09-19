@@ -27,7 +27,7 @@ SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use HARDFORK=paris for Sepolia and HARDFORK=shanghai for GOERLI
+Note: use `HARDFORK=paris` for Sepolia and `HARDFORK=shanghai` for GOERLI
 
 - deploy
 
