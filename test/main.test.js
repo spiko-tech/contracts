@@ -89,8 +89,8 @@ describe('Main', function () {
         expect(await this.contracts.manager.getRequirements(this.contracts.oracle.address, this.contracts.oracle.interface.getSighash('publishPrice'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
         // redemption
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('upgradeTo'        ))).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('executeRedemption'))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
-        expect(await this.contracts.manager.getRequirements(this.contracts.redemption.address, this.contracts.redemption.interface.getSighash('registerOutput'   ))).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
     });
 
     describe('Token', function () {

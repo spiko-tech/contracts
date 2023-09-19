@@ -64,7 +64,13 @@ module.exports = {
       },
     ],
   },
-  networks: {},
+  networks: {
+    hardhat: {
+      mining: argv.slow ? { auto: false, interval: [3000, 6000] } : undefined,
+      forking: argv.fork ? { url: argv.fork } : undefined,
+    },
+    ...Object.fromEntries(networkNames.map(name => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)),
+  },
   etherscan: {
     apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
   },
@@ -75,9 +81,3 @@ module.exports = {
 };
 
 DEBUG(JSON.stringify(module.exports.solidity.compilers, null, 2))
-Object.assign(
-  module.exports.networks,
-  accounts && Object.fromEntries(networkNames.map(name => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)),
-  argv.slow && { hardhat: { mining: { auto: false, interval: [3000, 6000] } } }, // Simulate a slow chain locally
-  argv.fork && { hardhat: { forking: { url: argv.fork } } }, // Simulate a mainnet fork
-);
