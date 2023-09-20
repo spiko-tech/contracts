@@ -1,8 +1,8 @@
 const { expect }           = require('chai');
-const { ethers, upgrades } = require('hardhat');
 const defaultsDeep         = require('lodash.defaultsdeep');
+const { ethers           } = require('hardhat');
 const { MigrationManager } = require('@amxx/hre/scripts');
-const { toMask, combine }  = require('../test/helpers');
+const { toMask, combine  } = require('../test/helpers');
 const DEFAULT              = require('./config');
 const DEBUG                = require('debug')('migration');
 
@@ -11,9 +11,6 @@ require('dotenv').config();
 async function migrate(config = {}, opts = {}) {
     config = defaultsDeep(config, DEFAULT);
 
-    // TODO: remove when we can use a newer version of the upgrade plugin
-    upgrades.silenceWarnings();
-    opts.unsafeAllow = ['state-variable-assignment', 'missing-public-upgradeto']; // Needed when using OZ 5.0.0
     opts.noCache   ??= process.env.FORCE;
     opts.noConfirm ??= process.env.FORCE;
 
@@ -38,16 +35,16 @@ async function migrate(config = {}, opts = {}) {
             [ deployer.address ],
             { ...opts, kind: 'uups' },
         ));
-    DEBUG(`manager: ${contracts.manager.address}`);
+    DEBUG(`manager: ${contracts.manager.target}`);
 
     contracts.redemption = await ethers.getContractFactory('Redemption')
         .then(factory => migration.migrate(
             'redemption',
             factory,
             [],
-            { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.address ] },
+            { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
         ));
-    DEBUG(`redemption: ${contracts.redemption.address}`);
+    DEBUG(`redemption: ${contracts.redemption.target}`);
 
     for (const { name, symbol, quote } of config?.contracts?.tokens || []) {
         // deploy token
@@ -56,24 +53,24 @@ async function migrate(config = {}, opts = {}) {
                 `token-${symbol}`,
                 factory,
                 [ name, symbol ],
-                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.address ] },
+                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
             ));
-        DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].address}`);
+        DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
 
         // deploy oracle (if quote is set)
         contracts.oracles[symbol] = quote && await ethers.getContractFactory('Oracle')
             .then(factory => migration.migrate(
                 `oracle-${symbol}`,
                 factory,
-                [ contracts.tokens[symbol].address, quote ],
-                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.address ] },
+                [ contracts.tokens[symbol].target, quote ],
+                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
             ));
-        DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol].address}`);
+        DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol].target}`);
     }
 
     // HELPER
     const getContractByName = name => name.endsWith('[]') ? Object.values(contracts[name.slice(0, -2)]) : [ contracts[name] ];
-    const getAddresses      = name => ethers.utils.isAddress(name) ? [ ethers.utils.getAddress(name) ] : getContractByName(name).map(({ address }) => address);
+    const getAddresses      = name => ethers.isAddress(name) ? [ ethers.getAddress(name) ] : getContractByName(name).map(({ target }) => target);
     const asyncFilter       = (promise, expected, yes, no) => Promise.resolve(promise).then(result => (typeof(expected) == 'function' ? expected(result) : result == expected) ? yes : no);
 
     // GROUP MANAGEMENT
@@ -109,9 +106,9 @@ async function migrate(config = {}, opts = {}) {
                     fn: id.split('-')[1],
                     roles: roles,
                 }))
-                .flatMap(({ name, fn, roles}) => getContractByName(name).map(({ address, interface }) => ({
-                    address,
-                    selector: interface.getSighash(fn),
+                .flatMap(({ name, fn, roles}) => getContractByName(name).map(({ target, interface }) => ({
+                    address: target,
+                    selector: interface.getFunction(fn).selector,
                     groups: roles.map(role => IDS[role]),
                 })))
                 .reduce((acc, { address, selector, groups }) => {
@@ -167,9 +164,9 @@ async function migrate(config = {}, opts = {}) {
 
     await contracts.manager.multicall(allOps.map(({ fn, args }) => contracts.manager.interface.encodeFunctionData(fn, args)))
         .then(txPromise => txPromise.wait())
-        .then(({ events }) => {
+        .then(({ logs }) => {
             DEBUG('Events:');
-            events.forEach(({ event, args }) => DEBUG(`- ${event}: ${args.join(', ')}`));
+            logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args.join(', ')}`));
         });
 
     return {
