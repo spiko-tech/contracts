@@ -32,5 +32,11 @@ Note: use `HARDFORK=paris` for Sepolia and `HARDFORK=shanghai` for GOERLI
 - deploy
 
 ```sh
-npx hardhat run scripts/migrate.js --network sepolia
+npx hardhat run scripts/migrate.js --network <sepolia or goerli>
 ```
+
+- verify contracts and publish source code 
+
+  ```sh
+npx hardhat verify --network <sepolia or goerli> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>
+  ```
