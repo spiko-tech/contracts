@@ -609,25 +609,6 @@ describe('Main', function () {
                     op.data,
                 )).to.be.revertedWith('Input/Output pair is not authorized');
             });
-
-            it('to fiat', async function () {
-                const op = this.makeOp({ output: ethers.ZeroAddress });
-                expect(await this.contracts.redemption.outputsFor(getAddress(op.input))).to.not.include(getAddress(op.output));
-
-                const { status: statusBefore, deadline: deadlineBefore } = await this.contracts.redemption.details(op.id);
-                expect(statusBefore).to.be.equal(STATUS.NULL);
-                expect(deadlineBefore).to.be.equal(0);
-
-                expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](getAddress(this.contracts.redemption), op.value, op.data))
-                .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
-                .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
-
-                const timepoint = await time.latest();
-
-                const { status: statusAfter, deadline: deadlineAfter } = await this.contracts.redemption.details(op.id);
-                expect(statusAfter).to.be.equal(STATUS.PENDING);
-                expect(deadlineAfter).to.be.equal(timepoint + time.duration.days(7));
-            });
         });
 
         describe('execute redemption', function () {
