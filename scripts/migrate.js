@@ -46,13 +46,13 @@ async function migrate(config = {}, opts = {}) {
         ));
     DEBUG(`redemption: ${contracts.redemption.target}`);
 
-    for (const { name, symbol, quote } of config?.contracts?.tokens || []) {
+    for (const { name, symbol, decimals, quote } of config?.contracts?.tokens || []) {
         // deploy token
         contracts.tokens[symbol] = await ethers.getContractFactory('Token')
             .then(factory => migration.migrate(
                 `token-${symbol}`,
                 factory,
-                [ name, symbol ],
+                [ name, symbol, decimals ],
                 { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
             ));
         DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);

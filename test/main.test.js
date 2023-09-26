@@ -57,7 +57,7 @@ describe('Main', function () {
         expect(await this.contracts.token.authority()).to.be.equal(getAddress(this.contracts.manager));
         expect(await this.contracts.token.name()).to.be.equal(this.config.contracts.tokens.find(Boolean).name);
         expect(await this.contracts.token.symbol()).to.be.equal(this.config.contracts.tokens.find(Boolean).symbol);
-        expect(await this.contracts.token.decimals()).to.be.equal(18);
+        expect(await this.contracts.token.decimals()).to.be.equal(this.config.contracts.tokens.find(Boolean).decimals);
         expect(await this.contracts.token.totalSupply()).to.be.equal(0);
 
         expect(await this.contracts.oracle.authority()).to.be.equal(getAddress(this.contracts.manager));
@@ -815,7 +815,7 @@ describe('Main', function () {
             });
 
             it('token', async function () {
-                await expect(this.contracts.token.initialize('Other Name', 'Other Symbol'))
+                await expect(this.contracts.token.initialize('Other Name', 'Other Symbol', 18))
                 .to.be.revertedWithCustomError(this.contracts.token, 'InvalidInitialization');
             });
 

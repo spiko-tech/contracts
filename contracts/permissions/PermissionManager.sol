@@ -9,7 +9,7 @@ import "../interfaces/IAuthority.sol";
 import "../utils/Mask.sol";
 
 /// @custom:security-contact TODO
-/// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 contract PermissionManager is
     IAuthority,
     Initializable,
