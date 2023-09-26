@@ -17,17 +17,19 @@ npm run compile
 ```sh
 # Compilation
 COMPILER=0.8.21
-HARDFORK=paris
+EVM_VERSION=paris
 MODE=production
 
 # Migration
 DEBUG=migration
 PRIVATE_KEY=
+MAINNET_NODE=
+GOERLI_NODE=
 SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use `HARDFORK=paris` for Sepolia and `HARDFORK=shanghai` for GOERLI
+Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for GOERLI
 
 - deploy
 
