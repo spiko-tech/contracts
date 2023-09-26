@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUp
 import "./extensions/ERC1363Upgradeable.sol";
 import "../permissions/PermissionManaged.sol";
 
-/// @custom:security-contact TODO
+/// @custom:security-contact security@spiko.tech
 contract Token is
     ERC20Upgradeable,
     ERC20PausableUpgradeable,

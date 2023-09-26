@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "../permissions/PermissionManaged.sol";
 
-/// @custom:security-contact TODO
+/// @custom:security-contact security@spiko.tech
 contract Oracle is
     AggregatorV3Interface,
     Initializable,
@@ -23,8 +23,8 @@ contract Oracle is
     using SafeCast     for *;
 
     IERC20Metadata       public           token;
-    uint256              public constant  version  = 0; // TODO: confirm
-    uint8                public constant  decimals = 18; // TODO: confirm
+    uint256              public constant  version  = 0;
+    uint8                public constant  decimals = 18;
     string               public           description; // set per-instance at initialization
     Checkpoints.Trace208 private          _history;
 
