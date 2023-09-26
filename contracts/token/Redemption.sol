@@ -82,11 +82,8 @@ contract Redemption is
         IERC20 input  = IERC20(msg.sender);
         (address output, bytes32 salt) = abi.decode(data, (address, bytes32));
 
-        // Check that output is fiat (address(0)), or if the output is registered for the input
-        require(
-            output == address(0) || _outputs[input].contains(output),
-            "Input/Output pair is not authorized"
-        );
+        // Check the output is registered for the input
+        require(_outputs[input].contains(output), "Input/Output pair is not authorized");
 
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, value, salt);
@@ -179,6 +176,6 @@ contract Redemption is
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
-        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
     }
 }

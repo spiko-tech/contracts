@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/Checkpoints.sol";
+import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "../permissions/PermissionManaged.sol";
 
@@ -19,17 +19,16 @@ contract Oracle is
     UUPSUpgradeable,
     Multicall
 {
-    // TODO: use Trace208
-    using Checkpoints  for Checkpoints.Trace224;
+    using Checkpoints  for Checkpoints.Trace208;
     using SafeCast     for *;
 
     IERC20Metadata       public           token;
     uint256              public constant  version  = 0; // TODO: confirm
     uint8                public constant  decimals = 18; // TODO: confirm
     string               public           description; // set per-instance at initialization
-    Checkpoints.Trace224 private          _history;
+    Checkpoints.Trace208 private          _history;
 
-    event Update(uint32 timepoint, int256 price, uint256 round);
+    event Update(uint48 timepoint, int256 price, uint256 round);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) PermissionManaged(_authority) {
@@ -48,13 +47,13 @@ contract Oracle is
         return _history.latest().toInt256();
     }
 
-    function getHistoricalPrice(uint32 _timepoint) public view returns (int256) {
+    function getHistoricalPrice(uint48 _timepoint) public view returns (int256) {
         return _history.upperLookup(_timepoint).toInt256();
     }
 
     // Note: we are not using block.timestamp for the timepoint because of the mining delay for the update transaction
     // and the fact that prices represent a value at a specific "update" time (according to regulation).
-    function publishPrice(uint32 timepoint, uint224 price) public restricted() returns (uint80) {
+    function publishPrice(uint48 timepoint, uint208 price) public restricted() returns (uint80) {
         uint80 roundId = _history.length().toUint80();
         _history.push(timepoint, price);
 
@@ -82,7 +81,7 @@ contract Oracle is
         )
     {
         require(_roundId < _history.length(), "No checkpoint for roundId");
-        Checkpoints.Checkpoint224 memory ckpt = _history._checkpoints[_roundId];
+        Checkpoints.Checkpoint208 memory ckpt = _history._checkpoints[_roundId];
 
         return (
             _roundId,
@@ -111,6 +110,6 @@ contract Oracle is
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
-        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
     }
 }

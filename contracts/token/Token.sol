@@ -12,7 +12,6 @@ import "./extensions/ERC1363Upgradeable.sol";
 import "../permissions/PermissionManaged.sol";
 
 /// @custom:security-contact TODO
-/// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 contract Token is
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
@@ -25,14 +24,21 @@ contract Token is
     error UnauthorizedFrom(address token, address user);
     error UnauthorizedTo(address token, address user);
 
+    uint8 private m_decimals;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) PermissionManaged(_authority) {
         _disableInitializers();
     }
 
-    function initialize(string calldata _name, string calldata _symbol) public initializer() {
+    function initialize(string calldata _name, string calldata _symbol, uint8 _decimals) public initializer() {
         __ERC20_init(_name, _symbol);
         __ERC20Permit_init(_name);
+        m_decimals = _decimals;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return m_decimals;
     }
 
     /****************************************************************************************************************
@@ -57,7 +63,7 @@ contract Token is
     /****************************************************************************************************************
      *                                           Token transfer whitelist                                           *
      ****************************************************************************************************************/
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+    function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
         // sender must be whitelisted, unless its a mint (sender is 0) or its a burn (admin can burn from non-whitelisted account)
         if (from != address(0) && to != address(0) && !authority.canCall(from, address(this), IERC20.transfer.selector)) {
             revert UnauthorizedFrom(address(this), from);
@@ -68,13 +74,13 @@ contract Token is
             revert UnauthorizedTo(address(this), to);
         }
 
-        super._beforeTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
     }
 
     /****************************************************************************************************************
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
-        _checkRestricted(UUPSUpgradeable.upgradeTo.selector);
+        _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
     }
 }

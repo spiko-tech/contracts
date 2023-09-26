@@ -4,11 +4,13 @@
             {
                 "name": "Spiko USD",
                 "symbol": "spUSD",
+                "decimals": 9,
                 "quote": "USD"
             },
             {
                 "name": "Spiko EUR",
                 "symbol": "spEUR",
+                "decimals": 9,
                 "quote": "EUR"
             }
         ],
