@@ -2,12 +2,17 @@
 
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "./Token.sol";
+import { IAuthority        } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20            } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { Initializable     } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable   } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { SafeERC20         } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast          } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { EnumerableSet     } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { PermissionManaged } from "../permissions/PermissionManaged.sol";
+import { IERC1363Receiver  } from "./extensions/IERC1363.sol";
+import { Token             } from "./Token.sol";
 
 /// @custom:security-contact security@spiko.tech
 contract Redemption is

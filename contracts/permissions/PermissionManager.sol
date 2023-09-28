@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
-import "../interfaces/IAuthority.sol";
-import "../utils/Mask.sol";
+import { IAuthority      } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { Initializable   } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Multicall       } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { Masks           } from "../utils/Masks.sol";
 
 /// @custom:security-contact security@spiko.tech
 /// @custom:oz-upgrades-unsafe-allow state-variable-immutable

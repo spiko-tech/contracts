@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import "../interfaces/IAuthority.sol";
+import { IAuthority } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
 
 /// @custom:security-contact security@spiko.tech
 /// @custom:oz-upgrades-unsafe-allow state-variable-immutable

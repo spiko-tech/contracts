@@ -2,14 +2,15 @@
 
 pragma solidity ^0.8.20;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
-import "../permissions/PermissionManaged.sol";
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import { IAuthority            } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20Metadata        } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import { UUPSUpgradeable       } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable         } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { SafeCast              } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Checkpoints           } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import { Multicall             } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { PermissionManaged     } from "../permissions/PermissionManaged.sol";
 
 /// @custom:security-contact security@spiko.tech
 contract Oracle is

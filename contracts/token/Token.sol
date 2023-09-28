@@ -2,14 +2,15 @@
 
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import "./extensions/ERC1363Upgradeable.sol";
-import "../permissions/PermissionManaged.sol";
+import { IAuthority               } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20                   } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { UUPSUpgradeable          } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Multicall                } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { ERC20Upgradeable         } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { ERC20PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import { ERC20PermitUpgradeable   } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import { PermissionManaged        } from "../permissions/PermissionManaged.sol";
+import { ERC1363Upgradeable       } from "./extensions/ERC1363Upgradeable.sol";
 
 /// @custom:security-contact security@spiko.tech
 contract Token is

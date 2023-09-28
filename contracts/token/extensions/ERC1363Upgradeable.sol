@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "./IERC1363.sol";
+import { ERC20Upgradeable                            } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { IERC1363, IERC1363Spender, IERC1363Receiver } from "./IERC1363.sol";
 
 /// @custom:security-contact security@spiko.tech
 abstract contract ERC1363Upgradeable is IERC1363, ERC20Upgradeable {
