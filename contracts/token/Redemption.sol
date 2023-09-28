@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./Token.sol";
 
-/// @custom:security-contact TODO
+/// @custom:security-contact security@spiko.tech
 contract Redemption is
     IERC1363Receiver,
     Initializable,

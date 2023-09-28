@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/Multicall.sol";
 import "../interfaces/IAuthority.sol";
 import "../utils/Mask.sol";
 
-/// @custom:security-contact TODO
+/// @custom:security-contact security@spiko.tech
 /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 contract PermissionManager is
     IAuthority,

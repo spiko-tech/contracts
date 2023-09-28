@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-/// @custom:security-contact TODO
+/// @custom:security-contact security@spiko.tech
 library Masks {
     using Masks for *;
 
