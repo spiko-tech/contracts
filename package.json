@@ -22,12 +22,12 @@
     "url": "https://github.com/spiko-tech/contracts/issues"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.6.1",
+    "@chainlink/contracts": "^0.7.1",
     "@openzeppelin/contracts": "^5.0.0-rc.0",
     "@openzeppelin/contracts-upgradeable": "^5.0.0-rc.0"
   },
   "devDependencies": {
-    "@amxx/hre": "https://github.com/Amxx/amxx-hre",
+    "@amxx/hre": "^0.2.1",
     "lodash.defaultsdeep": "^4.6.1"
   }
 }

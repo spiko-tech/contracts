@@ -838,7 +838,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('PermissionManager', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.manager,
                         factory,
-                        { redeployImplementation: 'always', kind: 'uups', call: { fn: 'getGroupAdmins', args: [0] } },
+                        { redeployImplementation: 'always' },
                     ));
                 });
 
@@ -847,7 +847,7 @@ describe('Main', function () {
                         ethers.getContractFactory('PermissionManager', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.manager,
                             factory,
-                            { redeployImplementation: 'always', kind: 'uups', call: { fn: 'getGroupAdmins', args: [0] } },
+                            { redeployImplementation: 'always' },
                         ))
                     ).to.be.revertedWithCustomError(this.contracts.manager, 'MissingPermissions').withArgs(getAddress(this.accounts.other), this.MASKS.public, this.MASKS.admin);
                 });
@@ -858,7 +858,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Token', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.token,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'name' },
+                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ]},
                     ));
                 });
 
@@ -867,7 +867,7 @@ describe('Main', function () {
                         ethers.getContractFactory('Token', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.token,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'name' },
+                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ] },
                         ))
                     ).to.be.revertedWithCustomError(this.contracts.token, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.token), this.contracts.token.interface.getFunction('upgradeToAndCall').selector);
                 });
@@ -878,7 +878,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Oracle', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.oracle,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'token' },
+                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ] },
                     ));
                 });
 
@@ -887,7 +887,7 @@ describe('Main', function () {
                         ethers.getContractFactory('Oracle', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.oracle,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'token' },
+                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ] },
                         ))
                     ).to.be.revertedWithCustomError(this.contracts.oracle, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.oracle), this.contracts.oracle.interface.getFunction('upgradeToAndCall').selector);
                 });
@@ -898,7 +898,7 @@ describe('Main', function () {
                     await ethers.getContractFactory('Redemption', this.accounts.admin).then(factory => upgrades.upgradeProxy(
                         this.contracts.redemption,
                         factory,
-                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'MAX_DELAY' },
+                        { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ] },
                     ));
                 });
 
@@ -907,7 +907,7 @@ describe('Main', function () {
                         ethers.getContractFactory('Redemption', this.accounts.other).then(factory => upgrades.upgradeProxy(
                             this.contracts.redemption,
                             factory,
-                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ], kind: 'uups', call: 'MAX_DELAY' },
+                            { redeployImplementation: 'always', constructorArgs: [ getAddress(this.contracts.manager) ] },
                         ))
                     ).to.be.revertedWithCustomError(this.contracts.redemption, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('upgradeToAndCall').selector);
                 });
