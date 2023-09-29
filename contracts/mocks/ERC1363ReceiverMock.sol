@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../token/extensions/IERC1363.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import { IERC1363Spender  } from "@openzeppelin/contracts/interfaces/IERC1363Spender.sol";
 
 contract ERC1363ReceiverMock is IERC1363Receiver, IERC1363Spender {
     event TransferReceived(address operator, address from, uint256 value, bytes data);

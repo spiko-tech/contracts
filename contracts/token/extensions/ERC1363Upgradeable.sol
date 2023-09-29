@@ -2,11 +2,19 @@
 
 pragma solidity ^0.8.20;
 
-import { ERC20Upgradeable                            } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { IERC1363, IERC1363Spender, IERC1363Receiver } from "./IERC1363.sol";
+import { IERC165          } from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import { IERC1363         } from "@openzeppelin/contracts/interfaces/IERC1363.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import { IERC1363Spender  } from "@openzeppelin/contracts/interfaces/IERC1363Spender.sol";
+import { ERC165           } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @custom:security-contact security@spiko.tech
-abstract contract ERC1363Upgradeable is IERC1363, ERC20Upgradeable {
+abstract contract ERC1363Upgradeable is IERC1363, ERC20Upgradeable, ERC165 {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC165) returns (bool) {
+        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
+    }
+
     function transferAndCall(address to, uint256 value) public override returns (bool) {
         return transferAndCall(to, value, bytes(""));
     }

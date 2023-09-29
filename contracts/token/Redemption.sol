@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 
 import { IAuthority        } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
 import { IERC20            } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { IERC1363Receiver  } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 import { Initializable     } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable   } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { SafeERC20         } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -11,7 +12,6 @@ import { SafeCast          } from "@openzeppelin/contracts/utils/math/SafeCast.s
 import { EnumerableSet     } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { PermissionManaged } from "../permissions/PermissionManaged.sol";
-import { IERC1363Receiver  } from "./extensions/IERC1363.sol";
 import { Token             } from "./Token.sol";
 
 /// @custom:security-contact security@spiko.tech
@@ -24,7 +24,7 @@ contract Redemption is
 {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for *;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for Token;
 
     enum Status {
         NULL,
@@ -84,7 +84,7 @@ contract Redemption is
         bytes calldata data
     ) external returns (bytes4) {
         // Fetch input params
-        IERC20 input  = IERC20(msg.sender);
+        Token input = Token(msg.sender);
         (address output, bytes32 salt) = abi.decode(data, (address, bytes32));
 
         // Check the output is registered for the input
@@ -110,7 +110,7 @@ contract Redemption is
      */
     function executeRedemption(
         address user,
-        IERC20  input,
+        Token   input,
         address output,
         uint256 inputValue,
         bytes32 salt,
@@ -127,7 +127,7 @@ contract Redemption is
         details[id].status = Status.EXECUTED;
 
         // Burn input tokens.
-        Token(address(input)).burn(address(this), inputValue);
+        input.burn(address(this), inputValue);
 
         // Emit event
         emit RedemptionExecuted(id, data);
@@ -139,7 +139,7 @@ contract Redemption is
      */
     function cancelRedemption(
         address user,
-        IERC20  input,
+        Token   input,
         address output,
         uint256 inputValue,
         bytes32 salt
