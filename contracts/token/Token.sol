@@ -27,8 +27,7 @@ contract Token is
     error UnauthorizedFrom(address token, address user);
     error UnauthorizedTo(address token, address user);
 
-    address private m_owner;
-    uint8   private m_decimals;
+    uint8 private m_decimals;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) PermissionManaged(_authority) {
