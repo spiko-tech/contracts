@@ -6,6 +6,7 @@ import { IAuthority               } from "@openzeppelin/contracts/access/manager
 import { IERC20                   } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { UUPSUpgradeable          } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Multicall                } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { OwnableUpgradeable       } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ERC20Upgradeable         } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ERC20PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import { ERC20PermitUpgradeable   } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
@@ -14,6 +15,7 @@ import { ERC1363Upgradeable       } from "./extensions/ERC1363Upgradeable.sol";
 
 /// @custom:security-contact security@spiko.tech
 contract Token is
+    OwnableUpgradeable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
     ERC20PermitUpgradeable,
@@ -33,6 +35,7 @@ contract Token is
     }
 
     function initialize(string calldata _name, string calldata _symbol, uint8 _decimals) public initializer() {
+        // __Ownable_init(); do not initialize ownership. By default owner is 0 until an admin sets it.
         __ERC20_init(_name, _symbol);
         __ERC20Permit_init(_name);
         m_decimals = _decimals;
@@ -59,6 +62,11 @@ contract Token is
 
     function unpause() public restricted() {
         _unpause();
+    }
+
+    // Admin has the ability to force reset ownership
+    function setOwnership(address newOwner) public restricted() {
+        _transferOwnership(newOwner);
     }
 
     /****************************************************************************************************************
