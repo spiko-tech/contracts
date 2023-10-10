@@ -178,10 +178,10 @@ describe('Main', function () {
                                         promise = this.contracts.token.connect(operator).transferFrom(from, to, amount);
                                         break;
                                     case 'transferAndCall':
-                                        promise = this.contracts.token.connect(from)['transferAndCall(address,uint256)'](to, amount);
+                                        promise = this.contracts.token.connect(from).getFunction('transferAndCall(address,uint256)')(to, amount);
                                         break;
                                     case 'transferFromAndCall':
-                                        promise = this.contracts.token.connect(operator)['transferFromAndCall(address,address,uint256)'](from, to, amount);
+                                        promise = this.contracts.token.connect(operator).getFunction('transferFromAndCall(address,address,uint256)')(from, to, amount);
                                         break;
                                 }
 
@@ -237,6 +237,167 @@ describe('Main', function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).transfer(this.accounts.bruce, 0))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.bruce), 0);
                 });
+            });
+        });
+
+        describe('ERC1363', function () {
+            const value = 1000n;
+
+            beforeEach(async function () {
+                this.mock = await deploy('ERC1363ReceiverMock');
+
+                await this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.mock, this.IDS.whitelisted),
+                await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, value);
+            });
+
+            describe('transferAndCall', function () {
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256)')(this.mock, value))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('onTransferReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived invalid result');
+                });
+            });
+
+            describe('transferFromAndCall', function () {
+                beforeEach(async function () {
+                    await this.contracts.token.connect(this.accounts.alice).approve(this.accounts.bruce, ethers.MaxUint256);
+                });
+
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256)')(this.accounts.alice, this.mock, value))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.bruce), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.bruce), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('onTransferReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived invalid result');
+                });
+            });
+
+            describe('approveAndCall', function () {
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256)')(this.mock, value))
+                    .to.emit(this.contracts.token, 'Approval').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'ApprovalReceived').withArgs(getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Approval').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'ApprovalReceived').withArgs(getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('onApprovalReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onApprovalReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(getAddress(this.mock), value, data))
+                    .to.be.revertedWith('ERC1363: onApprovalReceived invalid result');
+                });
+            });
+        });
+
+        describe('Ownable', function () {
+            it('Set initial ownership', async function () {
+                expect(await this.contracts.token.owner()).to.be.equal(ethers.ZeroAddress);
+
+                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice))
+                .to.emit(this.contracts.token, 'OwnershipTransferred')
+                .withArgs(ethers.ZeroAddress, getAddress(this.accounts.alice));
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.alice));
+            });
+
+            it('Reset ownership', async function () {
+                await this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice);
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.alice));
+
+                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.bruce))
+                .to.emit(this.contracts.token, 'OwnershipTransferred')
+                .withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.bruce));
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.bruce));
+            });
+
+            it('Setting ownership is access restricted', async function () {
+                await expect(this.contracts.token.connect(this.accounts.alice).setOwnership(this.accounts.alice))
+                .to.be.revertedWithCustomError(this.contracts.oracle, 'RestrictedAccess').withArgs(getAddress(this.accounts.alice), getAddress(this.contracts.token), this.contracts.token.interface.getFunction('setOwnership').selector);
             });
         });
     });
@@ -572,7 +733,7 @@ describe('Main', function () {
                 expect(statusBefore).to.be.equal(STATUS.NULL);
                 expect(deadlineBefore).to.be.equal(0);
 
-                await expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption, op.value, op.data))
+                await expect(await op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
                 .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
 
@@ -587,17 +748,17 @@ describe('Main', function () {
                 const op = this.makeOp();
 
                 // first call is ok
-                await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption, op.value, op.data);
+                await op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data);
 
                 // reusing the same operation details with the same salt is not ok
-                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption, op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.be.revertedWith('ID already used')
             });
 
             it('unauthorized output', async function () {
                 const op = this.makeOp({ output: this.accounts.other });
 
-                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](this.contracts.redemption, op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.be.revertedWith('Input/Output pair is not authorized');
             });
 
@@ -617,7 +778,7 @@ describe('Main', function () {
             beforeEach(async function () {
                 this.operation = this.makeOp();
 
-                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
+                await this.operation.input.connect(this.operation.user).getFunction('transferAndCall(address,uint256,bytes)')(
                     this.contracts.redemption,
                     this.operation.value,
                     this.operation.data,
@@ -694,7 +855,7 @@ describe('Main', function () {
             beforeEach(async function () {
                 this.operation = this.makeOp();
 
-                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
+                await this.operation.input.connect(this.operation.user).getFunction('transferAndCall(address,uint256,bytes)')(
                     this.contracts.redemption,
                     this.operation.value,
                     this.operation.data,
@@ -801,7 +962,7 @@ describe('Main', function () {
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
                     await expect(this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token, other, false))
-                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), other.address, false);
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(other), false);
 
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
                 });

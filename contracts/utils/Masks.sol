@@ -20,6 +20,7 @@ library Masks {
         return set;
     }
 
+    /// Not used by this project, and not covered by test. Kept for completeness. Use at your own risks.
     function get(Mask self, uint8 group) internal pure returns (bool) {
         return !group.toMask().intersection(self).isEmpty();
     }
@@ -44,6 +45,7 @@ library Masks {
         return m1.intersection(m2.complement());
     }
 
+    /// Not used by this project, and not covered by test. Kept for completeness. Use at your own risks.
     function symetric_difference(Mask m1, Mask m2) internal pure returns (Mask) {
         return m1.union(m2).difference(m1.intersection(m2));
     }
