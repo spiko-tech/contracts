@@ -1,9 +1,9 @@
-const { expect                } = require('chai');
-const { ethers, upgrades      } = require('hardhat');
-const { loadFixture, time     } = require('@nomicfoundation/hardhat-network-helpers');
-const { deploy                } = require('@amxx/hre/scripts');
-const { migrate               } = require('../scripts/migrate');
-const { Enum, toMask, combine } = require('./helpers');
+const { expect                           } = require('chai');
+const { ethers, upgrades                 } = require('hardhat');
+const { loadFixture, time                } = require('@nomicfoundation/hardhat-network-helpers');
+const { deploy                           } = require('@amxx/hre/scripts');
+const { migrate                          } = require('../scripts/migrate');
+const { Enum, toMask, combine, getDomain } = require('./helpers');
 
 const STATUS = Enum('NULL', 'PENDING', 'EXECUTED', 'CANCELED');
 
@@ -95,6 +95,25 @@ describe('Main', function () {
     });
 
     describe('Token', function () {
+        describe('EIP721', function () {
+            beforeEach(async function () {
+                this.expectedDomain = await ethers.provider.getNetwork().then(network => ({
+                    name: this.config.contracts.tokens.find(Boolean).name,
+                    version: '1',
+                    chainId: network.chainId,
+                    verifyingContract: getAddress(this.contracts.token),
+                }));
+            })
+
+            it('domain is correct', async function () {
+                expect(await getDomain(this.contracts.token)).to.be.deep.equal(this.expectedDomain);
+            });
+
+            it('domain separator is correct', async function () {
+                expect(await this.contracts.token.DOMAIN_SEPARATOR()).to.be.equal(ethers.TypedDataEncoder.hashDomain(this.expectedDomain));
+            });
+        });
+
         describe('ERC20', function () {
             describe('mint', function () {
                 it('authorized', async function () {
