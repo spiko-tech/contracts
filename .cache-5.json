@@ -1,14 +1,34 @@
 {
-	"manager-pending": "0xe4236c90b89b3b0bac0e6769f61a67648cb1c31270d52b4b92fc2e05251ab7a8",
-	"manager": "0xCCDeB536f6FB8bB1b827F6Bc0f42423C479D314B",
-	"redemption-pending": "0xbfb459357511493a04daba767b6b743685d7c17aa3f92de0482b2feb2aacebe5",
-	"redemption": "0xB3D0AdBAf785A71583038b411c4E3c0aA446Cbc4",
-	"token-spUSD-pending": "0x445b52824e110e81b75e000c073ddb49b87f1847b1d59f202fc8e65fce5c4230",
-	"token-spUSD": "0x34f2D08d1521738844A04AB207d2dB95B0657Cb3",
-	"oracle-spUSD-pending": "0xd2a5f3529f2265cd6231105e13bbd57d2e4b3744df0088feb8abe5a485d76114",
-	"oracle-spUSD": "0x7b4965BB43D8FAbE8dA2015963f63A87eE1c1565",
-	"token-spEUR-pending": "0x58e4a07b9f8f4aacac9046c3c61c601cc452d4d87c8d134fbf99540e96b8ace2",
-	"token-spEUR": "0xd9c05989D326c67388A0721DEB1C12eE1D911B11",
-	"oracle-spEUR-pending": "0x97d4b1bb84e5c67a324eafb165cefa3ee038c00bb81dc7efe01875851f0104c4",
-	"oracle-spEUR": "0x603A11eBCa7a5839F6c767Cb054BEb214aCd4EDB"
+	"manager": {
+		"txHash": "0xde0e8ab631ade4441ab837f5f23e0595f9d73c696163f790ccd9a371a55f3d1e",
+		"address": "0x9a133DD9ea88A99085b1970E7533c14Ee6668fBd"
+	},
+	"redemption": {
+		"txHash": "0x484089e772220e254bcc5558cba5d12eff9902340fc26027eb472afa3b71f263",
+		"address": "0xde357F02243417c23503c8c518a0abCeD29f4e26"
+	},
+	"token-spUSD": {
+		"txHash": "0x8b97677bba0616f4e364773e04d0928d92923441bf6ce5dff26dfb1ad6ea6f97",
+		"address": "0x7bb39e7AFdCa46B678BfdDA5Bfc956240a70199c"
+	},
+	"oracle-spUSD": {
+		"txHash": "0xf8a5fda8ac993732b255413927a3af20b664225eafe6b41f4f43eda08cbaa036",
+		"address": "0xee4d27EBb4061891832Ac6220BbF31bc1F4dB1f8"
+	},
+	"token-spEUR": {
+		"txHash": "0xeae3a7eb8346ea031f3d4302ed5ce81ae0e10109d93b6d25534b73902fb239dc",
+		"address": "0x3a7ad9678913AcC180a4b74cEb74bB93565F96e4"
+	},
+	"oracle-spEUR": {
+		"txHash": "0xae56cf8afee3b584c977a48f0f97c5babc2a76a0228ce484eadcb47e20015ad7",
+		"address": "0xFF2bE20f0Ff4DA6C7E9b8417E79961d6FFa726B2"
+	},
+	"token-koEUR": {
+		"txHash": "0xccc7fbaef20e0a46752041e3ad3a615de492262d9c16748d013f305bd7ab3046",
+		"address": "0xc30B828A0180917362005b5d10B4368262b526cd"
+	},
+	"oracle-koEUR": {
+		"txHash": "0x58030d13d71be241342547d35a707e49ff40958d02d0d47fa33fa881d16d5669",
+		"address": "0x398E37238F5705bF058fE3f62f690df43d76bcE7"
+	}
 }
