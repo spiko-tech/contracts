@@ -1,4 +1,4 @@
-import { store, BigInt, Bytes, log } from '@graphprotocol/graph-ts'
+import { store, Bytes } from '@graphprotocol/graph-ts'
 
 import { events, transactions } from '@amxx/graphprotocol-utils'
 import { fetchAccount  } from '@openzeppelin/subgraphs/src/fetch/account'
