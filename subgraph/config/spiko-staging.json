@@ -24,7 +24,7 @@
       "name": "spUSD-oracle",
       "address": "0xee4d27EBb4061891832Ac6220BbF31bc1F4dB1f8",
       "startBlock": 9876829,
-      "module": []
+      "module": [ "oracle" ]
     },
     {
       "name": "spEUR-token",
@@ -36,7 +36,7 @@
       "name": "spEUR-oracle",
       "address": "0xFF2bE20f0Ff4DA6C7E9b8417E79961d6FFa726B2",
       "startBlock": 9876833,
-      "module": []
+      "module": [ "oracle" ]
     },
     {
       "name": "koEUR-token",
@@ -48,7 +48,7 @@
       "name": "koEUR-oracle",
       "address": "0x398E37238F5705bF058fE3f62f690df43d76bcE7",
       "startBlock": 9876835,
-      "module": []
+      "module": [ "oracle" ]
     }
   ],
   "deploy": [
