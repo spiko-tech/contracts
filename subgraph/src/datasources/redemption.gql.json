@@ -1,15 +1,23 @@
 [{
+    "name": "Account",
+    "fields": [
+        { "name": "id",               "type": "Bytes!"                                        },
+        { "name": "redemptions",      "type": "Redemption!",          "derived": "user"       }
+    ]
+},{
     "name": "ERC20Contract",
     "fields": [
-        { "name": "id",              "type": "Bytes!"                                        },
-        { "name": "inputFor",        "type": "IOPair!",              "derived": "input"      },
-        { "name": "outputFor",       "type": "IOPair!",              "derived": "output"     }
+        { "name": "id",               "type": "Bytes!"                                        },
+        { "name": "inputFor",         "type": "Redemption!",          "derived": "input"      },
+        { "name": "outputFor",        "type": "Redemption!",          "derived": "output"     },
+        { "name": "inputEnabledFor",  "type": "IOPair!",              "derived": "input"      },
+        { "name": "outputEnabledFor", "type": "IOPair!",              "derived": "output"     }
     ]
 },{
     "name": "IOPair",
     "fields": [
-        { "name": "input",           "type": "ERC20Contract!"                                },
-        { "name": "output",          "type": "ERC20Contract!"                                }
+        { "name": "input",            "type": "ERC20Contract!"                                },
+        { "name": "output",           "type": "ERC20Contract!"                                }
     ]
 },{
     "name": "RedemptionStatus",
@@ -21,47 +29,47 @@
 },{
     "name": "Redemption",
     "fields": [
-        { "name": "id",              "type": "Bytes!"                                        },
-        { "name": "status",          "type": "RedemptionStatus!"                             },
-        { "name": "user",            "type": "Account!"                                      },
-        { "name": "input",           "type": "ERC20Contract!"                                },
-        { "name": "inputValue",      "type": "BigDecimal!"                                   },
-        { "name": "inputValueExact", "type": "BigInt!"                                       },
-        { "name": "output",          "type": "ERC20Contract!"                                },
-        { "name": "salt",            "type": "Bytes!"                                        },
-        { "name": "initiated",       "type": "RedemptionInitiated!", "derived": "redemption" },
-        { "name": "executed",        "type": "RedemptionExecuted!",  "derived": "redemption" },
-        { "name": "canceled",        "type": "RedemptionCanceled!",  "derived": "redemption" }
+        { "name": "id",               "type": "Bytes!"                                        },
+        { "name": "status",           "type": "RedemptionStatus!"                             },
+        { "name": "user",             "type": "Account!"                                      },
+        { "name": "input",            "type": "ERC20Contract!"                                },
+        { "name": "inputValue",       "type": "BigDecimal!"                                   },
+        { "name": "inputValueExact",  "type": "BigInt!"                                       },
+        { "name": "output",           "type": "ERC20Contract!"                                },
+        { "name": "salt",             "type": "Bytes!"                                        },
+        { "name": "initiated",        "type": "RedemptionInitiated!", "derived": "redemption" },
+        { "name": "executed",         "type": "RedemptionExecuted!",  "derived": "redemption" },
+        { "name": "canceled",         "type": "RedemptionCanceled!",  "derived": "redemption" }
     ]
 },{
     "name": "RedemptionInitiated",
     "parent": "Event",
     "immutable": true,
     "fields": [
-        { "name": "emitter",         "type": "Account!"                                      },
-        { "name": "transaction",     "type": "Transaction!"                                  },
-        { "name": "timestamp",       "type": "BigInt!"                                       },
-        { "name": "redemption",      "type": "Redemption!"                                   }
+        { "name": "emitter",          "type": "Account!"                                      },
+        { "name": "transaction",      "type": "Transaction!"                                  },
+        { "name": "timestamp",        "type": "BigInt!"                                       },
+        { "name": "redemption",       "type": "Redemption!"                                   }
     ]
 },{
     "name": "RedemptionExecuted",
     "parent": "Event",
     "immutable": true,
     "fields": [
-        { "name": "emitter",         "type": "Account!"                                      },
-        { "name": "transaction",     "type": "Transaction!"                                  },
-        { "name": "timestamp",       "type": "BigInt!"                                       },
-        { "name": "redemption",      "type": "Redemption!"                                   },
-        { "name": "data",            "type": "Bytes!"                                        }
+        { "name": "emitter",          "type": "Account!"                                      },
+        { "name": "transaction",      "type": "Transaction!"                                  },
+        { "name": "timestamp",        "type": "BigInt!"                                       },
+        { "name": "redemption",       "type": "Redemption!"                                   },
+        { "name": "data",             "type": "Bytes!"                                        }
     ]
 },{
     "name": "RedemptionCanceled",
     "parent": "Event",
     "immutable": true,
     "fields": [
-        { "name": "emitter",         "type": "Account!"                                      },
-        { "name": "transaction",     "type": "Transaction!"                                  },
-        { "name": "timestamp",       "type": "BigInt!"                                       },
-        { "name": "redemption",      "type": "Redemption!"                                   }
+        { "name": "emitter",          "type": "Account!"                                      },
+        { "name": "transaction",      "type": "Transaction!"                                  },
+        { "name": "timestamp",        "type": "BigInt!"                                       },
+        { "name": "redemption",       "type": "Redemption!"                                   }
     ]
 }]
