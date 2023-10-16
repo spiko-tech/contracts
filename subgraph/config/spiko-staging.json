@@ -12,7 +12,7 @@
       "name": "redemption",
       "address": "0xde357F02243417c23503c8c518a0abCeD29f4e26",
       "startBlock": 9876824,
-      "module": []
+      "module": [ "redemption" ]
     },
     {
       "name": "spUSD-token",
