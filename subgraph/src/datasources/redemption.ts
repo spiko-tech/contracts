@@ -42,6 +42,10 @@ export function handleRedemptionInitiated(event: RedemptionInitiatedEvent): void
 }
 
 export function handleRedemptionExecuted(event: RedemptionExecutedEvent): void {
+	let redemption    = new Redemption(event.params.id);
+	redemption.status = 'EXECUTED'
+	redemption.save()
+
 	let ev         = new RedemptionExecuted(events.id(event))
 	ev.emitter     = fetchAccount(event.address).id
 	ev.transaction = transactions.log(event).id
@@ -52,6 +56,10 @@ export function handleRedemptionExecuted(event: RedemptionExecutedEvent): void {
 }
 
 export function handleRedemptionCanceled(event: RedemptionCanceledEvent): void {
+	let redemption    = new Redemption(event.params.id);
+	redemption.status = 'CANCELED'
+	redemption.save()
+
 	let ev         = new RedemptionCanceled(events.id(event))
 	ev.emitter     = fetchAccount(event.address).id
 	ev.transaction = transactions.log(event).id

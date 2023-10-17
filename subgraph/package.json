@@ -11,7 +11,7 @@
     "build": "npm run build:codegen && npm run build:compile",
     "build:codegen": "graph codegen ${SUBGRAPH:-generated/spiko-staging.subgraph.yaml}",
     "build:compile": "graph build ${SUBGRAPH:-generated/spiko-staging.subgraph.yaml}",
-    "deploy:hosted": "config/deploy.sh"
+    "deploy": "config/deploy.sh"
   },
   "devDependencies": {
     "@amxx/graphprotocol-utils": "^1.1.0",
