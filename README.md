@@ -29,7 +29,7 @@ SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for GOERLI
+Note: use `EVM_VERSION=paris` for Sepolia / Mumbai or `EVM_VERSION=shanghai` for GOERLI / Polygon and Mainnet
 
 - deploy
 
