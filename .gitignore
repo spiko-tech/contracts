@@ -10,5 +10,7 @@ node_modules/
 !.env.example
 !.cache-1.json
 !.cache-5.json
+!.cache-5-dev.json
+!.cache-5-staging.json
 !.cache-11155111.json
 !.openzeppelin
