@@ -1,5 +1,5 @@
 {
-  "output": "./generated/spiko-staging.",
+  "output": "./generated/staging-goerli.",
   "chain": "goerli",
   "datasources": [
     {
@@ -12,46 +12,44 @@
       "name": "redemption",
       "address": "0xde357F02243417c23503c8c518a0abCeD29f4e26",
       "startBlock": 9876824,
-      "module": [ "redemption" ]
+      "module": ["redemption"]
     },
     {
       "name": "spUSD-token",
       "address": "0x7bb39e7AFdCa46B678BfdDA5Bfc956240a70199c",
       "startBlock": 9876826,
-      "module": [ "erc20" ]
+      "module": ["erc20"]
     },
     {
       "name": "spUSD-oracle",
       "address": "0xee4d27EBb4061891832Ac6220BbF31bc1F4dB1f8",
       "startBlock": 9876829,
-      "module": [ "oracle" ]
+      "module": ["oracle"]
     },
     {
       "name": "spEUR-token",
       "address": "0x3a7ad9678913AcC180a4b74cEb74bB93565F96e4",
       "startBlock": 9876831,
-      "module": [ "erc20" ]
+      "module": ["erc20"]
     },
     {
       "name": "spEUR-oracle",
       "address": "0xFF2bE20f0Ff4DA6C7E9b8417E79961d6FFa726B2",
       "startBlock": 9876833,
-      "module": [ "oracle" ]
+      "module": ["oracle"]
     },
     {
       "name": "koEUR-token",
       "address": "0xc30B828A0180917362005b5d10B4368262b526cd",
       "startBlock": 9876834,
-      "module": [ "erc20" ]
+      "module": ["erc20"]
     },
     {
       "name": "koEUR-oracle",
       "address": "0x398E37238F5705bF058fE3f62f690df43d76bcE7",
       "startBlock": 9876835,
-      "module": [ "oracle" ]
+      "module": ["oracle"]
     }
   ],
-  "deploy": [
-    { "type": "hosted-service", "name": "amxx/spiko-staging" }
-  ]
+  "deploy": [{ "type": "hosted-service", "name": "spiko-tech/staging-goerli" }]
 }
