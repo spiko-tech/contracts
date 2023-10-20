@@ -752,7 +752,7 @@ describe('Main', function () {
                 expect(statusBefore).to.be.equal(STATUS.NULL);
                 expect(deadlineBefore).to.be.equal(0);
 
-                await expect(await op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
                 .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
 

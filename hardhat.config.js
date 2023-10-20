@@ -20,7 +20,7 @@ const { argv } = require('yargs/yargs')(process.argv.slice(2))
     // APIs
     coinmarketcap: { type: 'string' },
     etherscan:     { type: 'string' },
-  })
+  });
 
 require("@nomicfoundation/hardhat-toolbox");
 require('@nomicfoundation/hardhat-ethers');
@@ -89,6 +89,7 @@ module.exports = {
     apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
   },
   gasReporter: {
+    showMethodSig: true,
     currency: 'USD',
     coinmarketcap: argv.coinmarketcap,
   },
