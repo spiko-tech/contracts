@@ -1,0 +1,55 @@
+{
+  "output": "./generated/dev-mumbai.",
+  "chain": "mumbai",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x051263c00a9c581303946E12669E4ef1dBC2e31B",
+      "startBlock": 41357631,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0x69e5a8087C5ad86D5A5c24b9B5Fd5aF0D7491B28",
+      "startBlock": 41357631,
+      "module": ["redemption"]
+    },
+    {
+      "name": "spUSD-token",
+      "address": "0x38385E17381E13241Ea8cF280103e7114969a5D3",
+      "startBlock": 41357631,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spUSD-oracle",
+      "address": "0x27C5dF8bE18fA0880A3F6F3DF2F65A041CFa4158",
+      "startBlock": 41357631,
+      "module": ["oracle"]
+    },
+    {
+      "name": "spEUR-token",
+      "address": "0xCb6f4A3949c1F707f8765a7a12A975E4Eb0a2851",
+      "startBlock": 41357631,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spEUR-oracle",
+      "address": "0x2932e839Faa1b1a50b95B361296919E5efb54FC4",
+      "startBlock": 41357631,
+      "module": ["oracle"]
+    },
+    {
+      "name": "koEUR-token",
+      "address": "0xac441Bcfdae70316Df658124a18B052f37369D6E",
+      "startBlock": 41357631,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koEUR-oracle",
+      "address": "0x2B70b04Da7FcE4A2ceDBFEBF0Ecde31017c1b28f",
+      "startBlock": 41357631,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [{ "type": "hosted-service", "name": "spiko-tech/dev-mumbai" }]
+}
