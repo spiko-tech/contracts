@@ -3,7 +3,7 @@
 - install dependencies
 
 ```sh
-npm i
+yarn install
 ```
 
 - compile
@@ -29,7 +29,7 @@ SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for GOERLI
+Note: use `EVM_VERSION=paris` for Sepolia / Mumbai or `EVM_VERSION=shanghai` for GOERLI / Polygon and Mainnet
 
 - deploy
 
@@ -37,7 +37,7 @@ Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for GOERLI
 npx hardhat run scripts/migrate.js --network <sepolia or goerli>
 ```
 
-- verify contracts and publish source code 
+- verify contracts and publish source code
 
 ```sh
 npx hardhat verify --network <sepolia or goerli> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>

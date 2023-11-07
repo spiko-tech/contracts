@@ -27,7 +27,7 @@ async function fixture() {
                 'operator-exceptional': { members: [ accounts.operator                            ].map(getAddress) },
                 'operator-daily':       { members: [ accounts.operator                            ].map(getAddress) },
                 'operator-oracle':      { members: [ accounts.operator                            ].map(getAddress) },
-                'burner':               { members: [ 'redemption'                                 ].map(getAddress) },
+                burner:                 { members: [ 'redemption'                                 ].map(getAddress) },
                 whitelister:            { members: [ accounts.whitelister                         ].map(getAddress) },
                 whitelisted:            { members: [ accounts.alice, accounts.bruce, 'redemption' ].map(getAddress) },
             },

@@ -1,62 +1,75 @@
 {
-    "contracts": {
-        "tokens": [
-            {
-                "name": "Spiko USD",
-                "symbol": "spUSD",
-                "decimals": 9,
-                "quote": "USD"
-            },
-            {
-                "name": "Spiko EUR",
-                "symbol": "spEUR",
-                "decimals": 9,
-                "quote": "EUR"
-            }
-        ],
-        "fns": {
-            "tokens[]-mint":                [ "operator-daily"                 ],
-            "tokens[]-burn":                [ "operator-exceptional", "burner" ],
-            "tokens[]-pause":               [ "operator-exceptional"           ],
-            "tokens[]-unpause":             [ "operator-exceptional"           ],
-            "tokens[]-setOwnership":        [ "operator-exceptional"           ],
-            "tokens[]-transfer":            [ "whitelisted"                    ],
-            "oracles[]-publishPrice":       [ "operator-oracle"                ],
-            "redemption-executeRedemption": [ "operator-daily"                 ]
-        }
-    },
-    "roles": {
-        "admin": {
-            "members": []
-        },
-        "operator-exceptional": {
-            "admins": [ "admin" ],
-            "members": ["0x8A60Ba7784F34bD8Fd35575cf3fDc68BfFb9DBf8"]
-        },
-        "operator-daily": {
-            "admins": [ "admin" ],
-            "members": ["0xBA6752EEf2f0385227b8f498c9ba0Dc3D7a5649f"]
-        },
-        "operator-oracle": {
-            "admins": [ "admin" ],
-            "members": ["0xe50d1c59c16e0bd2C2E60dF42Aa566D6b054A5fc"]
-        },
-        "burner": {
-            "admins": [ "admin" ],
-            "members": [ "redemption" ]
-        },
-        "whitelister": {
-            "admins": [ "admin" ],
-            "members": ["0xc5CC10B03937a135C6334a10Ce740f3aEF104F6A"]
-        },
-        "whitelisted": {
-            "admins": [ "whitelister" ],
-            "members": [
-                "redemption",
-                "0x2E757Dc3cea931dE182B0bEC293E3f7ad8a39d30",
-                "0xd0B9Ab988b6432F6beCdD5EEe2dB360eD608Eb9e",
-                "0x95e5f528b108855F07e8F918050eba57ee723D8f"
-            ]
-        }
+  "contracts": {
+    "tokens": [
+      {
+        "name": "Spiko USD",
+        "symbol": "spUSD",
+        "decimals": 6,
+        "quote": "USD"
+      },
+      {
+        "name": "Spiko EUR",
+        "symbol": "spEUR",
+        "decimals": 6,
+        "quote": "EUR"
+      },
+      {
+        "name": "Kospi EUR",
+        "symbol": "koEUR",
+        "decimals": 6,
+        "quote": "EUR"
+      }
+    ],
+    "fns": {
+      "tokens[]-mint": ["operator-daily"],
+      "tokens[]-burn": ["operator-exceptional", "burner"],
+      "tokens[]-pause": ["operator-exceptional"],
+      "tokens[]-unpause": ["operator-exceptional"],
+      "tokens[]-setOwnership": ["operator-exceptional"],
+      "tokens[]-transfer": ["whitelisted"],
+      "oracles[]-publishPrice": ["operator-oracle"],
+      "redemption-executeRedemption": ["operator-daily"]
     }
+  },
+  "roles": {
+    "admin": {
+      "members": ["0xCeb9e6617F2D7757458Caedda39A440DC9117208"]
+    },
+    "operator-exceptional": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "operator-daily": {
+      "admins": ["admin"],
+      "members": ["0x88A17d8e6CC579FdE258a9926896E095A0f3502a"]
+    },
+    "operator-oracle": {
+      "admins": ["admin"],
+      "members": ["0xb670eb861Cf7b420594cDfcd6e81cEDAFC80F53b"]
+    },
+    "burner": {
+      "admins": ["admin"],
+      "members": ["redemption"]
+    },
+    "whitelister": {
+      "admins": ["admin"],
+      "members": ["0xeebE02084E54Bc449d974E25B36b38f74350d8A3"]
+    },
+    "whitelisted": {
+      "admins": ["whitelister"],
+      "members": [
+        "redemption",
+        "0x2E757Dc3cea931dE182B0bEC293E3f7ad8a39d30",
+        "0xd0B9Ab988b6432F6beCdD5EEe2dB360eD608Eb9e",
+        "0x95e5f528b108855F07e8F918050eba57ee723D8f",
+        "0xf71F2015B729522e8f72b238E4cB51942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5",
+        "0x22f4F216e08a8D124e7AaBB06FeD8e18bEd237d4",
+        "0xd1C93147D5faFbd4eF48dc224AB5c492E5826742",
+        "0xFD69b07a9da7955d6CBf73E51d81Ed4303862437",
+        "0x3dD0C7Db33cDdc31Aed428f04037FdC649DE95b8"
+      ]
+    }
+  }
 }
