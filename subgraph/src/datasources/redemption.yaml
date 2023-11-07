@@ -15,6 +15,8 @@
       abis:
         - name: Redemption
           file: {root}/../artifacts/contracts/token/Redemption.sol/Redemption.json
+        - name: IERC20
+          file: {root}/node_modules/@openzeppelin/contracts/build/contracts/IERC20Metadata.json
       eventHandlers:
         - event: RedemptionInitiated(indexed bytes32,indexed address,indexed address,address,uint256,bytes32)
           handler: handleRedemptionInitiated
