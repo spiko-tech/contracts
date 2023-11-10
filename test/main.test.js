@@ -91,6 +91,7 @@ describe('Main', function () {
         // redemption
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('upgradeToAndCall' ).selector)).to.be.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('registerOutput'   ).selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('setMinimum'       ).selector)).to.be.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('executeRedemption').selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
     });
 
@@ -791,6 +792,27 @@ describe('Main', function () {
                     op.data,
                 )).to.be.revertedWith('Input/Output pair is not authorized');
             });
+
+            describe('minimum amount', function () {
+                it('just enough', async function () {
+                    const op = this.makeOp();
+
+                    await this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, op.value);
+
+                    await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
+                    .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
+                    .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
+                });
+
+                it('not enough', async function () {
+                    const op = this.makeOp();
+
+                    await this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, op.value + 1);
+
+                    await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
+                    .to.be.rejectedWith("Minimum redemption amount  not reached")
+                });
+            });
         });
 
         describe('execute redemption', function () {
@@ -984,6 +1006,28 @@ describe('Main', function () {
                     .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(other), false);
 
                     expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
+                });
+            });
+
+            describe('set minimum', function () {
+                const amount = ethers.WeiPerEther;
+
+                it('authorized', async function () {
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, amount))
+                    .to.emit(this.contracts.redemption, 'MinimumUpdated').withArgs(getAddress(this.contracts.token), amount);
+
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(amount);
+                });
+
+                it('unauthorized', async function () {
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.other).setMinimum(this.contracts.token, amount))
+                    .to.be.revertedWithCustomError(this.contracts.redemption, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('setMinimum').selector);
+
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
                 });
             });
         });

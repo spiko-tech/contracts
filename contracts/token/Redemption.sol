@@ -40,12 +40,14 @@ contract Redemption is
 
     uint48                                       public constant MAX_DELAY = 7 days;
     mapping(bytes32 => Details                 ) public          details;
+    mapping(IERC20  => uint256                 ) public          minimum;
     mapping(IERC20  => EnumerableSet.AddressSet) private         _outputs;
 
     event RedemptionInitiated(bytes32 indexed id, address indexed user, IERC20 indexed input, address output, uint256 inputValue, bytes32 salt);
     event RedemptionExecuted(bytes32 indexed id, bytes data);
     event RedemptionCanceled(bytes32 indexed id);
     event EnableOutput(IERC20 indexed input, address output, bool enable);
+    event MinimumUpdated(IERC20 indexed input, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) PermissionManaged(_authority) {
@@ -89,6 +91,7 @@ contract Redemption is
 
         // Check the output is registered for the input
         require(_outputs[input].contains(output), "Input/Output pair is not authorized");
+        require(minimum[input] <= value, "Minimum redemption amount  not reached");
 
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, value, salt);
@@ -175,6 +178,12 @@ contract Redemption is
         }
 
         emit EnableOutput(input, output, enable);
+    }
+
+    function setMinimum(IERC20 input, uint256 amount) external restricted() {
+        minimum[input] = amount;
+
+        emit MinimumUpdated(input, amount);
     }
 
     /****************************************************************************************************************
