@@ -1,9 +1,9 @@
-const { expect                } = require('chai');
-const { ethers, upgrades      } = require('hardhat');
-const { loadFixture, time     } = require('@nomicfoundation/hardhat-network-helpers');
-const { deploy                } = require('@amxx/hre/scripts');
-const { migrate               } = require('../scripts/migrate');
-const { Enum, toMask, combine } = require('./helpers');
+const { expect                           } = require('chai');
+const { ethers, upgrades                 } = require('hardhat');
+const { loadFixture, time                } = require('@nomicfoundation/hardhat-network-helpers');
+const { deploy                           } = require('@amxx/hre/scripts');
+const { migrate                          } = require('../scripts/migrate');
+const { Enum, toMask, combine, getDomain } = require('./helpers');
 
 const STATUS = Enum('NULL', 'PENDING', 'EXECUTED', 'CANCELED');
 
@@ -27,7 +27,7 @@ async function fixture() {
                 'operator-exceptional': { members: [ accounts.operator                            ].map(getAddress) },
                 'operator-daily':       { members: [ accounts.operator                            ].map(getAddress) },
                 'operator-oracle':      { members: [ accounts.operator                            ].map(getAddress) },
-                'burner':               { members: [ 'redemption'                                 ].map(getAddress) },
+                burner:                 { members: [ 'redemption'                                 ].map(getAddress) },
                 whitelister:            { members: [ accounts.whitelister                         ].map(getAddress) },
                 whitelisted:            { members: [ accounts.alice, accounts.bruce, 'redemption' ].map(getAddress) },
             },
@@ -68,75 +68,95 @@ describe('Main', function () {
     });
 
     it('accounts have permissions', async function () {
-        expect(await this.contracts.manager.getGroups(getAddress(this.contracts.redemption))).to.be.equal(combine(this.MASKS.public, this.MASKS.burner, this.MASKS.whitelisted));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.admin      ))).to.be.equal(combine(this.MASKS.public, this.MASKS.admin));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.operator   ))).to.be.equal(combine(this.MASKS.public, this.MASKS['operator-daily'], this.MASKS['operator-exceptional'], this.MASKS['operator-oracle']));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.whitelister))).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelister));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.alice      ))).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.bruce      ))).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
-        expect(await this.contracts.manager.getGroups(getAddress(this.accounts.chris      ))).to.be.equal(combine(this.MASKS.public));
+        expect(await this.contracts.manager.getGroups(this.contracts.redemption)).to.be.equal(combine(this.MASKS.public, this.MASKS.burner, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.admin      )).to.be.equal(combine(this.MASKS.public, this.MASKS.admin));
+        expect(await this.contracts.manager.getGroups(this.accounts.operator   )).to.be.equal(combine(this.MASKS.public, this.MASKS['operator-daily'], this.MASKS['operator-exceptional'], this.MASKS['operator-oracle']));
+        expect(await this.contracts.manager.getGroups(this.accounts.whitelister)).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelister));
+        expect(await this.contracts.manager.getGroups(this.accounts.alice      )).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.bruce      )).to.be.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getGroups(this.accounts.chris      )).to.be.equal(combine(this.MASKS.public));
     });
 
     it('functions have requirements', async function () {
         // token
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('upgradeToAndCall').selector)).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('mint'            ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('burn'            ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('pause'           ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('unpause'         ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.token), this.contracts.token.interface.getFunction('transfer'        ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('upgradeToAndCall').selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('mint'            ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('burn'            ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('pause'           ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('unpause'         ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('transfer'        ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
         // oracle
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.oracle), this.contracts.oracle.interface.getFunction('upgradeToAndCall').selector)).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.oracle), this.contracts.oracle.interface.getFunction('publishPrice'    ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle, this.contracts.oracle.interface.getFunction('upgradeToAndCall').selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.oracle, this.contracts.oracle.interface.getFunction('publishPrice'    ).selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-oracle']));
         // redemption
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('upgradeToAndCall' ).selector)).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('registerOutput'   ).selector)).to.be.equal(combine(this.MASKS.admin));
-        expect(await this.contracts.manager.getRequirements(getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('executeRedemption').selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('upgradeToAndCall' ).selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('registerOutput'   ).selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('setMinimum'       ).selector)).to.be.equal(combine(this.MASKS.admin));
+        expect(await this.contracts.manager.getRequirements(this.contracts.redemption, this.contracts.redemption.interface.getFunction('executeRedemption').selector)).to.be.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
     });
 
     describe('Token', function () {
+        describe('EIP721', function () {
+            beforeEach(async function () {
+                this.expectedDomain = await ethers.provider.getNetwork().then(network => ({
+                    name: this.config.contracts.tokens.find(Boolean).name,
+                    version: '1',
+                    chainId: network.chainId,
+                    verifyingContract: getAddress(this.contracts.token),
+                }));
+            })
+
+            it('domain is correct', async function () {
+                expect(await getDomain(this.contracts.token)).to.be.deep.equal(this.expectedDomain);
+            });
+
+            it('domain separator is correct', async function () {
+                expect(await this.contracts.token.DOMAIN_SEPARATOR()).to.be.equal(ethers.TypedDataEncoder.hashDomain(this.expectedDomain));
+            });
+        });
+
         describe('ERC20', function () {
             describe('mint', function () {
                 it('authorized', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.alice), 1000))
+                    await expect(this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, 1000))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(ethers.ZeroAddress, getAddress(this.accounts.alice), 1000);
                 });
 
                 it('unauthorized caller (need operator)', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.alice).mint(getAddress(this.accounts.alice), 1000))
+                    await expect(this.contracts.token.connect(this.accounts.alice).mint(this.accounts.alice, 1000))
                     .to.be.revertedWithCustomError(this.contracts.token, 'RestrictedAccess').withArgs(getAddress(this.accounts.alice), getAddress(this.contracts.token), this.contracts.token.interface.getFunction('mint').selector);
                 });
 
                 it('unauthorized to (need whitelisted)', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.chris), 1000))
+                    await expect(this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris, 1000))
                     .to.be.revertedWithCustomError(this.contracts.token, 'UnauthorizedTo').withArgs(getAddress(this.contracts.token), getAddress(this.accounts.chris));
                 });
             });
 
             describe('burn', function () {
                 beforeEach(async function () {
-                    await this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.alice), 1000)
+                    await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, 1000)
                 });
 
                 it('authorized', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.operator).burn(getAddress(this.accounts.alice), 100))
+                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.alice, 100))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), ethers.ZeroAddress, 100);
                 });
 
                 it('unauthorized caller (need operator)', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.alice).burn(getAddress(this.accounts.alice), 100))
+                    await expect(this.contracts.token.connect(this.accounts.alice).burn(this.accounts.alice, 100))
                     .to.be.revertedWithCustomError(this.contracts.token, 'RestrictedAccess').withArgs(getAddress(this.accounts.alice), getAddress(this.contracts.token), this.contracts.token.interface.getFunction('burn').selector);
                 });
 
                 it('can burn from not-whitelisted account', async function () {
                     // whitelist, mint, blacklist
                     await Promise.all([
-                        this.contracts.manager.connect(this.accounts.whitelister).addGroup(getAddress(this.accounts.chris), this.IDS.whitelisted),
-                        this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.chris), 1000),
-                        this.contracts.manager.connect(this.accounts.whitelister).remGroup(getAddress(this.accounts.chris), this.IDS.whitelisted),
+                        this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.chris, this.IDS.whitelisted),
+                        this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris, 1000),
+                        this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris, this.IDS.whitelisted),
                     ]);
 
-                    await expect(this.contracts.token.connect(this.accounts.operator).burn(getAddress(this.accounts.chris), 100))
+                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.chris, 100))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.chris), ethers.ZeroAddress, 100);
                 });
             });
@@ -144,7 +164,7 @@ describe('Main', function () {
             describe('transfers', function () {
                 beforeEach(async function () {
                     this.mock = await deploy('ERC1363ReceiverMock');
-                    await this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.alice), 1000);
+                    await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, 1000);
                 });
 
                 for (const fn of [ 'transfer', 'transferFrom', 'transferAndCall', 'transferFromAndCall' ])
@@ -165,31 +185,33 @@ describe('Main', function () {
                                 let amount   = 10;
 
                                 // set approval if needed + configure sender and receiver
-                                operator && await this.contracts.token.connect(from).approve(getAddress(operator), amount);
-                                await this.contracts.manager.connect(this.accounts.whitelister)[fromAuthorized ? 'addGroup' : 'remGroup'](getAddress(from), this.IDS.whitelisted);
-                                await this.contracts.manager.connect(this.accounts.whitelister)[toAuthorized   ? 'addGroup' : 'remGroup'](getAddress(to),   this.IDS.whitelisted);
+                                operator && await this.contracts.token.connect(from).approve(operator, amount);
+                                await this.contracts.manager.connect(this.accounts.whitelister)[fromAuthorized ? 'addGroup' : 'remGroup'](from, this.IDS.whitelisted);
+                                await this.contracts.manager.connect(this.accounts.whitelister)[toAuthorized   ? 'addGroup' : 'remGroup'](to,   this.IDS.whitelisted);
 
                                 let promise = null;
                                 switch(fn) {
                                     case 'transfer':
-                                        promise = this.contracts.token.connect(from).transfer(getAddress(to), amount)
+                                        promise = this.contracts.token.connect(from).transfer(to, amount)
                                         break;
                                     case 'transferFrom':
-                                        promise = this.contracts.token.connect(operator).transferFrom(getAddress(from), getAddress(to), amount);
+                                        promise = this.contracts.token.connect(operator).transferFrom(from, to, amount);
                                         break;
                                     case 'transferAndCall':
-                                        promise = this.contracts.token.connect(from)['transferAndCall(address,uint256)'](getAddress(to), amount);
+                                        promise = this.contracts.token.connect(from).getFunction('transferAndCall(address,uint256)')(to, amount);
                                         break;
                                     case 'transferFromAndCall':
-                                        promise = this.contracts.token.connect(operator)['transferFromAndCall(address,address,uint256)'](getAddress(from), getAddress(to), amount);
+                                        promise = this.contracts.token.connect(operator).getFunction('transferFromAndCall(address,address,uint256)')(from, to, amount);
                                         break;
                                 }
 
-                                await (fromAuthorized && toAuthorized)
-                                    ? expect(promise).to.emit(this.contracts.token, 'Transfer')
-                                        .withArgs(getAddress(from), getAddress(to), amount)
-                                    : expect(promise).to.be.revertedWithCustomError(this.contracts.token, (!fromAuthorized && 'UnauthorizedFrom') || (!toAuthorized && 'UnauthorizedTo'))
-                                        .withArgs(getAddress(this.contracts.token), (!fromAuthorized && getAddress(from)) || (!toAuthorized && getAddress(to)));
+                                await (
+                                    (fromAuthorized && toAuthorized)
+                                        ? expect(promise).to.emit(this.contracts.token, 'Transfer')
+                                            .withArgs(getAddress(from), getAddress(to), amount)
+                                        : expect(promise).to.be.revertedWithCustomError(this.contracts.token, (!fromAuthorized && 'UnauthorizedFrom') || (!toAuthorized && 'UnauthorizedTo'))
+                                            .withArgs(getAddress(this.contracts.token), (!fromAuthorized && getAddress(from)) || (!toAuthorized && getAddress(to)))
+                                );
                             });
                         }
                     });
@@ -209,7 +231,7 @@ describe('Main', function () {
                 it('pausing disables transfers', async function () {
                     await this.contracts.token.connect(this.accounts.operator).pause();
 
-                    await expect(this.contracts.token.connect(this.accounts.alice).transfer(getAddress(this.accounts.bruce), 0))
+                    await expect(this.contracts.token.connect(this.accounts.alice).transfer(this.accounts.bruce, 0))
                     .to.be.revertedWithCustomError(this.contracts.token, 'EnforcedPause');
                 });
             });
@@ -232,9 +254,170 @@ describe('Main', function () {
                 it('unpausing re-enables transfers', async function () {
                     await this.contracts.token.connect(this.accounts.operator).unpause();
 
-                    await expect(this.contracts.token.connect(this.accounts.alice).transfer(getAddress(this.accounts.bruce), 0))
+                    await expect(this.contracts.token.connect(this.accounts.alice).transfer(this.accounts.bruce, 0))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.bruce), 0);
                 });
+            });
+        });
+
+        describe('ERC1363', function () {
+            const value = 1000n;
+
+            beforeEach(async function () {
+                this.mock = await deploy('ERC1363ReceiverMock');
+
+                await this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.mock, this.IDS.whitelisted),
+                await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, value);
+            });
+
+            describe('transferAndCall', function () {
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256)')(this.mock, value))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('onTransferReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('transferAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived invalid result');
+                });
+            });
+
+            describe('transferFromAndCall', function () {
+                beforeEach(async function () {
+                    await this.contracts.token.connect(this.accounts.alice).approve(this.accounts.bruce, ethers.MaxUint256);
+                });
+
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256)')(this.accounts.alice, this.mock, value))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.bruce), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Transfer').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'TransferReceived').withArgs(getAddress(this.accounts.bruce), getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('onTransferReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.bruce).getFunction('transferFromAndCall(address,address,uint256,bytes)')(this.accounts.alice, this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onTransferReceived invalid result');
+                });
+            });
+
+            describe('approveAndCall', function () {
+                it('without data', async function () {
+                    const data = '0x';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256)')(this.mock, value))
+                    .to.emit(this.contracts.token, 'Approval').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'ApprovalReceived').withArgs(getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with data', async function () {
+                    const data = '0x123456';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.emit(this.contracts.token, 'Approval').withArgs(getAddress(this.accounts.alice), getAddress(this.mock), value)
+                    .to.emit(this.mock, 'ApprovalReceived').withArgs(getAddress(this.accounts.alice), value, data);
+                });
+
+                it('with reverting hook (with reason)', async function () {
+                    const data = '0x00';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('onApprovalReceived revert');
+                });
+
+                it('with reverting hook (without reason)', async function () {
+                    const data = '0x01';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(this.mock, value, data))
+                    .to.be.revertedWith('ERC1363: onApprovalReceived reverted without reason');
+                });
+
+                it('with bad return value', async function () {
+                    const data = '0x02';
+
+                    await expect(this.contracts.token.connect(this.accounts.alice).getFunction('approveAndCall(address,uint256,bytes)')(getAddress(this.mock), value, data))
+                    .to.be.revertedWith('ERC1363: onApprovalReceived invalid result');
+                });
+            });
+        });
+
+        describe('Ownable', function () {
+            it('Set initial ownership', async function () {
+                expect(await this.contracts.token.owner()).to.be.equal(ethers.ZeroAddress);
+
+                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice))
+                .to.emit(this.contracts.token, 'OwnershipTransferred')
+                .withArgs(ethers.ZeroAddress, getAddress(this.accounts.alice));
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.alice));
+            });
+
+            it('Reset ownership', async function () {
+                await this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice);
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.alice));
+
+                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.bruce))
+                .to.emit(this.contracts.token, 'OwnershipTransferred')
+                .withArgs(getAddress(this.accounts.alice), getAddress(this.accounts.bruce));
+
+                expect(await this.contracts.token.owner()).to.be.equal(getAddress(this.accounts.bruce));
+            });
+
+            it('Setting ownership is access restricted', async function () {
+                await expect(this.contracts.token.connect(this.accounts.alice).setOwnership(this.accounts.alice))
+                .to.be.revertedWithCustomError(this.contracts.oracle, 'RestrictedAccess').withArgs(getAddress(this.accounts.alice), getAddress(this.contracts.token), this.contracts.token.interface.getFunction('setOwnership').selector);
             });
         });
     });
@@ -249,7 +432,7 @@ describe('Main', function () {
                 expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(0);
                 await expect(this.contracts.oracle.latestRoundData()).to.be.reverted;
 
-                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                await expect(this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
                 .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
 
                 expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
@@ -283,7 +466,7 @@ describe('Main', function () {
                 ];
 
                 for (const [ roundId, { timepoint, value } ] of Object.entries(rounds)) {
-                    expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
+                    await expect(this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
                     .to.emit(this.contracts.oracle, 'Update').withArgs(timepoint, value, roundId);
 
                     expect(await this.contracts.oracle.getLatestPrice()).to.be.equal(value);
@@ -317,7 +500,7 @@ describe('Main', function () {
 
             // Fill the oracle with data
             for (const { timepoint, value } of rounds) {
-                expect(await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value));
+                await this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value);
             }
 
             // Perform lookups
@@ -382,35 +565,35 @@ describe('Main', function () {
 
         describe('addGroup', function () {
             it('authorized', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupAdded').withArgs(getAddress(this.accounts.alice), group);
             });
 
             it('restricted', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.other).addGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.other).addGroup(this.accounts.alice, group))
                 .to.revertedWithCustomError(this.contracts.manager, 'MissingPermissions').withArgs(getAddress(this.accounts.other), this.MASKS.public, this.MASKS.admin);
             });
 
             it('with role admin', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice, group))
                 .to.revertedWithCustomError(this.contracts.manager, 'MissingPermissions').withArgs(getAddress(this.accounts.whitelister), combine(this.MASKS.whitelister, this.MASKS.public), this.MASKS.admin);
 
                 await this.contracts.manager.setGroupAdmins(group, [ this.IDS.whitelister ]);
 
-                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupAdded').withArgs(getAddress(this.accounts.alice), group);
             });
 
             it('effect', async function () {
-                expect(await this.contracts.manager.getGroups(getAddress(this.accounts.alice))).to.be.equal(combine(
+                expect(await this.contracts.manager.getGroups(this.accounts.alice)).to.be.equal(combine(
                     this.MASKS.public,
                     this.MASKS.whitelisted,
                 ));
 
-                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupAdded').withArgs(getAddress(this.accounts.alice), group);
 
-                expect(await this.contracts.manager.getGroups(getAddress(this.accounts.alice))).to.be.equal(combine(
+                expect(await this.contracts.manager.getGroups(this.accounts.alice)).to.be.equal(combine(
                     this.MASKS.public,
                     this.MASKS.whitelisted,
                     toMask(group),
@@ -420,40 +603,40 @@ describe('Main', function () {
 
         describe('remGroup', function () {
             beforeEach(async function () {
-                await this.contracts.manager.connect(this.accounts.admin).addGroup(getAddress(this.accounts.alice), group)
+                await this.contracts.manager.connect(this.accounts.admin).addGroup(this.accounts.alice, group)
             });
 
             it('authorized', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(getAddress(this.accounts.alice), group);
             });
 
             it('restricted', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.other).remGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.other).remGroup(this.accounts.alice, group))
                 .be.revertedWithCustomError(this.contracts.manager, 'MissingPermissions').withArgs(getAddress(this.accounts.other), this.MASKS.public, this.MASKS.admin);
             });
 
             it('with role admin', async function () {
-                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice, group))
                 .be.revertedWithCustomError(this.contracts.manager, 'MissingPermissions').withArgs(getAddress(this.accounts.whitelister), combine(this.MASKS.whitelister, this.MASKS.public), this.MASKS.admin);
 
                 await this.contracts.manager.setGroupAdmins(group, [ this.IDS.whitelister ]);
 
-                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(getAddress(this.accounts.alice), group);
             });
 
             it('effect', async function () {
-                expect(await this.contracts.manager.getGroups(getAddress(this.accounts.alice))).to.be.equal(combine(
+                expect(await this.contracts.manager.getGroups(this.accounts.alice)).to.be.equal(combine(
                     this.MASKS.public,
                     this.MASKS.whitelisted,
                     toMask(group),
                 ));
 
-                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(getAddress(this.accounts.alice), group))
+                await expect(this.contracts.manager.connect(this.accounts.admin).remGroup(this.accounts.alice, group))
                 .to.emit(this.contracts.manager, 'GroupRemoved').withArgs(getAddress(this.accounts.alice), group);
 
-                expect(await this.contracts.manager.getGroups(getAddress(this.accounts.alice))).to.be.equal(combine(
+                expect(await this.contracts.manager.getGroups(this.accounts.alice)).to.be.equal(combine(
                     this.MASKS.public,
                     this.MASKS.whitelisted,
                 ));
@@ -532,7 +715,7 @@ describe('Main', function () {
 
         beforeEach(async function () {
             // mint tokens
-            await this.contracts.token.connect(this.accounts.operator).mint(getAddress(this.accounts.alice), 1000);
+            await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, 1000);
 
             // set authorized output token
             await this.contracts.redemption.registerOutput(
@@ -564,13 +747,13 @@ describe('Main', function () {
         describe('initiate redemption', function () {
             it('success', async function () {
                 const op = this.makeOp();
-                expect(await this.contracts.redemption.outputsFor(getAddress(op.input))).to.include(getAddress(op.output));
+                expect(await this.contracts.redemption.outputsFor(op.input)).to.include(getAddress(op.output));
 
                 const { status: statusBefore, deadline: deadlineBefore } = await this.contracts.redemption.details(op.id);
                 expect(statusBefore).to.be.equal(STATUS.NULL);
                 expect(deadlineBefore).to.be.equal(0);
 
-                expect(await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](getAddress(this.contracts.redemption), op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
                 .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
 
@@ -585,17 +768,17 @@ describe('Main', function () {
                 const op = this.makeOp();
 
                 // first call is ok
-                await op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](getAddress(this.contracts.redemption), op.value, op.data);
+                await op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data);
 
                 // reusing the same operation details with the same salt is not ok
-                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](getAddress(this.contracts.redemption), op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.be.revertedWith('ID already used')
             });
 
             it('unauthorized output', async function () {
                 const op = this.makeOp({ output: this.accounts.other });
 
-                await expect(op.input.connect(op.user)['transferAndCall(address,uint256,bytes)'](getAddress(this.contracts.redemption), op.value, op.data))
+                await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
                 .to.be.revertedWith('Input/Output pair is not authorized');
             });
 
@@ -603,11 +786,32 @@ describe('Main', function () {
                 const op = this.makeOp({ input: this.accounts.alice });
 
                 await expect(this.contracts.redemption.connect(op.user).onTransferReceived(
-                    getAddress(op.user),
-                    getAddress(op.user),
+                    op.user,
+                    op.user,
                     op.value,
                     op.data,
                 )).to.be.revertedWith('Input/Output pair is not authorized');
+            });
+
+            describe('minimum amount', function () {
+                it('just enough', async function () {
+                    const op = this.makeOp();
+
+                    await this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, op.value);
+
+                    await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
+                    .to.emit(op.input,                  'Transfer'           ).withArgs(getAddress(op.user), getAddress(this.contracts.redemption), op.value)
+                    .to.emit(this.contracts.redemption, 'RedemptionInitiated').withArgs(op.id, getAddress(op.user), getAddress(op.input), getAddress(op.output), op.value, op.salt);
+                });
+
+                it('not enough', async function () {
+                    const op = this.makeOp();
+
+                    await this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, op.value + 1);
+
+                    await expect(op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(this.contracts.redemption, op.value, op.data))
+                    .to.be.rejectedWith("Minimum redemption amount  not reached")
+                });
             });
         });
 
@@ -615,8 +819,8 @@ describe('Main', function () {
             beforeEach(async function () {
                 this.operation = this.makeOp();
 
-                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
-                    getAddress(this.contracts.redemption),
+                await this.operation.input.connect(this.operation.user).getFunction('transferAndCall(address,uint256,bytes)')(
+                    this.contracts.redemption,
                     this.operation.value,
                     this.operation.data,
                 );
@@ -630,9 +834,9 @@ describe('Main', function () {
                 const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
                 expect(statusBefore).to.be.equal(STATUS.PENDING);
 
-                expect(await this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
-                    getAddress(this.operation.user),
-                    getAddress(this.operation.input),
+                await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
+                    this.operation.user,
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -649,8 +853,8 @@ describe('Main', function () {
                 const data = ethers.hexlify(ethers.randomBytes(64));
 
                 await expect(this.contracts.redemption.connect(this.accounts.other).executeRedemption(
-                    getAddress(this.operation.user),
-                    getAddress(this.operation.input),
+                    this.operation.user,
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -663,8 +867,8 @@ describe('Main', function () {
                 const data = ethers.hexlify(ethers.randomBytes(64));
 
                 await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
-                    getAddress(this.accounts.other), // invalid user
-                    getAddress(this.operation.input),
+                    this.accounts.other, // invalid user
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -678,8 +882,8 @@ describe('Main', function () {
                 await time.increase(time.duration.days(10));
 
                 await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
-                    getAddress(this.operation.user),
-                    getAddress(this.operation.input),
+                    this.operation.user,
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -692,8 +896,8 @@ describe('Main', function () {
             beforeEach(async function () {
                 this.operation = this.makeOp();
 
-                await this.operation.input.connect(this.operation.user)['transferAndCall(address,uint256,bytes)'](
-                    getAddress(this.contracts.redemption),
+                await this.operation.input.connect(this.operation.user).getFunction('transferAndCall(address,uint256,bytes)')(
+                    this.contracts.redemption,
                     this.operation.value,
                     this.operation.data,
                 );
@@ -707,9 +911,9 @@ describe('Main', function () {
                 const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
                 expect(statusBefore).to.be.equal(STATUS.PENDING);
 
-                expect(await this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
-                    getAddress(this.operation.user),
-                    getAddress(this.operation.input),
+                await expect(this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
+                    this.operation.user,
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -725,8 +929,8 @@ describe('Main', function () {
                 await time.increase(time.duration.days(10));
 
                 await expect(this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
-                    getAddress(this.accounts.other), // invalid user
-                    getAddress(this.operation.input),
+                    this.accounts.other, // invalid user
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -735,8 +939,8 @@ describe('Main', function () {
 
             it('too late', async function () {
                 await expect(this.contracts.redemption.connect(this.accounts.other).cancelRedemption(
-                    getAddress(this.operation.user),
-                    getAddress(this.operation.input),
+                    this.operation.user,
+                    this.operation.input,
                     this.operation.output,
                     this.operation.value,
                     this.operation.salt,
@@ -749,59 +953,81 @@ describe('Main', function () {
 
             describe('enable output', function () {
                 it('authorized', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(getAddress(this.contracts.token), getAddress(other), true))
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token, getAddress(other), true))
                     .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(other), true);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output), getAddress(other) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output), getAddress(other) ]);
                 });
 
                 it('unauthorized', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(getAddress(this.contracts.token), getAddress(other), true))
+                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token, other, true))
                     .to.be.revertedWithCustomError(this.contracts.redemption, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('registerOutput').selector);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
                 });
 
                 it('no-effect', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(getAddress(this.contracts.token), getAddress(output), true))
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token, output, true))
                     .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(output), true);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
                 });
             });
 
             describe('disable output', function () {
                 it('authorized', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(getAddress(this.contracts.token), getAddress(output), false))
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token, output, false))
                     .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(output), false);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ ]);
                 });
 
                 it('unauthorized', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(getAddress(this.contracts.token), getAddress(output), false))
+                    await expect(this.contracts.redemption.connect(this.accounts.other).registerOutput(this.contracts.token, output, false))
                     .to.be.revertedWithCustomError(this.contracts.redemption, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('registerOutput').selector);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
                 });
 
                 it('no-effect', async function () {
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
 
-                    expect(await this.contracts.redemption.connect(this.accounts.admin).registerOutput(getAddress(this.contracts.token), other, false))
-                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), other, false);
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).registerOutput(this.contracts.token, other, false))
+                    .to.emit(this.contracts.redemption, 'EnableOutput').withArgs(getAddress(this.contracts.token), getAddress(other), false);
 
-                    expect(await this.contracts.redemption.outputsFor(getAddress(this.contracts.token))).to.be.deep.equal([ getAddress(output) ]);
+                    expect(await this.contracts.redemption.outputsFor(this.contracts.token)).to.be.deep.equal([ getAddress(output) ]);
+                });
+            });
+
+            describe('set minimum', function () {
+                const amount = ethers.WeiPerEther;
+
+                it('authorized', async function () {
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.admin).setMinimum(this.contracts.token, amount))
+                    .to.emit(this.contracts.redemption, 'MinimumUpdated').withArgs(getAddress(this.contracts.token), amount);
+
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(amount);
+                });
+
+                it('unauthorized', async function () {
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
+
+                    await expect(this.contracts.redemption.connect(this.accounts.other).setMinimum(this.contracts.token, amount))
+                    .to.be.revertedWithCustomError(this.contracts.redemption, 'RestrictedAccess').withArgs(getAddress(this.accounts.other), getAddress(this.contracts.redemption), this.contracts.redemption.interface.getFunction('setMinimum').selector);
+
+                    expect(await this.contracts.redemption.minimum(this.contracts.token)).to.be.deep.equal(0n);
                 });
             });
         });
@@ -810,7 +1036,7 @@ describe('Main', function () {
     describe('Upgradeability', function () {
         describe('re-initialize', function () {
             it('manager', async function () {
-                await expect(this.contracts.manager.initialize(getAddress(this.accounts.admin)))
+                await expect(this.contracts.manager.initialize(this.accounts.admin))
                 .to.be.revertedWithCustomError(this.contracts.manager, 'InvalidInitialization');
             });
 
@@ -820,7 +1046,7 @@ describe('Main', function () {
             });
 
             it('oracle', async function () {
-                await expect(this.contracts.oracle.initialize(getAddress(this.contracts.token), 'EUR'))
+                await expect(this.contracts.oracle.initialize(this.contracts.token, 'EUR'))
                 .to.be.revertedWithCustomError(this.contracts.oracle, 'InvalidInitialization');
             });
 

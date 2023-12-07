@@ -25,6 +25,7 @@
       "tokens[]-burn": ["operator-exceptional", "burner"],
       "tokens[]-pause": ["operator-exceptional"],
       "tokens[]-unpause": ["operator-exceptional"],
+      "tokens[]-setOwnership": ["operator-exceptional"],
       "tokens[]-transfer": ["whitelisted"],
       "oracles[]-publishPrice": ["operator-oracle"],
       "redemption-executeRedemption": ["operator-daily"]

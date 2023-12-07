@@ -16,7 +16,13 @@ contract ERC1363ReceiverMock is IERC1363Receiver, IERC1363Spender {
         bytes memory data
     ) external override returns (bytes4) {
         if (data.length == 1) {
-            require(data[0] == 0x00, "onTransferReceived revert");
+            if (data[0] == 0x00) {
+                revert("onTransferReceived revert");
+            } else if (data[0] == 0x01) {
+                revert();
+            } else if (data[0] == 0x02) {
+                return bytes4(0xFFFFFFFF);
+            }
         }
         emit TransferReceived(operator, from, value, data);
         return this.onTransferReceived.selector;
@@ -28,7 +34,13 @@ contract ERC1363ReceiverMock is IERC1363Receiver, IERC1363Spender {
         bytes memory data
     ) external override returns (bytes4) {
         if (data.length == 1) {
-            require(data[0] == 0x00, "onApprovalReceived revert");
+            if (data[0] == 0x00) {
+                revert("onApprovalReceived revert");
+            } else if (data[0] == 0x01) {
+                revert();
+            } else if (data[0] == 0x02) {
+                return bytes4(0xFFFFFFFF);
+            }
         }
         emit ApprovalReceived(owner, value, data);
         return this.onApprovalReceived.selector;
