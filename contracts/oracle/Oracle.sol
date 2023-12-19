@@ -25,7 +25,7 @@ contract Oracle is
 
     IERC20Metadata       public           token;
     uint256              public constant  version  = 0;
-    uint8                public constant  decimals = 18;
+    uint8                public           decimals;
     string               public           description; // set per-instance at initialization
     Checkpoints.Trace208 private          _history;
 
@@ -36,8 +36,9 @@ contract Oracle is
         _disableInitializers();
     }
 
-    function initialize(IERC20Metadata _token, string calldata denomination) public initializer() {
+    function initialize(IERC20Metadata _token, uint8 _decimals, string calldata denomination) public initializer() {
         token       = _token;
+        decimals    = _decimals;
         description = string.concat(_token.symbol(), " / ", denomination);
     }
 

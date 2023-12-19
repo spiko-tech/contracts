@@ -40,7 +40,14 @@ async function fixture() {
     contracts.oracle = Object.values(contracts.oracles).find(Boolean);
     expect(await contracts.oracle.token()).to.be.equal(getAddress(contracts.token), 'Invalid configuration for testing');
 
-    return { accounts, contracts, config, ...roles };
+    return {
+        accounts,
+        contracts,
+        config,
+        tokenConfig: config.contracts.tokens.find(Boolean),
+        oracleConfig: config.contracts.tokens.find(Boolean).oracle,
+        ...roles,
+    };
 }
 
 describe('Main', function () {
@@ -55,16 +62,16 @@ describe('Main', function () {
         expect(await this.contracts.manager.PUBLIC_MASK()).to.be.equal(this.MASKS.public);
 
         expect(await this.contracts.token.authority()).to.be.equal(getAddress(this.contracts.manager));
-        expect(await this.contracts.token.name()).to.be.equal(this.config.contracts.tokens.find(Boolean).name);
-        expect(await this.contracts.token.symbol()).to.be.equal(this.config.contracts.tokens.find(Boolean).symbol);
-        expect(await this.contracts.token.decimals()).to.be.equal(this.config.contracts.tokens.find(Boolean).decimals);
+        expect(await this.contracts.token.name()).to.be.equal(this.tokenConfig.name);
+        expect(await this.contracts.token.symbol()).to.be.equal(this.tokenConfig.symbol);
+        expect(await this.contracts.token.decimals()).to.be.equal(this.tokenConfig.decimals);
         expect(await this.contracts.token.totalSupply()).to.be.equal(0);
 
         expect(await this.contracts.oracle.authority()).to.be.equal(getAddress(this.contracts.manager));
         expect(await this.contracts.oracle.token()).to.be.equal(getAddress(this.contracts.token));
         expect(await this.contracts.oracle.version()).to.be.equal(0);
-        expect(await this.contracts.oracle.decimals()).to.be.equal(18);
-        expect(await this.contracts.oracle.description()).to.be.equal(`${this.config.contracts.tokens.find(Boolean).symbol} / ${this.config.contracts.tokens.find(Boolean).quote}`);
+        expect(await this.contracts.oracle.decimals()).to.be.equal(this.oracleConfig.decimals);
+        expect(await this.contracts.oracle.description()).to.be.equal(`${this.tokenConfig.symbol} / ${this.oracleConfig.quote}`);
     });
 
     it('accounts have permissions', async function () {
@@ -99,7 +106,7 @@ describe('Main', function () {
         describe('EIP721', function () {
             beforeEach(async function () {
                 this.expectedDomain = await ethers.provider.getNetwork().then(network => ({
-                    name: this.config.contracts.tokens.find(Boolean).name,
+                    name: this.tokenConfig.name,
                     version: '1',
                     chainId: network.chainId,
                     verifyingContract: getAddress(this.contracts.token),
@@ -1046,7 +1053,7 @@ describe('Main', function () {
             });
 
             it('oracle', async function () {
-                await expect(this.contracts.oracle.initialize(this.contracts.token, 'EUR'))
+                await expect(this.contracts.oracle.initialize(this.contracts.token, 18, 'EUR'))
                 .to.be.revertedWithCustomError(this.contracts.oracle, 'InvalidInitialization');
             });
 

@@ -46,7 +46,7 @@ async function migrate(config = {}, opts = {}) {
         ));
     DEBUG(`redemption: ${contracts.redemption.target}`);
 
-    for (const { name, symbol, decimals, quote } of config?.contracts?.tokens || []) {
+    for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
         // deploy token
         contracts.tokens[symbol] = await ethers.getContractFactory('Token')
             .then(factory => migration.migrate(
@@ -58,11 +58,11 @@ async function migrate(config = {}, opts = {}) {
         DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
 
         // deploy oracle (if quote is set)
-        contracts.oracles[symbol] = quote && await ethers.getContractFactory('Oracle')
+        contracts.oracles[symbol] = oracle && await ethers.getContractFactory('Oracle')
             .then(factory => migration.migrate(
                 `oracle-${symbol}`,
                 factory,
-                [ contracts.tokens[symbol].target, quote ],
+                [ contracts.tokens[symbol].target, oracle.decimals, oracle.quote ],
                 { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
             ));
         DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol].target}`);

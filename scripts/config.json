@@ -5,19 +5,19 @@
         "name": "Spiko USD",
         "symbol": "spUSD",
         "decimals": 6,
-        "quote": "USD"
+        "oracle": { "decimals": 5, "quote": "USD" }
       },
       {
         "name": "Spiko EUR",
         "symbol": "spEUR",
         "decimals": 6,
-        "quote": "EUR"
+        "oracle": { "decimals": 5, "quote": "EUR" }
       },
       {
         "name": "Kospi EUR",
         "symbol": "koEUR",
         "decimals": 6,
-        "quote": "EUR"
+        "oracle": { "decimals": 5, "quote": "EUR" }
       }
     ],
     "fns": {
