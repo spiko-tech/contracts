@@ -13,6 +13,8 @@ node_modules/
 !.cache-5-dev.json
 !.cache-5-staging.json
 !.cache-137.json
+!.cache-137-preprod-failed.json
+!.cache-137-preprod.json
 !.cache-80001.json
 !.cache-80001-dev.json
 !.cache-80001-staging.json

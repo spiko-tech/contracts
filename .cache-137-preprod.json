@@ -1,0 +1,26 @@
+{
+	"manager": {
+		"txHash": "0x507866afe605eceb8197bbe839806d0142f43738217f64ee49d394ee266dea9b",
+		"address": "0x920Da8a495133Ea6C23E80c760Eb8E5f32620ea1"
+	},
+	"redemption": {
+		"txHash": "0x611d148c0124eedc15f78a9d548c7f1e68021f3fa0835e8cbce605e099fe5654",
+		"address": "0xA502b51aad6D8DecFb9f05757ACf3012499B6494"
+	},
+	"token-koEUR": {
+		"txHash": "0xdf29a2ae612d198d60f7c1c64cbda3cdd3b18d30e080958ac5caa7723d547e58",
+		"address": "0x2FeeFB435Cc31493Da0950b1C6deD8c7E536c434"
+	},
+	"oracle-koEUR": {
+		"txHash": "0x66d0e5a3a00d03ef0dcffd2336633f9ae164373d7303a7a5c9eda96c1dd30a80",
+		"address": "0x3EB7De768dE2513041482cE3d5798D5B675660da"
+	},
+	"token-koUSD": {
+		"txHash": "0x0bca5383d0adedddfebf363f0666da8dba28a6255c0367bd80884024189e1444",
+		"address": "0xAa59C3708d9D5e09c0C85558a170eA846712b1c4"
+	},
+	"oracle-koUSD": {
+		"txHash": "0x9b94134f510e1177cac9d0cf30ca32b6045c6319df8063a12b153990f056e360",
+		"address": "0xaCa6bcfaAF7d65078D454cf7076978e30e4744E9"
+	}
+}
