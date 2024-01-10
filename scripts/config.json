@@ -27,19 +27,19 @@
   },
   "roles": {
     "admin": {
-      "members": ["0xD8F2A9ab98ea97394F504574195AbC542Fc0e995"]
+      "members": ["0xe67D2cbeaE3090bE017C66e7A6943961619a5D35"]
     },
     "operator-exceptional": {
       "admins": ["admin"],
-      "members": ["0xFD6371A7FCD792Ac4DD3897121B06B3002869068"]
+      "members": ["0xe67D2cbeaE3090bE017C66e7A6943961619a5D35"]
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": ["0x62182151a768B6B830eFe823A7a03a37A55c17E6"]
+      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": ["0x62182151a768B6B830eFe823A7a03a37A55c17E6"]
+      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
     },
     "burner": {
       "admins": ["admin"],
@@ -47,7 +47,7 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": ["0x62182151a768B6B830eFe823A7a03a37A55c17E6"]
+      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
     },
     "whitelisted": {
       "admins": ["whitelister"],

@@ -17,5 +17,6 @@ node_modules/
 !.cache-80001.json
 !.cache-80001-dev.json
 !.cache-80001-staging.json
+!.cache-80001-preprod.json
 !.cache-11155111.json
 !.openzeppelin
