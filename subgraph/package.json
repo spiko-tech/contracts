@@ -7,10 +7,10 @@
   "scripts": {
     "prepublish": "rimraf artifacts build cache generated",
     "prepare": "mkdir -p generated artifacts && npm run prepare:subgraph",
-    "prepare:subgraph": "graph-compiler --config config/staging-goerli.json --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph",
+    "prepare:subgraph": "graph-compiler --config config/preprod-polygon.json --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph",
     "build": "npm run build:codegen && npm run build:compile",
-    "build:codegen": "graph codegen ${SUBGRAPH:-generated/staging-goerli.subgraph.yaml}",
-    "build:compile": "graph build ${SUBGRAPH:-generated/staging-goerli.subgraph.yaml}",
+    "build:codegen": "graph codegen ${SUBGRAPH:-generated/preprod-polygon.subgraph.yaml}",
+    "build:compile": "graph build ${SUBGRAPH:-generated/preprod-polygon.subgraph.yaml}",
     "deploy:hosted": "config/deploy.sh"
   },
   "devDependencies": {
