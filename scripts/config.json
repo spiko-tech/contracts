@@ -2,13 +2,13 @@
   "contracts": {
     "tokens": [
       {
-        "name": "Kospi PreProd EUR",
+        "name": "Spiko Sandbox EUR",
         "symbol": "koEUR",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
       },
       {
-        "name": "Kospi PreProd USD",
+        "name": "Spiko Sandbox USD",
         "symbol": "koUSD",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" }
@@ -27,19 +27,19 @@
   },
   "roles": {
     "admin": {
-      "members": ["0xe67D2cbeaE3090bE017C66e7A6943961619a5D35"]
+      "members": ["0x99FCc75f7C3302eEd71BDAed40352ADc7826D390"]
     },
     "operator-exceptional": {
       "admins": ["admin"],
-      "members": ["0xe67D2cbeaE3090bE017C66e7A6943961619a5D35"]
+      "members": ["0x99FCc75f7C3302eEd71BDAed40352ADc7826D390"]
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
+      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
+      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
     },
     "burner": {
       "admins": ["admin"],
@@ -47,11 +47,15 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": ["0x3c34590cfDB2D22497378e32Aa9066639eE5206e"]
+      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
     },
     "whitelisted": {
       "admins": ["whitelister"],
-      "members": ["redemption"]
+      "members": [
+        "redemption",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5"
+      ]
     }
   }
 }

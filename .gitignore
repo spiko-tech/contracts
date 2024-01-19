@@ -19,4 +19,5 @@ node_modules/
 !.cache-80001-staging.json
 !.cache-80001-preprod.json
 !.cache-11155111.json
+!.cache-11155111-sandbox.json
 !.openzeppelin
