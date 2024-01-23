@@ -2,19 +2,24 @@
 
 pragma solidity ^0.8.20;
 
-import { IAuthority               } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
-import { IERC20                   } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { UUPSUpgradeable          } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Multicall                } from "@openzeppelin/contracts/utils/Multicall.sol";
-import { OwnableUpgradeable       } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { ERC20Upgradeable         } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { ERC20PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import { ERC20PermitUpgradeable   } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import { PermissionManaged        } from "../permissions/PermissionManaged.sol";
-import { ERC1363Upgradeable       } from "./extensions/ERC1363Upgradeable.sol";
+import { IAuthority                } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20                    } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { OwnableUpgradeable        } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ERC2771ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import { UUPSUpgradeable           } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { ERC20Upgradeable          } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { ERC20PausableUpgradeable  } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import { ERC20PermitUpgradeable    } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import { ContextUpgradeable        } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { MulticallUpgradeable      } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import { PermissionManaged         } from "../permissions/PermissionManaged.sol";
+import { ERC1363Upgradeable        } from "./extensions/ERC1363Upgradeable.sol";
 
 /// @custom:security-contact security@spiko.tech
+// Note that {ERC2771ContextUpgradeable} overrides the behavior of {Ownable}, {ERC20} & {ERC1363} but does not affect
+// {PermissionManaged}. Therefor, `restricted()` function cannot be called through the forwarder.
 contract Token is
+    ERC2771ContextUpgradeable,
     OwnableUpgradeable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
@@ -22,7 +27,7 @@ contract Token is
     ERC1363Upgradeable,
     PermissionManaged,
     UUPSUpgradeable,
-    Multicall
+    MulticallUpgradeable
 {
     error UnauthorizedFrom(address token, address user);
     error UnauthorizedTo(address token, address user);
@@ -30,7 +35,10 @@ contract Token is
     uint8 private m_decimals;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAuthority _authority) PermissionManaged(_authority) {
+    constructor(IAuthority _authority, address _trustedForwarder)
+        PermissionManaged(_authority)
+        ERC2771ContextUpgradeable(_trustedForwarder)
+    {
         _disableInitializers();
     }
 
@@ -91,5 +99,20 @@ contract Token is
      ****************************************************************************************************************/
     function _authorizeUpgrade(address) internal view override {
         _checkRestricted(UUPSUpgradeable.upgradeToAndCall.selector);
+    }
+
+    /****************************************************************************************************************
+     *                                              Context overrides                                               *
+     ****************************************************************************************************************/
+    function _msgSender() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (address) {
+        return super._msgSender();
+    }
+
+    function _msgData() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (bytes calldata) {
+        return super._msgData();
+    }
+
+    function _contextSuffixLength() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (uint256) {
+        return super._contextSuffixLength();
     }
 }

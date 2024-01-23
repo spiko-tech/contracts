@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@amxx/hre": "^0.2.1",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
     "lodash.defaultsdeep": "^4.6.1"
   }
 }

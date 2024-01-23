@@ -28,6 +28,15 @@ async function migrate(config = {}, opts = {}) {
 
     const contracts = { tokens: {}, oracles: {} };
 
+    contracts.forwarder = await ethers.getContractFactory('ERC2771Forwarder')
+    .then(factory => migration.migrate(
+        'forwarder',
+        factory,
+        [ 'Forwarder' ],
+        { ...opts },
+    ));
+    DEBUG(`forwarder: ${contracts.forwarder.target}`);
+
     contracts.manager = await ethers.getContractFactory('PermissionManager')
         .then(factory => migration.migrate(
             'manager',
@@ -53,7 +62,7 @@ async function migrate(config = {}, opts = {}) {
                 `token-${symbol}`,
                 factory,
                 [ name, symbol, decimals ],
-                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
+                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target, contracts.forwarder.target ] },
             ));
         DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
 
