@@ -22,9 +22,9 @@
     "url": "https://github.com/spiko-tech/contracts/issues"
   },
   "dependencies": {
-    "@chainlink/contracts": "^0.7.1",
-    "@openzeppelin/contracts": "^5.0.0",
-    "@openzeppelin/contracts-upgradeable": "^5.0.0"
+    "@chainlink/contracts": "^0.8.0",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1"
   },
   "devDependencies": {
     "@amxx/hre": "^0.2.1",
