@@ -2,16 +2,22 @@
   "contracts": {
     "tokens": [
       {
-        "name": "Spiko Sandbox EUR",
-        "symbol": "koEUR",
-        "decimals": 5,
+        "name": "Spiko Development EUTB",
+        "symbol": "EUTB",
+        "decimals": 6,
         "oracle": { "decimals": 6, "quote": "EUR" }
       },
       {
-        "name": "Spiko Sandbox USD",
-        "symbol": "koUSD",
-        "decimals": 5,
+        "name": "Spiko Development USTB",
+        "symbol": "USTB",
+        "decimals": 6,
         "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Spiko Development eurUSTB",
+        "symbol": "eurUSTB",
+        "decimals": 6,
+        "oracle": { "decimals": 6, "quote": "EUR" }
       }
     ],
     "fns": {
@@ -27,19 +33,19 @@
   },
   "roles": {
     "admin": {
-      "members": ["0x99FCc75f7C3302eEd71BDAed40352ADc7826D390"]
+      "members": ["0x21c35116e99255528B75CBc153BF3c954778a1F5"]
     },
     "operator-exceptional": {
       "admins": ["admin"],
-      "members": ["0x99FCc75f7C3302eEd71BDAed40352ADc7826D390"]
+      "members": ["0x21c35116e99255528B75CBc153BF3c954778a1F5"]
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
+      "members": ["0x88A17d8e6CC579FdE258a9926896E095A0f3502a"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
+      "members": ["0x88A17d8e6CC579FdE258a9926896E095A0f3502a"]
     },
     "burner": {
       "admins": ["admin"],
@@ -47,14 +53,15 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": ["0x20d8C626047bE8370261eC45dCB94c3Ac0e5A876"]
+      "members": ["0xeebE02084E54Bc449d974E25B36b38f74350d8A3"]
     },
     "whitelisted": {
       "admins": ["whitelister"],
       "members": [
         "redemption",
         "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
-        "0x21c35116e99255528B75CBc153BF3c954778a1F5"
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5",
+        "0xf71F2015B729522e8f72b238E4cB51942Cd89741"
       ]
     }
   }
