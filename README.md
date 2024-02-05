@@ -43,3 +43,5 @@ npx hardhat run scripts/migrate.js --network <sepolia or goerli>
 ```sh
 npx hardhat verify --network <sepolia or goerli> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>
 ```
+
+Note: if verification is failing to link proxy and implementation, you could refer to https://mumbai.polygonscan.com/proxyContractChecker
