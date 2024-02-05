@@ -175,7 +175,7 @@ async function migrate(config = {}, opts = {}) {
         .then(txPromise => txPromise.wait())
         .then(({ logs }) => {
             DEBUG('Events:');
-            logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args.join(', ')}`));
+            logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
         });
 
     return {
