@@ -30,6 +30,7 @@ ETHERSCAN=
 ```
 
 Note: use `EVM_VERSION=paris` for Sepolia / Mumbai or `EVM_VERSION=shanghai` for GOERLI / Polygon and Mainnet
+Note: The variable ETHERSCAN should be used also when deploying to polygonscan (mumbai/polygon) with API key coming from polygonscan.
 
 - deploy
 
