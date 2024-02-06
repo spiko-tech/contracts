@@ -8,19 +8,4 @@ node_modules/
 
 .*
 !.env.example
-!.cache-1.json
-!.cache-5.json
-!.cache-5-dev.json
-!.cache-5-staging.json
-!.cache-5-preprod.json
-!.cache-137.json
-!.cache-80001.json
-!.cache-80001-dev.json
-!.cache-80001-dev-29_01_2024.json
-!.cache-80001-staging-05_02_2024.json
-!.cache-80001-preprod-05_02_2024.json
-!.cache-80001-staging.json
-!.cache-80001-preprod.json
-!.cache-11155111.json
-!.cache-11155111-sandbox.json
-!.openzeppelin
+!.cache-*.json
