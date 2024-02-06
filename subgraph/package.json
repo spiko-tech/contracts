@@ -1,0 +1,22 @@
+{
+  "name": "@spiko/subgraph",
+  "description": "",
+  "author": "Hadrien Croubois (@Amxx)",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "prepublish": "rimraf artifacts build cache generated",
+    "prepare": "mkdir -p generated artifacts && npm run prepare:subgraph",
+    "prepare:subgraph": "graph-compiler --config config/sandbox-sepolia.json --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph",
+    "build": "npm run build:codegen && npm run build:compile",
+    "build:codegen": "graph codegen ${SUBGRAPH:-generated/sandbox-sepolia.subgraph.yaml}",
+    "build:compile": "graph build ${SUBGRAPH:-generated/sandbox-sepolia.subgraph.yaml}",
+    "deploy:hosted": "config/deploy.sh"
+  },
+  "devDependencies": {
+    "@amxx/graphprotocol-utils": "^1.1.0",
+    "@graphprotocol/graph-cli": "^0.60.0",
+    "@graphprotocol/graph-ts": "^0.31.0",
+    "@openzeppelin/subgraphs": "0.1.8-5"
+  }
+}

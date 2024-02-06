@@ -1,0 +1,26 @@
+  - kind: ethereum/contract
+    name: {id}
+    network: {chain}
+    source:
+      address: "{address}"
+      abi: PermissionManager
+      startBlock: {startBlock}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - VestingAirdrop
+        - VestingSchedule
+      abis:
+        - name: PermissionManager
+          file: {root}/../artifacts/contracts/permissions/PermissionManager.sol/PermissionManager.json
+      eventHandlers:
+        - event: GroupAdded(indexed address,indexed uint8)
+          handler: handleGroupAdded
+        - event: GroupAdmins(indexed uint8,bytes32)
+          handler: handleGroupAdmins
+        - event: GroupRemoved(indexed address,indexed uint8)
+          handler: handleGroupRemoved
+        - event: Requirements(indexed address,indexed bytes4,bytes32)
+          handler: handleRequirements

@@ -1,0 +1,20 @@
+[{
+    "name": "ERC20Contract",
+    "fields": [
+        { "name": "id",           "type": "Bytes!"                            },
+        { "name": "priceUpdates", "type": "PriceUpdate!", "derived": "token"  }
+    ]
+},{
+    "name": "PriceUpdate",
+    "parent": "Event",
+    "immutable": true,
+    "fields": [
+        { "name": "emitter",      "type": "Account!"                          },
+        { "name": "transaction",  "type": "Transaction!"                      },
+        { "name": "timestamp",    "type": "BigInt!"                           },
+        { "name": "timepoint",    "type": "BigInt!"                           },
+        { "name": "token",        "type": "ERC20Contract!"                    },
+        { "name": "price",        "type": "BigDecimal!"                       },
+        { "name": "priceExact",   "type": "BigInt!"                           }
+    ]
+}]

@@ -1,0 +1,43 @@
+{
+  "output": "./generated/sandbox-sepolia.",
+  "chain": "sepolia",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x42221ee7FA654fD92674321A48f8f4911AdB846e",
+      "startBlock": 5115096,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0xEaE6013Fac4e20A98551eE333D2891249BaC4D73",
+      "startBlock": 5115098,
+      "module": ["redemption"]
+    },
+    {
+      "name": "koEUR-token",
+      "address": "0x9a133DD9ea88A99085b1970E7533c14Ee6668fBd",
+      "startBlock": 5115104,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koEUR-oracle",
+      "address": "0xde357F02243417c23503c8c518a0abCeD29f4e26",
+      "startBlock": 5115106,
+      "module": ["oracle"]
+    },
+    {
+      "name": "koUSD-token",
+      "address": "0x0290593a4c90dA1A3058f214bb6A1D47e7D68CC3",
+      "startBlock": 5115107,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koUSD-oracle",
+      "address": "0x7bb39e7AFdCa46B678BfdDA5Bfc956240a70199c",
+      "startBlock": 5115108,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [{ "type": "hosted-service", "name": "spiko-tech/sandbox-sepolia" }]
+}

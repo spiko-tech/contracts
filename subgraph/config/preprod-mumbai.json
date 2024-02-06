@@ -1,0 +1,43 @@
+{
+  "output": "./generated/preprod-mumbai.",
+  "chain": "mumbai",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x403E77C371828886FFCE242ED485d18BB383537C",
+      "startBlock": 44626214,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0x94e575088F1C2dc5e987b9bd51109587013A1007",
+      "startBlock": 44626240,
+      "module": ["redemption"]
+    },
+    {
+      "name": "koEUR-token",
+      "address": "0xb0832d74fE2154889855774115Cc62afBA750e9c",
+      "startBlock": 44626248,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koEUR-oracle",
+      "address": "0x96204e304AB71EE783eac7A9a9b3D0bB655F26C5",
+      "startBlock": 44626255,
+      "module": ["oracle"]
+    },
+    {
+      "name": "koUSD-token",
+      "address": "0xA6457Bf8A4a6390e9494fa6AfDCbA4762604E999",
+      "startBlock": 44626258,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koUSD-oracle",
+      "address": "0x4E925836cf3f0cd723acFB548DA1a2a3866b0de4",
+      "startBlock": 44626261,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [{ "type": "hosted-service", "name": "spiko-tech/preprod-mumbai" }]
+}
