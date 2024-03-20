@@ -2,21 +2,21 @@
   "contracts": {
     "tokens": [
       {
-        "name": "Spiko Development EUTB",
+        "name": "Staging EUTB",
         "symbol": "EUTB",
-        "decimals": 6,
+        "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
       },
       {
-        "name": "Spiko Development USTB",
+        "name": "Staging USTB",
         "symbol": "USTB",
-        "decimals": 6,
+        "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" }
       },
       {
-        "name": "Spiko Development eurUSTB",
+        "name": "Staging eurUSTB",
         "symbol": "eurUSTB",
-        "decimals": 6,
+        "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
       }
     ],
@@ -36,7 +36,8 @@
       "members": [
         "0x21c35116e99255528B75CBc153BF3c954778a1F5",
         "0x231eF26299caD78950A353832739B9f7245467F0",
-        "0xf71F2015B729522e8f72b238E4cB51942Cd89741"
+        "0xf71F2015B729522e8f72b238E4cB51 942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752"
       ]
     },
     "operator-exceptional": {
@@ -44,16 +45,17 @@
       "members": [
         "0x21c35116e99255528B75CBc153BF3c954778a1F5",
         "0x231eF26299caD78950A353832739B9f7245467F0",
-        "0xf71F2015B729522e8f72b238E4cB51942Cd89741"
+        "0xf71F2015B729522e8f72b238E4cB51 942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752"
       ]
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": ["0x88A17d8e6CC579FdE258a9926896E095A0f3502a"]
+      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": ["0x88A17d8e6CC579FdE258a9926896E095A0f3502a"]
+      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
     },
     "burner": {
       "admins": ["admin"],
@@ -61,16 +63,17 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": ["0xeebE02084E54Bc449d974E25B36b38f74350d8A3"]
+      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
     },
     "whitelisted": {
       "admins": ["whitelister"],
       "members": [
         "redemption",
-        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
         "0x21c35116e99255528B75CBc153BF3c954778a1F5",
         "0x231eF26299caD78950A353832739B9f7245467F0",
-        "0xf71F2015B729522e8f72b238E4cB51942Cd89741"
+        "0xf71F2015B729522e8f72b238E4cB51 942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
+        "0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"
       ]
     }
   }

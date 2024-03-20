@@ -1,53 +1,53 @@
 {
-  "output": "./generated/staging-mumbai",
+  "output": "./generated/staging-mumbai.",
   "chain": "mumbai",
   "datasources": [
     {
       "name": "manager",
-      "address": "0xD427D8a70945B0d4304A2B1E40Ea2A23356A5A09",
-      "startBlock": 45608779,
+      "address": "0x7909A690cE2e8C2e6d235f7cA335E8D7f005903c",
+      "startBlock": 47274931,
       "module": ["manager"]
     },
     {
       "name": "redemption",
-      "address": "0xE86aB41e1cF348C7dE007d42f25Ec50b46447267",
-      "startBlock": 45608779,
+      "address": "0x7512659E153CE56AFCe29c71Ece0F7147DFb5Db2",
+      "startBlock": 47274931,
       "module": ["redemption"]
     },
     {
-      "name": "spUSD-token",
-      "address": "0xA8Cd5e5C8730B493fCaC11e45aebf49785C7250D",
-      "startBlock": 45608779,
+      "name": "USTB-token",
+      "address": "0xEe73fb0DC64BA66e14CcD5b7Bf191d1c0b0e1c46",
+      "startBlock": 47274931,
       "module": ["erc20"]
     },
     {
-      "name": "spUSD-oracle",
-      "address": "0x84D7866234e9B3628A210ff5D69aaad2DC834Eb0",
-      "startBlock": 45608779,
+      "name": "USTB-oracle",
+      "address": "0xEF762Ff6788ff8c26C0DcBdF2CFf8EDfCB55afeD",
+      "startBlock": 47274931,
       "module": ["oracle"]
     },
     {
-      "name": "spEUR-token",
-      "address": "0xBa70A89e17dDF2B09A96C2D3049412046241A7cb",
-      "startBlock": 45608779,
+      "name": "EUTB-token",
+      "address": "0xD0775344a30dEB0a5882E5d47693611aa951059C",
+      "startBlock": 47274931,
       "module": ["erc20"]
     },
     {
-      "name": "spEUR-oracle",
-      "address": "0x8BE7a5EB9F158388cC874c541f88C5AFeBbDf23c",
-      "startBlock": 45608779,
+      "name": "EUTB-oracle",
+      "address": "0x1255D99a3D54B1bbbffa61be008c2764a549e03f",
+      "startBlock": 47274931,
       "module": ["oracle"]
     },
     {
-      "name": "koEUR-token",
-      "address": "0x8a0D3F256d0749fDD94042DaefA1D20620e35564",
-      "startBlock": 45608779,
+      "name": "eurUSTB-token",
+      "address": "0x2b9F39131f175fd08BD48cD957B667cec7E85BE3",
+      "startBlock": 47274931,
       "module": ["erc20"]
     },
     {
-      "name": "koEUR-oracle",
-      "address": "0x96a5aDb437de92e69E8d0a4CCA42aF905460CFcC",
-      "startBlock": 45608779,
+      "name": "eurUSTB-oracle",
+      "address": "0x0a8CCf74b802af44ED9AfEbB8ed4D5708632A365",
+      "startBlock": 47274931,
       "module": ["oracle"]
     }
   ],
