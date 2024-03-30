@@ -57,6 +57,47 @@ async function verifyContracts(contracts, chainName) {
     }
 }
 
+const Role = {
+    Admin : 'admin',
+    OperatorExceptional : 'operator-exceptional',
+    OperatorDaily : 'operator-daily',
+    OperatorOracle : 'operator-oracle',
+    Burner : 'burner',
+    Whitelister : 'whitelister',
+    Whitelisted : 'whitelisted'
+}
+
+const PermissionedContracts = { 
+    Redemption: 'redemption',
+}
+
+const sanityCheckConfig = (config) => {
+    DEBUG('Sanity checking config');
+
+    // check that all members are correctly declared
+    const rolesSanity = Object.keys(Role).map((roleKey) => {
+        const roleValue = Role[roleKey];
+        const membersCorrectness = config.roles[roleValue].members.map((member) => {
+            console.log(roleValue + ' ' + member);
+            const isPermissionedContract = Object.values(PermissionedContracts).includes(member);
+            const isValidEthereumAddress = ethers.isAddress(member);
+            
+            const isCorrectMember = isPermissionedContract || isValidEthereumAddress
+
+            console.log(' => isValidEthereumAddress '+isValidEthereumAddress)
+            console.log(' => isPermissionedContract '+isPermissionedContract)
+            
+            return isCorrectMember
+        })
+        
+        console.log('membersCorrectness = ' + membersCorrectness);
+        console.log('every = ' + membersCorrectness.every((memberCorrectness) => memberCorrectness === true))
+        return membersCorrectness.every((memberCorrectness) => memberCorrectness === true)
+    })
+
+    return rolesSanity.every((roleSanity) => roleSanity === true)
+}
+
 async function migrate(config = {}, opts = {}) {
     config = defaultsDeep(config, DEFAULT);
 
@@ -71,6 +112,9 @@ async function migrate(config = {}, opts = {}) {
     DEBUG(`Network:  ${name} (${chainId})`);
     DEBUG(`Deployer: ${deployer.address}`);
     DEBUG('----------------------------------------------------');
+    
+    const isConfigSane = sanityCheckConfig(config);
+    expect(isConfigSane, 'Config is not correct').to.be.true;
 
     const migration = new MigrationManager(provider, config);
     
