@@ -16,23 +16,22 @@ task("verify-contract", "Verify deployed contract on Etherscan")
     .addParam("forwarderAddress", "Arguments forwarder")
     .setAction(async (_args, hre) => {
         try {
-            const constructorArguments = _args.permissionManagerAddress === "" ? [] 
-            : (_args.permissionManagerAddress.forwarderAddress === "" ? [_args.permissionManagerAddress] : [_args.permissionManagerAddress, _args.forwarderAddress]);
-
-            console.log(`Constructor Arguments : ${JSON.stringify(constructorArguments)}`)
-
+            const constructorArguments = [_args.permissionManagerAddress, _args.forwarderAddress].filter((add)=> add !== "");
+            
             await hre.run("verify:verify", {
                 address: _args.address,
                 chain: _args.chain,
                 constructorArguments
             })
         } catch (message) {
-            console.error(message)
+            const host = _args.chain === "mainnet" || "sepolia" ? "etherscan" : `polygonscan`;
+            
+            DEBUG(`AUTOMATIC VERIFICIATION NOK, Please visit: https://${_args.chain}.${host}.io/proxyContractChecker?a=${_args.address}`)
         }
     });
 
 async function verifyContract(contractName, contractAddress, chain, permissionManagerAddress = "", forwarderAddress = ""){
-    console.log(`Verifying ${contractName} at ${contractAddress} on ${chain}`);
+    DEBUG(`Verifying ${contractName} at ${contractAddress} on ${chain}`);
     await run("verify-contract", {
         address: contractAddress,
         chain,
@@ -45,15 +44,17 @@ async function verifyContracts(contracts, chainName) {
     DEBUG(`Verifying contracts for chain ${chainName}:`)
     DEBUG('----------------------------------------------------');
     const permissionManagerAddress = contracts.manager.target;
-    const forwarderAddress = contracts.forwarder.target;
     const redemptionAddress = contracts.redemption.target;
-    
+    const forwarderAddress = contracts.forwarder.target;
     const tokenAddresses = Object.values(contracts.tokens).map(token => token.target);
-    const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
+    // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
 
     await verifyContract("PermissionManager", permissionManagerAddress, chainName);
-    await verifyContract("Forwarder", forwarderAddress, chainName, permissionManagerAddress);
     await verifyContract("Redemption", redemptionAddress, chainName, permissionManagerAddress);
+    
+    for (const tokenAddress of tokenAddresses){
+        await verifyContract("Token", tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
+    }
 }
 
 async function migrate(config = {}, opts = {}) {
