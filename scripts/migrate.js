@@ -78,20 +78,13 @@ const sanityCheckConfig = (config) => {
     const rolesSanity = Object.keys(Role).map((roleKey) => {
         const roleValue = Role[roleKey];
         const membersCorrectness = config.roles[roleValue].members.map((member) => {
-            console.log(roleValue + ' ' + member);
             const isPermissionedContract = Object.values(PermissionedContracts).includes(member);
             const isValidEthereumAddress = ethers.isAddress(member);
-            
             const isCorrectMember = isPermissionedContract || isValidEthereumAddress
-
-            console.log(' => isValidEthereumAddress '+isValidEthereumAddress)
-            console.log(' => isPermissionedContract '+isPermissionedContract)
             
             return isCorrectMember
         })
         
-        console.log('membersCorrectness = ' + membersCorrectness);
-        console.log('every = ' + membersCorrectness.every((memberCorrectness) => memberCorrectness === true))
         return membersCorrectness.every((memberCorrectness) => memberCorrectness === true)
     })
 
