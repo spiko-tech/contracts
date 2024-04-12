@@ -7,15 +7,15 @@ const { argv } = require('yargs/yargs')(process.argv.slice(2))
     coverage:      { type: 'boolean', default: false },
     report:        { type: 'boolean', default: false },
     // compilations
-    compiler:      { type: 'string', default: '0.8.21' },
-    evmVersion:    { type: 'string', default: 'shanghai' }, // paris?
+    compiler:      { type: 'string', default: '0.8.24' },
+    evmVersion:    { type: 'string', default: 'cancun' },
     mode:          { type: 'string', choices: ['production', 'development'], default: 'production' },
     runs:          { type: 'number', default: 200 },
     viaIr:         { type: 'boolean', default: false },
     revertStrings: { type: 'string', choices: ['default', 'strip'], default: 'default' },
     // chain
     chainId:       { type: 'number', default: 1337 },
-    hardfork:      { type: 'string', default: 'shanghai' }, // merge?
+    hardfork:      { type: 'string', default: 'cancun' },
     slow:          { type: 'boolean', default: false },
     // APIs
     coinmarketcap: { type: 'string' },
@@ -25,9 +25,7 @@ const { argv } = require('yargs/yargs')(process.argv.slice(2))
 require("@nomicfoundation/hardhat-toolbox");
 require('@nomicfoundation/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
-argv.coverage && require('solidity-coverage');
-argv.report && require('hardhat-gas-reporter');
-argv.etherscan && require('@nomicfoundation/hardhat-verify');
+require('solidity-coverage');
 
 const accounts = [
   argv.mnemonic   && { mnemonic: argv.mnemonic },
@@ -89,6 +87,7 @@ module.exports = {
     apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
   },
   gasReporter: {
+    enabled: argv.report,
     showMethodSig: true,
     currency: 'USD',
     coinmarketcap: argv.coinmarketcap,
