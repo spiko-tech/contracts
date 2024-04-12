@@ -1,12 +1,61 @@
-const { expect }           = require('chai');
-const defaultsDeep         = require('lodash.defaultsdeep');
-const { ethers           } = require('hardhat');
-const { MigrationManager } = require('@amxx/hre/scripts');
-const { toMask, combine  } = require('../test/helpers');
-const DEFAULT              = require('./config');
-const DEBUG                = require('debug')('migration');
+const { expect }                     = require('chai');
+const defaultsDeep                   = require('lodash.defaultsdeep');
+const { ethers, run }                = require('hardhat');
+const { task }                       = require('hardhat/config');
+const { MigrationManager }           = require('@amxx/hre/scripts');
+const { toMask, combine  }           = require('../test/helpers');
+const DEFAULT                        = require('./config');
+const DEBUG                          = require('debug')('migration');
 
 require('dotenv').config();
+
+task("verify-contract", "Verify deployed contract on Etherscan")
+    .addParam("address", "Contract address deployed")
+    .addParam("chain", "chain to deploy")
+    .addParam("permissionManagerAddress", "Arguments permission manager")
+    .addParam("forwarderAddress", "Arguments forwarder")
+    .setAction(async (_args, hre) => {
+        try {
+            const constructorArguments = [_args.permissionManagerAddress, _args.forwarderAddress].filter((add)=> add !== "");
+            
+            await hre.run("verify:verify", {
+                address: _args.address,
+                chain: _args.chain,
+                constructorArguments
+            })
+        } catch (message) {
+            const host = _args.chain === "mainnet" || "sepolia" ? "etherscan" : `polygonscan`;
+            
+            DEBUG(`AUTOMATIC VERIFICIATION NOK, Please visit: https://${_args.chain}.${host}.io/proxyContractChecker?a=${_args.address}`)
+        }
+    });
+
+async function verifyContract(contractName, contractAddress, chain, permissionManagerAddress = "", forwarderAddress = ""){
+    DEBUG(`Verifying ${contractName} at ${contractAddress} on ${chain}`);
+    await run("verify-contract", {
+        address: contractAddress,
+        chain,
+        permissionManagerAddress,
+        forwarderAddress
+   });
+}
+
+async function verifyContracts(contracts, chainName) { 
+    DEBUG(`Verifying contracts for chain ${chainName}:`)
+    DEBUG('----------------------------------------------------');
+    const permissionManagerAddress = contracts.manager.target;
+    const redemptionAddress = contracts.redemption.target;
+    const forwarderAddress = contracts.forwarder.target;
+    const tokenAddresses = Object.values(contracts.tokens).map(token => token.target);
+    // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
+
+    await verifyContract("PermissionManager", permissionManagerAddress, chainName);
+    await verifyContract("Redemption", redemptionAddress, chainName, permissionManagerAddress);
+    
+    for (const tokenAddress of tokenAddresses){
+        await verifyContract("Token", tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
+    }
+}
 
 async function migrate(config = {}, opts = {}) {
     config = defaultsDeep(config, DEFAULT);
@@ -24,6 +73,7 @@ async function migrate(config = {}, opts = {}) {
     DEBUG('----------------------------------------------------');
 
     const migration = new MigrationManager(provider, config);
+    
     await migration.ready();
 
     const contracts = { tokens: {}, oracles: {} };
@@ -177,6 +227,8 @@ async function migrate(config = {}, opts = {}) {
             DEBUG('Events:');
             logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
         });
+
+    await verifyContracts(contracts, name);
 
     return {
         config,
