@@ -12,9 +12,9 @@ do
 
   echo "the config is "$config
 
-  jq -cr '.deploy[].type+" "+.deploy[].name' $config | while read endpoint;
+  jq -cr '.deploy[].enabled+" "+.deploy[].type+" "+.deploy[].name' $config | while read enabled endpoint;
   do
-    if [[ ! -z ${endpoint} ]]; then 
+    if [[ ! -z ${endpoint} ]] && [[ "${enabled}" == "on" ]]; then 
       npx graph deploy --product ${endpoint} ${subgraph}subgraph.yaml --version-label=$1
     fi
   done
