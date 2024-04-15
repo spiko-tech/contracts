@@ -10,12 +10,11 @@ do
   npx graph-compiler --config ${config} --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph
   npx graph codegen ${subgraph}subgraph.yaml
 
-  echo "the config is "$config
-
+  version=$(jq -cr '.version' $config)
   jq -cr '.deploy[].enabled+" "+.deploy[].type+" "+.deploy[].name' $config | while read enabled endpoint;
   do
     if [[ ! -z ${endpoint} ]] && [[ "${enabled}" == "on" ]]; then 
-      npx graph deploy --product ${endpoint} ${subgraph}subgraph.yaml --version-label=$1
+      npx graph deploy --product ${endpoint} ${subgraph}subgraph.yaml --version-label=${version}
     fi
   done
 done
