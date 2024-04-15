@@ -2,19 +2,19 @@
   "contracts": {
     "tokens": [
       {
-        "name": "Staging EUTB",
+        "name": "Preprod EUTB",
         "symbol": "EUTB",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
       },
       {
-        "name": "Staging USTB",
+        "name": "Preprod USTB",
         "symbol": "USTB",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" }
       },
       {
-        "name": "Staging eurUSTB",
+        "name": "Preprod eurUSTB",
         "symbol": "eurUSTB",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
