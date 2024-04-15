@@ -44,7 +44,7 @@ const networkNames = [
   // optimism
   'optimisticEthereum', 'optimisticKovan',
   // polygon
-  'polygon', 'polygonMumbai',
+  'polygon', 'polygonAmoy',
   // arbitrum
   'arbitrumOne', 'arbitrumTestnet',
   // avalanche
