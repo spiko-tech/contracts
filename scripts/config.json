@@ -51,11 +51,11 @@
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "burner": {
       "admins": ["admin"],
@@ -63,7 +63,7 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": ["0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"]
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "whitelisted": {
       "admins": ["whitelister"],
@@ -73,7 +73,7 @@
         "0x231eF26299caD78950A353832739B9f7245467F0",
         "0xf71F2015B729522e8f72b238E4cB51942Cd89741",
         "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
-        "0x8F6D97e3b055c742CBc8572464D25D46EB2A0E84"
+        "0x3d0e0e741B2514bCA427136864B5d6646047ECbE"
       ]
     }
   }
