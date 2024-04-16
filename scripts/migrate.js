@@ -24,9 +24,11 @@ task("verify-contract", "Verify deployed contract on Etherscan")
                 constructorArguments
             })
         } catch (message) {
-            const host = _args.chain === "mainnet" || "sepolia" ? "etherscan" : `polygonscan`;
-            
-            DEBUG(`AUTOMATIC VERIFICIATION NOK, Please visit: https://${_args.chain}.${host}.io/proxyContractChecker?a=${_args.address}`)
+            const host = _args.chain === "mainnet" || _args.chain ===  "sepolia" ? "etherscan" : `polygonscan`;
+            const ending = host === "etherscan" ? "io" : "com";
+            const chain = _args.chain === "amoyPolygon" ? "amoy" : _args.chain;
+
+            DEBUG(`AUTOMATIC VERIFICIATION NOK, Please visit: https://${chain}.${host}.${ending}/proxyContractChecker?a=${_args.address}`)
         }
     });
 
