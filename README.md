@@ -1,15 +1,22 @@
-# contracts
+# Spiko Contracts
+
+## Prerequisites
+
+- Node LTS (20)
+- PNPM
+
+## Installation
 
 - install dependencies
 
 ```sh
-yarn install
+pnpm install
 ```
 
 - compile
 
 ```sh
-npm run compile
+pnpm compile
 ```
 
 - add `.env` file with following infos:
@@ -29,19 +36,19 @@ SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use `EVM_VERSION=paris` for Sepolia / Mumbai or `EVM_VERSION=shanghai` for GOERLI / Polygon and Mainnet
-Note: The variable `ETHERSCAN` should be used also when deploying to polygonscan (mumbai/polygon) with API key coming from polygonscan.
+Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for Polygon and Mainnet
+Note: The variable `ETHERSCAN` should be used also when deploying to polygonscan (polygon/polygonAmoy) with API key coming from polygonscan.
 
 - deploy
 
 ```sh
-npx hardhat run scripts/migrate.js --network <sepolia or goerli>
+pnpm hardhat run scripts/migrate.js --network <sepolia or polygonAmoy>
 ```
 
 - verify contracts and publish source code
 
 ```sh
-npx hardhat verify --network <sepolia or goerli> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>
+pnpm hardhat verify --network <sepolia or polygonAmoy> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>
 ```
 
 Note: if verification is failing with following error:
