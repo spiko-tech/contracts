@@ -1,0 +1,38 @@
+{
+	"forwarder": {
+		"txHash": "0x29c8c373057f9e50e54e2ea6b2aef136ced8024fe16ef52105ea8a0f004590f8",
+		"address": "0x22Ef458877a90E2461B2A9e7489AA54ae86D0BB2"
+	},
+	"manager": {
+		"txHash": "0x2898809a13586398d06aaad0e5f603a7fcf3a7e2b65c303af03c88630f51c2d5",
+		"address": "0xF7bfa0D8BEcA7D9C2803C16E271A96802EB44401"
+	},
+	"redemption": {
+		"txHash": "0x97c33701563f63be7bdb2789e4595dde14d68a4ccacf9963993f726c996c6b41",
+		"address": "0xE55144E18CE4069E8C6598D9d5D44E2991463535"
+	},
+	"token-EUTB": {
+		"txHash": "0xc06f590ecef84a109800408ce9951fbd5450f725c8e3d340865c2ea886979ad2",
+		"address": "0x65a0bCf89b32995B0F000E00ddeBc6272167a12c"
+	},
+	"oracle-EUTB": {
+		"txHash": "0xa36217614321fac9bc6811ffa7dcd12b2d4a7ab016830f50d594586215689c47",
+		"address": "0xD3b2ceaA6c82fB8C7922cC34b349f0C0941F529B"
+	},
+	"token-USTB": {
+		"txHash": "0x5b542e9928653e0fff6878d1b787859d9199fc565c8fe7066fd5de4b00683ee6",
+		"address": "0x94C6251f402415446aca39fAeA43B6979fa14980"
+	},
+	"oracle-USTB": {
+		"txHash": "0x26bdec1480a24ffff256810689c004d60454899260556edf993035ed204ce788",
+		"address": "0xDAF7fFf080B38e1B8970730Cafb41Ff6947D035B"
+	},
+	"token-eurUSTB": {
+		"txHash": "0x89589d2497414a38b74d64b4245a93967f334b3936cae96ef311fed4c565ef9b",
+		"address": "0x4d3DC44cc6346987418551855e1ddD418E643c7d"
+	},
+	"oracle-eurUSTB": {
+		"txHash": "0xfc7d3556fd4168365eacaca844a9a6705db614c2b77054a852332d1c0f94ec5b",
+		"address": "0x09CbbA9026C83f82aAA1eA875f9a40C4113CE2e6"
+	}
+}

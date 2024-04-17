@@ -2,16 +2,22 @@
   "contracts": {
     "tokens": [
       {
-        "name": "Spiko EU T-Bills Money Market Fund",
-        "symbol": "EUTBL",
+        "name": "Dev EUTB",
+        "symbol": "EUTB",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" }
       },
       {
-        "name": "Spiko US T-Bills Money Market Fund",
-        "symbol": "USTBL",
+        "name": "Dev USTB",
+        "symbol": "USTB",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Dev eurUSTB",
+        "symbol": "eurUSTB",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
       }
     ],
     "fns": {
@@ -27,19 +33,29 @@
   },
   "roles": {
     "admin": {
-      "members": []
+      "members": [
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5",
+        "0x231eF26299caD78950A353832739B9f7245467F0",
+        "0xf71F2015B729522e8f72b238E4cB51942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752"
+      ]
     },
     "operator-exceptional": {
       "admins": ["admin"],
-      "members": []
+      "members": [
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5",
+        "0x231eF26299caD78950A353832739B9f7245467F0",
+        "0xf71F2015B729522e8f72b238E4cB51942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752"
+      ]
     },
     "operator-daily": {
       "admins": ["admin"],
-      "members": []
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "operator-oracle": {
       "admins": ["admin"],
-      "members": []
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "burner": {
       "admins": ["admin"],
@@ -47,11 +63,18 @@
     },
     "whitelister": {
       "admins": ["admin"],
-      "members": []
+      "members": ["0x3d0e0e741B2514bCA427136864B5d6646047ECbE"]
     },
     "whitelisted": {
       "admins": ["whitelister"],
-      "members": ["redemption"]
+      "members": [
+        "redemption",
+        "0x21c35116e99255528B75CBc153BF3c954778a1F5",
+        "0x231eF26299caD78950A353832739B9f7245467F0",
+        "0xf71F2015B729522e8f72b238E4cB51942Cd89741",
+        "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
+        "0x3d0e0e741B2514bCA427136864B5d6646047ECbE"
+      ]
     }
   }
 }
