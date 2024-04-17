@@ -38,7 +38,7 @@ contract Redemption is
         uint48 deadline;
     }
 
-    uint48                                       public constant MAX_DELAY = 7 days;
+    uint48                                       public constant MAX_DELAY = 14 days;
     mapping(bytes32 => Details                 ) public          details;
     mapping(IERC20  => uint256                 ) public          minimum;
     mapping(IERC20  => EnumerableSet.AddressSet) private         _outputs;
