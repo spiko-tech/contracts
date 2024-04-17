@@ -6,6 +6,8 @@ coverage.json
 generated/
 node_modules/
 
-.*
+.yarn
+
+.env
 !.env.example
 !.cache-*.json
