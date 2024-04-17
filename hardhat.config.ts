@@ -1,13 +1,17 @@
 import { HardhatUserConfig } from "hardhat/config";
+import yargs from "yargs/yargs";
+
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
 import "@nomicfoundation/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
 import "solidity-coverage";
+import { MultiSolcUserConfig, NetworksUserConfig } from "hardhat/types";
+import debug from "debug";
 
 require("dotenv").config();
 
-const { argv } = require("yargs/yargs")(process.argv.slice(2))
+const argv = yargs(process.argv.slice(2))
   .env("")
   .options({
     // modules
@@ -35,7 +39,8 @@ const { argv } = require("yargs/yargs")(process.argv.slice(2))
     // APIs
     coinmarketcap: { type: "string" },
     etherscan: { type: "string" },
-  });
+  })
+  .parseSync();
 
 const accounts = [
   argv.mnemonic && { mnemonic: argv.mnemonic },
@@ -80,38 +85,42 @@ const networkNames = [
   "sokol",
 ];
 
-const config: HardhatUserConfig = {
-  solidity: {
-    compilers: [
-      {
-        version: argv.compiler,
-        settings: {
-          evmVersion: argv.evmVersion,
-          optimizer: {
-            enabled: argv.mode === "production" || argv.report,
-            runs: argv.runs,
-          },
-          viaIR: argv.viaIr,
-          debug: {
-            revertStrings: argv.revertStrings,
-          },
+const solidityConfig: MultiSolcUserConfig = {
+  compilers: [
+    {
+      version: argv.compiler,
+      settings: {
+        evmVersion: argv.evmVersion,
+        optimizer: {
+          enabled: argv.mode === "production" || argv.report,
+          runs: argv.runs,
+        },
+        viaIR: argv.viaIr,
+        debug: {
+          revertStrings: argv.revertStrings,
         },
       },
-    ],
-  },
-  networks: {
-    hardhat: {
-      chainId: argv.chainId,
-      hardfork: argv.hardfork,
-      mining: argv.slow ? { auto: false, interval: [3000, 6000] } : undefined,
-      forking: argv.fork ? { url: argv.fork } : undefined,
     },
-    ...Object.fromEntries(
-      networkNames
-        .map((name) => [name, { url: argv[`${name}Node`], accounts }] as const)
-        .filter(([, { url }]) => url)
-    ),
+  ],
+};
+
+const networksConfig: NetworksUserConfig = {
+  hardhat: {
+    chainId: argv.chainId,
+    hardfork: argv.hardfork,
+    mining: argv.slow ? { auto: false, interval: [3000, 6000] } : undefined,
+    forking: argv.fork ? { url: argv.fork as string } : undefined,
   },
+  ...Object.fromEntries(
+    networkNames
+      .map((name) => [name, { url: argv[`${name}Node`], accounts }] as const)
+      .filter(([, { url }]) => url)
+  ),
+};
+
+const config: HardhatUserConfig = {
+  solidity: solidityConfig,
+  networks: networksConfig,
   // @ts-ignore
   etherscan: {
     apiKey: Object.fromEntries(
@@ -126,8 +135,6 @@ const config: HardhatUserConfig = {
   },
 };
 
-require("debug")("compilation")(
-  JSON.stringify(module.exports.solidity.compilers, null, 2)
-);
+debug("compilation")(JSON.stringify(solidityConfig.compilers, null, 2));
 
 export default config;

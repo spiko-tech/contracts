@@ -22,18 +22,33 @@ devDependencies:
   '@nomicfoundation/hardhat-chai-matchers':
     specifier: ^2.0.3
     version: 2.0.6(@nomicfoundation/hardhat-ethers@3.0.5)(chai@4.4.1)(ethers@6.12.0)(hardhat@2.22.3)
+  '@nomicfoundation/hardhat-ethers':
+    specifier: ^3.0.5
+    version: 3.0.5(ethers@6.12.0)(hardhat@2.22.3)
   '@types/chai':
     specifier: '4'
     version: 4.3.14
+  '@types/debug':
+    specifier: ^4.1.12
+    version: 4.1.12
   '@types/mocha':
     specifier: ^10.0.6
     version: 10.0.6
   '@types/node':
     specifier: ^20.12.7
     version: 20.12.7
+  '@types/yargs':
+    specifier: ^17.0.32
+    version: 17.0.32
   chai:
     specifier: '4'
     version: 4.4.1
+  debug:
+    specifier: ^4.3.4
+    version: 4.3.4(supports-color@8.1.1)
+  ethers:
+    specifier: ^6.12.0
+    version: 6.12.0
   hardhat:
     specifier: ^2.22.3
     version: 2.22.3(ts-node@10.9.2)(typescript@5.4.5)
@@ -43,6 +58,9 @@ devDependencies:
   typescript:
     specifier: ^5.4.5
     version: 5.4.5
+  yargs:
+    specifier: ^17.7.2
+    version: 17.7.2
 
 packages:
 
@@ -1217,6 +1235,12 @@ packages:
       '@types/node': 20.12.7
     dev: true
 
+  /@types/debug@4.1.12:
+    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+    dependencies:
+      '@types/ms': 0.7.34
+    dev: true
+
   /@types/form-data@0.0.33:
     resolution: {integrity: sha512-8BSvG1kGm83cyJITQMZSulnl6QV8jqAGreJsc5tPu1Jq0vTSOiY/k24Wx82JRpWwZSqrala6sd5rWi6aNXvqcw==}
     dependencies:
@@ -1240,6 +1264,10 @@ packages:
 
   /@types/mocha@10.0.6:
     resolution: {integrity: sha512-dJvrYWxP/UcXm36Qn36fxhUKu8A/xMRXVT2cliFF1Z7UA9liG5Psj3ezNSZw+5puH2czDXRLcXQxf8JbJt0ejg==}
+    dev: true
+
+  /@types/ms@0.7.34:
+    resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
     dev: true
 
   /@types/node@10.17.60:
@@ -1277,6 +1305,16 @@ packages:
     resolution: {integrity: sha512-hHxJU6PAEUn0TP4S/ZOzuTUvJWuZ6eIKeNKb5RBpODvSl6hp1Wrw4s7ATY50rklRCScUDpHzVA/DQdSjJ3UoYQ==}
     dependencies:
       '@types/node': 20.12.7
+    dev: true
+
+  /@types/yargs-parser@21.0.3:
+    resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
+    dev: true
+
+  /@types/yargs@17.0.32:
+    resolution: {integrity: sha512-xQ67Yc/laOG5uMfX/093MRlGGCIBzZMarVa+gfNKJxWAIgykYpVGkBdbqEzGDDfCrVUj6Hiff4mTZ5BA6TmAog==}
+    dependencies:
+      '@types/yargs-parser': 21.0.3
     dev: true
 
   /abbrev@1.0.9:
