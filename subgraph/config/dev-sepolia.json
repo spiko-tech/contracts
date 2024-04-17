@@ -51,5 +51,7 @@
       "module": ["oracle"]
     }
   ],
-  "deploy": [{ "type": "subgraph-studio", "name": "dev-sepolia" }]
+  "deploy": [
+    { "enabled": "off", "type": "subgraph-studio", "name": "dev-sepolia" }
+  ]
 }
