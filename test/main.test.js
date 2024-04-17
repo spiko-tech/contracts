@@ -768,7 +768,7 @@ describe('Main', function () {
 
                 const { status: statusAfter, deadline: deadlineAfter } = await this.contracts.redemption.details(op.id);
                 expect(statusAfter).to.equal(STATUS.PENDING);
-                expect(deadlineAfter).to.equal(timepoint + time.duration.days(7));
+                expect(deadlineAfter).to.equal(timepoint + time.duration.days(14));
             });
 
             it('using ERC-2771', async function () {
@@ -810,7 +810,7 @@ describe('Main', function () {
 
                 const { status: statusAfter, deadline: deadlineAfter } = await this.contracts.redemption.details(op.id);
                 expect(statusAfter).to.equal(STATUS.PENDING);
-                expect(deadlineAfter).to.equal(timepoint + time.duration.days(7));
+                expect(deadlineAfter).to.equal(timepoint + time.duration.days(14));
             });
 
             it('duplicated id', async function () {
@@ -874,7 +874,7 @@ describe('Main', function () {
                     this.operation.data,
                 );
 
-                this.operation.deadline = (await time.latest()) + time.duration.days(7);
+                this.operation.deadline = (await time.latest()) + time.duration.days(14);
             });
 
             it('authorized', async function () {
@@ -928,7 +928,7 @@ describe('Main', function () {
             it('too late', async function () {
                 const data = ethers.hexlify(ethers.randomBytes(64));
 
-                await time.increase(time.duration.days(10));
+                await time.increase(time.duration.days(15));
 
                 await expect(this.contracts.redemption.connect(this.accounts.operator).executeRedemption(
                     this.operation.user,
@@ -955,7 +955,7 @@ describe('Main', function () {
             });
 
             it('anyone can cancel', async function () {
-                await time.increase(time.duration.days(10));
+                await time.increase(time.duration.days(15));
 
                 const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
                 expect(statusBefore).to.equal(STATUS.PENDING);
