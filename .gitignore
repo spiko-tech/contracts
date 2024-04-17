@@ -11,3 +11,5 @@ node_modules/
 .env
 !.env.example
 !.cache-*.json
+
+.cache-1337.json
