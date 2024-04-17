@@ -22,12 +22,27 @@ devDependencies:
   '@nomicfoundation/hardhat-chai-matchers':
     specifier: ^2.0.3
     version: 2.0.6(@nomicfoundation/hardhat-ethers@3.0.5)(chai@4.4.1)(ethers@6.12.0)(hardhat@2.22.3)
+  '@types/chai':
+    specifier: '4'
+    version: 4.3.14
+  '@types/mocha':
+    specifier: ^10.0.6
+    version: 10.0.6
+  '@types/node':
+    specifier: ^20.12.7
+    version: 20.12.7
+  chai:
+    specifier: '4'
+    version: 4.4.1
   hardhat:
     specifier: ^2.22.3
     version: 2.22.3(ts-node@10.9.2)(typescript@5.4.5)
   lodash.defaultsdeep:
     specifier: ^4.6.1
     version: 4.6.1
+  typescript:
+    specifier: ^5.4.5
+    version: 5.4.5
 
 packages:
 
@@ -1199,13 +1214,13 @@ packages:
   /@types/concat-stream@1.6.1:
     resolution: {integrity: sha512-eHE4cQPoj6ngxBZMvVf6Hw7Mh4jMW4U9lpGmS5GBPB9RYxlFg+CHaVN7ErNY4W9XfLIEn20b4VDYaIrbq0q4uA==}
     dependencies:
-      '@types/node': 8.10.66
+      '@types/node': 20.12.7
     dev: true
 
   /@types/form-data@0.0.33:
     resolution: {integrity: sha512-8BSvG1kGm83cyJITQMZSulnl6QV8jqAGreJsc5tPu1Jq0vTSOiY/k24Wx82JRpWwZSqrala6sd5rWi6aNXvqcw==}
     dependencies:
-      '@types/node': 8.10.66
+      '@types/node': 20.12.7
     dev: true
 
   /@types/glob@7.2.0:

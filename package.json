@@ -33,7 +33,12 @@
   "devDependencies": {
     "@amxx/hre": "^0.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
+    "@types/chai": "4",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.12.7",
+    "chai": "4",
     "hardhat": "^2.22.3",
-    "lodash.defaultsdeep": "^4.6.1"
+    "lodash.defaultsdeep": "^4.6.1",
+    "typescript": "^5.4.5"
   }
 }
