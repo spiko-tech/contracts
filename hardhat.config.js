@@ -85,6 +85,17 @@ module.exports = {
   },
   etherscan: {
     apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
+    //apiKey: '.....',
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com"
+        }
+      }
+    ]
   },
   gasReporter: {
     enabled: argv.report,
