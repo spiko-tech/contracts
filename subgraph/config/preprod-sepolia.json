@@ -1,0 +1,56 @@
+{
+  "output": "./generated/preprod-sepolia.",  
+  "version": "v0.0.1",
+  "chain": "sepolia",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x557Ec5e0eFaD04a19EdA69Ede9D6785c4C5756cA",
+      "startBlock": 5718867,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0x2B3deF32e08ecc4A2B4Ede20463C0772214136d5",
+      "startBlock": 5718867,
+      "module": ["redemption"]
+    },
+    {
+      "name": "spUSD-token",
+      "address": "0xDAF7fFf080B38e1B8970730Cafb41Ff6947D035B",
+      "startBlock": 5718867,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spUSD-oracle",
+      "address": "0x4d3DC44cc6346987418551855e1ddD418E643c7d",
+      "startBlock": 5718867,
+      "module": ["oracle"]
+    },
+    {
+      "name": "spEUR-token",
+      "address": "0x2328FcFeee0C0917a8F4beC994003d7661093eAE",
+      "startBlock": 5718867,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spEUR-oracle",
+      "address": "0x94C6251f402415446aca39fAeA43B6979fa14980",
+      "startBlock": 5718867,
+      "module": ["oracle"]
+    },
+    {
+      "name": "koEUR-token",
+      "address": "0x09CbbA9026C83f82aAA1eA875f9a40C4113CE2e6",
+      "startBlock": 5718867,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koEUR-oracle",
+      "address": "0xFF94c1E8650c133aA55d5E6224a80a49eC8a3C46",
+      "startBlock": 5718867,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [{ "enabled": "off", "type": "subgraph-studio", "name": "preprod-sepolia" }]
+}
