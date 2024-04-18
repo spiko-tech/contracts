@@ -1,0 +1,56 @@
+{
+  "output": "./generated/preprod-amoy.",
+  "version": "v0.0.1",
+  "chain": "polygon-amoy",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x9e3286ffE7F42557A413e14EcD9d1a01c3599232",
+      "startBlock": 5978022,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0x36f5b32DF173197Ab7541e5CAC7E10608dD4956B",
+      "startBlock": 5978022,
+      "module": ["redemption"]
+    },
+    {
+      "name": "spUSD-token",
+      "address": "0xdAb69748Df3bbb2D1702d9c05BF540dE649B9Ca7",
+      "startBlock": 5978022,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spUSD-oracle",
+      "address": "0x0dFb33C9086f179b36BDdeDB2C0c8C59cB861C0D",
+      "startBlock": 5978022,
+      "module": ["oracle"]
+    },
+    {
+      "name": "spEUR-token",
+      "address": "0x81b6b2b317cC8eEb107331d448a569978eab521b",
+      "startBlock": 5978022,
+      "module": ["erc20"]
+    },
+    {
+      "name": "spEUR-oracle",
+      "address": "0x3B8aA8f1c1c78CAE4dB723Da38377f3256B64b9a",
+      "startBlock": 5978022,
+      "module": ["oracle"]
+    },
+    {
+      "name": "koEUR-token",
+      "address": "0x49BF1a7a6a33cF456026Cd1d7eBF768C81406Cd1",
+      "startBlock": 5978022,
+      "module": ["erc20"]
+    },
+    {
+      "name": "koEUR-oracle",
+      "address": "0x5DC27c68aa37d46eC511718b765E001b88e9a404",
+      "startBlock": 5978022,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [{ "enabled": "on", "type": "subgraph-studio", "name": "preprod-amoy" }]
+}
