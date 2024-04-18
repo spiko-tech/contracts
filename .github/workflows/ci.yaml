@@ -1,0 +1,36 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: 20.9.0
+  PNPM_VERSION: 8.10.0
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      actions: "read"
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-lint
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install -r
+      - run: pnpm compile
+      - run: pnpm coverage
