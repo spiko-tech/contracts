@@ -1,3 +1,5 @@
+![ci](https://github.com/spiko-tech/contracts/actions/workflows/ci.yaml/badge.svg)
+
 # Spiko Contracts
 
 Welcome to the Spiko Contracts repository. Here you'll find the smart contracts powering Spiko's tokenization of securities on public blockchains. These contracts are the backbone of the first fully-licensed money market funds in the EU issued on-chain:
