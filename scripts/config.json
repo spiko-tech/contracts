@@ -19,7 +19,6 @@
       "tokens[]-burn": ["burner"],
       "tokens[]-pause": ["operator-exceptional"],
       "tokens[]-unpause": ["operator-exceptional"],
-      "tokens[]-setOwnership": [],
       "tokens[]-transfer": ["whitelisted"],
       "oracles[]-publishPrice": ["operator-oracle"],
       "redemption-executeRedemption": ["operator-daily"]

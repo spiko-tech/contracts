@@ -88,7 +88,7 @@ describe('Main', function () {
         // token
         expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('upgradeToAndCall').selector)).to.equal(combine(this.MASKS.admin));
         expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('mint'            ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS['operator-daily']));
-        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('burn'            ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional'], this.MASKS.burner));
+        expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('burn'            ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS.burner));
         expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('pause'           ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
         expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('unpause'         ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS['operator-exceptional']));
         expect(await this.contracts.manager.getRequirements(this.contracts.token, this.contracts.token.interface.getFunction('transfer'        ).selector)).to.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
@@ -146,11 +146,11 @@ describe('Main', function () {
                 });
 
                 it('authorized', async function () {
-                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.alice, 100))
+                    await expect(this.contracts.token.connect(this.accounts.admin).burn(this.accounts.alice, 100))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(this.accounts.alice, ethers.ZeroAddress, 100);
                 });
 
-                it('unauthorized caller (need operator)', async function () {
+                it('unauthorized caller (need admin)', async function () {
                     await expect(this.contracts.token.connect(this.accounts.alice).burn(this.accounts.alice, 100))
                     .to.be.revertedWithCustomError(this.contracts.token, 'RestrictedAccess').withArgs(this.accounts.alice, this.contracts.token, this.contracts.token.interface.getFunction('burn').selector);
                 });
@@ -163,7 +163,7 @@ describe('Main', function () {
                         this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris, this.IDS.whitelisted),
                     ]);
 
-                    await expect(this.contracts.token.connect(this.accounts.operator).burn(this.accounts.chris, 100))
+                    await expect(this.contracts.token.connect(this.accounts.admin).burn(this.accounts.chris, 100))
                     .to.emit(this.contracts.token, 'Transfer').withArgs(this.accounts.chris, ethers.ZeroAddress, 100);
                 });
             });
@@ -403,7 +403,7 @@ describe('Main', function () {
             it('Set initial ownership', async function () {
                 expect(await this.contracts.token.owner()).to.equal(ethers.ZeroAddress);
 
-                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice))
+                await expect(this.contracts.token.connect(this.accounts.admin).setOwnership(this.accounts.alice))
                 .to.emit(this.contracts.token, 'OwnershipTransferred')
                 .withArgs(ethers.ZeroAddress, this.accounts.alice);
 
@@ -411,11 +411,11 @@ describe('Main', function () {
             });
 
             it('Reset ownership', async function () {
-                await this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.alice);
+                await this.contracts.token.connect(this.accounts.admin).setOwnership(this.accounts.alice);
 
                 expect(await this.contracts.token.owner()).to.equal(this.accounts.alice);
 
-                await expect(this.contracts.token.connect(this.accounts.operator).setOwnership(this.accounts.bruce))
+                await expect(this.contracts.token.connect(this.accounts.admin).setOwnership(this.accounts.bruce))
                 .to.emit(this.contracts.token, 'OwnershipTransferred')
                 .withArgs(this.accounts.alice, this.accounts.bruce);
 
