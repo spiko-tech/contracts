@@ -53,6 +53,6 @@
     }
   ],
   "deploy": [
-    { "enabled": "on", "type": "subgraph-studio", "name": "staging-amoy" }
+    { "enabled": "off", "type": "subgraph-studio", "name": "staging-amoy" }
   ]
 }

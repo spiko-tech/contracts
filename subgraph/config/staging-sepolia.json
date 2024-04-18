@@ -52,6 +52,6 @@
     }
   ],
   "deploy": [
-    { "enabled": "on", "type": "subgraph-studio", "name": "staging-sepolia" }
+    { "enabled": "off", "type": "subgraph-studio", "name": "staging-sepolia" }
   ]
 }
