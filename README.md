@@ -50,8 +50,8 @@ pnpm test
 
 ```sh
 # Compilation
-COMPILER=0.8.21
-EVM_VERSION=paris
+COMPILER=0.8.24
+EVM_VERSION=cancun
 MODE=production
 
 # Migration
@@ -63,7 +63,6 @@ SEPOLIA_NODE=
 ETHERSCAN=
 ```
 
-Note: use `EVM_VERSION=paris` for Sepolia or `EVM_VERSION=shanghai` for Polygon and Mainnet
 Note: The variable `ETHERSCAN` should be used also when deploying to polygonscan (polygon/polygonAmoy) with API key coming from polygonscan.
 
 - Add custom addresses in the `script/config.json` file for the different persmissions groups
