@@ -1,0 +1,46 @@
+{
+  "output": "./generated/mainnet.",
+  "version": "v0.0.1",
+  "chain": "mainnet",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0x344278aff344d6fb960705dc18a4912221608472",
+      "startBlock": 19690257,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0xDA5599f04e9b437C8394b0c2BC68B502A66ebFe8",
+      "startBlock": 19690259,
+      "module": ["redemption"]
+    },
+    {
+      "name": "token-EUTBL",
+      "address": "0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80",
+      "startBlock": 19690261,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-EUTBL",
+      "address": "0x29503f31B73F0734455942Eb888E13acA1588a4e",
+      "startBlock": 19690263,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-USTBL",
+      "address": "0xe4880249745eAc5F1eD9d8F7DF844792D560e750",
+      "startBlock": 19690265,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-USTBL",
+      "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
+      "startBlock": 19690267,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [
+    { "enabled": "on", "type": "subgraph-studio", "name": "spiko-mainnet" }
+  ]
+}
