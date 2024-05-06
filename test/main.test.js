@@ -22,7 +22,7 @@ async function fixture() {
   accounts.chris = accounts.shift();
   accounts.other = accounts.shift();
 
-  const { contracts, config, roles } = await migrate(
+  const { migration, contracts, config, roles, opts } = await migrate(
     {
       deployer: accounts.admin,
       roles: {
@@ -51,13 +51,22 @@ async function fixture() {
     contracts.token,
     "Invalid configuration for testing"
   );
+  const { oracle: oracleConfig, ...tokenConfig } = config.contracts.tokens.find(Boolean);
+
+  // build rebasing
+  contracts.rebasing = await ethers.getContractFactory("TokenRebasing").then(factory => migration.migrate(
+    `token-${tokenConfig.symbol}-rebasing`,
+    factory,
+    [ contracts.oracle.target ],
+    { ...opts, kind: "uups", constructorArgs: [ contracts.manager.target, contracts.forwarder.target ] },
+  ));
 
   return {
     accounts,
     contracts,
     config,
-    tokenConfig: config.contracts.tokens.find(Boolean),
-    oracleConfig: config.contracts.tokens.find(Boolean).oracle,
+    tokenConfig,
+    oracleConfig,
     ...roles,
   };
 }
@@ -217,6 +226,16 @@ describe("Main", function () {
   });
 
   describe("Token", function () {
+    describe("metadata", function () {
+      it("name", async function () {
+        expect(await this.contracts.token.name()).to.be.equal(this.tokenConfig.name);
+      });
+
+      it("symbol", async function () {
+        expect(await this.contracts.token.symbol()).to.be.equal(this.tokenConfig.symbol);
+      });
+    });
+
     describe("EIP721", function () {
       beforeEach(async function () {
         this.expectedDomain = await ethers.provider
@@ -829,6 +848,62 @@ describe("Main", function () {
             this.contracts.token.interface.getFunction("setOwnership").selector
           );
       });
+    });
+  });
+
+  describe("Rebasing Token", function () {
+    describe("metadata", function () {
+      it("name", async function () {
+        expect(await this.contracts.rebasing.name()).to.be.equal(this.tokenConfig.name + " (rebasing)");
+      });
+
+      it("symbol", async function () {
+        expect(await this.contracts.rebasing.symbol()).to.be.equal(this.tokenConfig.symbol + "-R");
+      });
+    });
+
+    describe("EIP721", function () {
+      beforeEach(async function () {
+        this.expectedDomain = await ethers.provider
+          .getNetwork()
+          .then((network) => ({
+            name: this.tokenConfig.name + " (rebasing)",
+            version: "1",
+            chainId: network.chainId,
+            verifyingContract: this.contracts.rebasing.target,
+          }));
+      });
+
+      it("domain is correct", async function () {
+        expect(await getDomain(this.contracts.rebasing)).to.deep.equal(
+          this.expectedDomain
+        );
+      });
+
+      it("domain separator is correct", async function () {
+        expect(await this.contracts.rebasing.DOMAIN_SEPARATOR()).to.equal(
+          ethers.TypedDataEncoder.hashDomain(this.expectedDomain)
+        );
+      });
+    });
+
+    describe("ERC20", function () {
+      it.skip("transfers", function () {});
+
+      describe("paused", function () {
+        it("copy token state", async function () {
+          expect(await this.contracts.token.paused()).to.be.false;
+          expect(await this.contracts.rebasing.paused()).to.be.false;
+
+          await this.contracts.token.connect(this.accounts.operator).pause();
+
+          expect(await this.contracts.token.paused()).to.be.true;
+          expect(await this.contracts.rebasing.paused()).to.be.true;
+        });
+      });
+    });
+
+    it.skip("ERC4626", function () {
     });
   });
 
