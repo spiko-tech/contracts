@@ -109,21 +109,29 @@ contract TokenRebasing is
      ****************************************************************************************************************/
     // Override the deposit and withdraw mechanism to mint/burn amount of assets and not virtual amount of shares
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal virtual override {
+        if (!authority.canCall(receiver, asset(), IERC20.transfer.selector)) {
+            revert Token.UnauthorizedTo(address(this), receiver);
+        }
+
         SafeERC20.safeTransferFrom(IERC20(asset()), caller, address(this), assets);
-        _mint(receiver, assets);
+        super._update(address(0), receiver, assets); // without the convertion override
 
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares) internal virtual override {
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
+    function _withdraw(address caller, address receiver, address holder, uint256 assets, uint256 shares) internal virtual override {
+        if (!authority.canCall(holder, asset(), IERC20.transfer.selector)) {
+            revert Token.UnauthorizedFrom(address(this), holder);
         }
 
-        _burn(owner, assets);
+        if (caller != holder) {
+            _spendAllowance(holder, caller, shares);
+        }
+
+        super._update(holder, address(0), assets); // without the convertion override
         SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
 
-        emit Withdraw(caller, receiver, owner, assets, shares);
+        emit Withdraw(caller, receiver, holder, assets, shares);
     }
 
     /****************************************************************************************************************
@@ -135,7 +143,7 @@ contract TokenRebasing is
     }
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view virtual override returns (uint256) {
         // rebasing to underlying
-        return shares.mulDiv(oracle.getLatestPrice().toUint256(), oracleDemoninator, rounding);
+        return shares.mulDiv(oracleDemoninator, oracle.getLatestPrice().toUint256(), rounding);
     }
 
     /****************************************************************************************************************

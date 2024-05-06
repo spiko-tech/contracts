@@ -22,6 +22,8 @@ async function fixture() {
   accounts.chris = accounts.shift();
   accounts.other = accounts.shift();
 
+  const mock = await deploy("ERC1363ReceiverMock");
+
   const { migration, contracts, config, roles, opts } = await migrate(
     {
       deployer: accounts.admin,
@@ -61,8 +63,12 @@ async function fixture() {
     { ...opts, kind: "uups", constructorArgs: [ contracts.manager.target, contracts.forwarder.target ] },
   ));
 
+  // whitelist rebasing
+  await contracts.manager.connect(accounts.whitelister).addGroup(contracts.rebasing, roles.IDS.whitelisted);
+
   return {
     accounts,
+    mock,
     contracts,
     config,
     tokenConfig,
@@ -364,7 +370,6 @@ describe("Main", function () {
 
       describe("transfers", function () {
         beforeEach(async function () {
-          this.mock = await deploy("ERC1363ReceiverMock");
           await this.contracts.token
             .connect(this.accounts.operator)
             .mint(this.accounts.alice, 1000);
@@ -393,7 +398,7 @@ describe("Main", function () {
                     let operator = fn.includes("From")
                       ? this.accounts.other
                       : null;
-                    let amount = 10;
+                    let amount = 10n;
 
                     // set approval if needed + configure sender and receiver
                     operator &&
@@ -546,8 +551,6 @@ describe("Main", function () {
       const value = 1000n;
 
       beforeEach(async function () {
-        this.mock = await deploy("ERC1363ReceiverMock");
-
         await this.contracts.manager
           .connect(this.accounts.whitelister)
           .addGroup(this.mock, this.IDS.whitelisted),
@@ -888,7 +891,210 @@ describe("Main", function () {
     });
 
     describe("ERC20", function () {
-      it.skip("transfers", function () {});
+      beforeEach(async function () {
+        this.setPrice = price => Promise.all([
+          time.latest(),
+          this.contracts.oracle.decimals(),
+        ]).then(([ timepoint, decimals ]) => this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, ethers.parseUnits(price, decimals)));
+
+        // set initial price
+        await this.setPrice("1.5");
+        // mint tokens
+        await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.alice, ethers.parseEther("100"));
+        await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.rebasing, ethers.MaxUint256);
+        await this.contracts.rebasing.connect(this.accounts.alice).deposit(ethers.parseEther("10"), this.accounts.alice);
+      });
+
+      describe("transfers", function () {
+        for (const fn of [
+          "transfer",
+          "transferFrom",
+          "transferAndCall",
+          "transferFromAndCall",
+        ])
+        describe(fn, function () {
+          for (const fromAuthorized of [true, false])
+            for (const toAuthorized of [true, false]) {
+              it(
+                [
+                  fromAuthorized ? "from authorized" : "from unauthorized",
+                  "+",
+                  toAuthorized ? "to authorized" : "to unauthorized",
+                  "=",
+                  fromAuthorized && toAuthorized ? "ok" : "revert",
+                ].join(" "),
+                async function () {
+                  let from = this.accounts.alice; // Alice has tokens to send
+                  let to = this.mock; // ERC1363 compatible receiver
+                  let operator = fn.includes("From")
+                    ? this.accounts.other
+                    : null;
+                  let amount = 10n;
+                  let underlying = amount * 2n / 3n;
+
+                  // set approval if needed + configure sender and receiver
+                  operator &&
+                    (await this.contracts.rebasing
+                      .connect(from)
+                      .approve(operator, amount));
+                  await this.contracts.manager
+                    .connect(this.accounts.whitelister)
+                    [fromAuthorized ? "addGroup" : "remGroup"](
+                      from,
+                      this.IDS.whitelisted
+                    );
+                  await this.contracts.manager
+                    .connect(this.accounts.whitelister)
+                    [toAuthorized ? "addGroup" : "remGroup"](
+                      to,
+                      this.IDS.whitelisted
+                    );
+
+                  let promise = null;
+                  switch (fn) {
+                    case "transfer":
+                      promise = this.contracts.rebasing
+                        .connect(from)
+                        .transfer(to, amount);
+                      break;
+                    case "transferFrom":
+                      promise = this.contracts.rebasing
+                        .connect(operator)
+                        .transferFrom(from, to, amount);
+                      break;
+                    case "transferAndCall":
+                      promise = this.contracts.rebasing
+                        .connect(from)
+                        .getFunction("transferAndCall(address,uint256)")(
+                        to,
+                        amount
+                      );
+                      break;
+                    case "transferFromAndCall":
+                      promise = this.contracts.rebasing
+                        .connect(operator)
+                        .getFunction(
+                          "transferFromAndCall(address,address,uint256)"
+                        )(from, to, amount);
+                      break;
+                  }
+
+                  await (fromAuthorized && toAuthorized
+                    ? expect(promise)
+                        .to.emit(this.contracts.rebasing, "Transfer")
+                        .withArgs(from, to, underlying)
+                    : expect(promise)
+                        .to.be.revertedWithCustomError(
+                          this.contracts.rebasing,
+                          (!fromAuthorized && "UnauthorizedFrom") ||
+                            (!toAuthorized && "UnauthorizedTo")
+                        )
+                        .withArgs(
+                          this.contracts.rebasing,
+                          (!fromAuthorized && from) || (!toAuthorized && to)
+                        ));
+                }
+              );
+            }
+        });
+      });
+
+      describe("allowance", function () {
+        it("consume correct value", async function () {
+          await this.contracts.rebasing.connect(this.accounts.alice).approve(this.accounts.chris, 1000n);
+
+          expect(await this.contracts.rebasing.allowance(this.accounts.alice, this.accounts.chris)).to.be.equal(1000n);
+
+          await expect(this.contracts.rebasing.connect(this.accounts.chris).transferFrom(this.accounts.alice, this.accounts.bruce, 100n))
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(this.accounts.alice, this.accounts.bruce, 66n);
+
+          expect(await this.contracts.rebasing.allowance(this.accounts.alice, this.accounts.chris)).to.be.equal(900n);
+        });
+      });
+
+      describe("ERC4626", function () {
+        it("deposit", async function () {
+          const assets = 100n;
+          const shares = 150n;
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(0n);
+
+          expect(await this.contracts.rebasing.previewDeposit(assets)).to.be.equal(shares);
+          await expect(this.contracts.rebasing.connect(this.accounts.alice).deposit(assets, this.accounts.bruce))
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.accounts.alice, this.contracts.rebasing, assets)
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(ethers.ZeroAddress, this.accounts.bruce, assets)
+            .to.emit(this.contracts.rebasing, "Deposit").withArgs(this.accounts.alice, this.accounts.bruce, assets, shares);
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(shares);
+        });
+
+        it("mint", async function () {
+          const shares = 100n;
+          const assets = 67n;
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(0n);
+
+          expect(await this.contracts.rebasing.previewMint(shares)).to.be.equal(assets);
+          await expect(this.contracts.rebasing.connect(this.accounts.alice).mint(shares, this.accounts.bruce))
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.accounts.alice, this.contracts.rebasing, assets)
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(ethers.ZeroAddress, this.accounts.bruce, assets)
+            .to.emit(this.contracts.rebasing, "Deposit").withArgs(this.accounts.alice, this.accounts.bruce, assets, shares);
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(shares);
+        });
+
+        it("withdraw", async function () {
+          const assets = 100n;
+          const shares = 150n;
+
+          expect(await this.contracts.token.balanceOf(this.accounts.bruce)).to.be.equal(0n);
+
+          expect(await this.contracts.rebasing.previewWithdraw(assets)).to.be.equal(shares);
+          await expect(this.contracts.rebasing.connect(this.accounts.alice).withdraw(assets, this.accounts.bruce, this.accounts.alice))
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(this.accounts.alice, ethers.ZeroAddress, assets)
+            .to.emit(this.contracts.rebasing, "Withdraw").withArgs(this.accounts.alice, this.accounts.bruce, this.accounts.alice, assets, shares)
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.contracts.rebasing, this.accounts.bruce, assets);
+
+          expect(await this.contracts.token.balanceOf(this.accounts.bruce)).to.be.equal(assets);
+        });
+
+        it("redeem", async function () {
+          const shares = 100n;
+          const assets = 66n;
+
+          expect(await this.contracts.token.balanceOf(this.accounts.bruce)).to.be.equal(0n);
+
+          expect(await this.contracts.rebasing.previewRedeem(shares)).to.be.equal(assets);
+          await expect(this.contracts.rebasing.connect(this.accounts.alice).redeem(shares, this.accounts.bruce, this.accounts.alice))
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(this.accounts.alice, ethers.ZeroAddress, assets)
+            .to.emit(this.contracts.rebasing, "Withdraw").withArgs(this.accounts.alice, this.accounts.bruce, this.accounts.alice, assets, shares)
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.contracts.rebasing, this.accounts.bruce, assets);
+
+          expect(await this.contracts.token.balanceOf(this.accounts.bruce)).to.be.equal(assets);
+        });
+      });
+
+      describe("Rebasing", async function () {
+        it("price goes up", async function() {
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.alice)).to.be.equal(ethers.parseEther("15"));
+          expect(await this.contracts.rebasing.totalSupply()).to.be.equal(ethers.parseEther("15"));
+
+          await this.setPrice("2.5");
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.alice)).to.be.equal(ethers.parseEther("25"));
+          expect(await this.contracts.rebasing.totalSupply()).to.be.equal(ethers.parseEther("25"));
+        });
+
+        it("price goes down", async function() {
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.alice)).to.be.equal(ethers.parseEther("15"));
+          expect(await this.contracts.rebasing.totalSupply()).to.be.equal(ethers.parseEther("15"));
+
+          await this.setPrice("1.2");
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.alice)).to.be.equal(ethers.parseEther("12"));
+          expect(await this.contracts.rebasing.totalSupply()).to.be.equal(ethers.parseEther("12"));
+        });
+      });
 
       describe("paused", function () {
         it("copy token state", async function () {
@@ -901,9 +1107,6 @@ describe("Main", function () {
           expect(await this.contracts.rebasing.paused()).to.be.true;
         });
       });
-    });
-
-    it.skip("ERC4626", function () {
     });
   });
 
