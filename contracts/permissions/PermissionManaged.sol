@@ -22,8 +22,12 @@ abstract contract PermissionManaged {
     }
 
     function _checkRestricted(bytes4 selector) internal view {
-        if (!authority.canCall(msg.sender, address(this), selector)) {
-            revert RestrictedAccess(msg.sender, address(this), selector);
+        _checkRestricted(address(this), selector);
+    }
+
+    function _checkRestricted(address target, bytes4 selector) internal view {
+        if (!authority.canCall(msg.sender, target, selector)) {
+            revert RestrictedAccess(msg.sender, target, selector);
         }
     }
 }
