@@ -398,7 +398,7 @@ describe("Main", function () {
                     let operator = fn.includes("From")
                       ? this.accounts.other
                       : null;
-                    let amount = 10n;
+                    let amount = 100n;
 
                     // set approval if needed + configure sender and receiver
                     operator &&
@@ -929,8 +929,8 @@ describe("Main", function () {
                   let operator = fn.includes("From")
                     ? this.accounts.other
                     : null;
-                  let amount = 10n;
-                  let underlying = amount * 2n / 3n;
+                  let amount = 100n;
+                  let underlying = 67n;
 
                   // set approval if needed + configure sender and receiver
                   operator &&
@@ -1006,7 +1006,7 @@ describe("Main", function () {
           expect(await this.contracts.rebasing.allowance(this.accounts.alice, this.accounts.chris)).to.be.equal(1000n);
 
           await expect(this.contracts.rebasing.connect(this.accounts.chris).transferFrom(this.accounts.alice, this.accounts.bruce, 100n))
-            .to.emit(this.contracts.rebasing, "Transfer").withArgs(this.accounts.alice, this.accounts.bruce, 66n);
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(this.accounts.alice, this.accounts.bruce, 67n);
 
           expect(await this.contracts.rebasing.allowance(this.accounts.alice, this.accounts.chris)).to.be.equal(900n);
         });
