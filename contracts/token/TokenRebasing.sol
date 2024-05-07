@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import { IAuthority                } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
 import { IERC20                    } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IERC20Metadata            } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import { IERC1363Receiver          } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 import { IERC4626                  } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC5313                  } from "@openzeppelin/contracts/interfaces/IERC5313.sol";
 import { SafeERC20                 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -25,6 +26,7 @@ import { PermissionManaged         } from "../permissions/PermissionManaged.sol"
 
 /// @custom:security-contact security@spiko.tech
 contract TokenRebasing is
+    IERC1363Receiver,
     IERC5313,
     ERC2771ContextUpgradeable,
     ERC20Upgradeable,
@@ -78,6 +80,31 @@ contract TokenRebasing is
         return Token(asset()).paused();
     }
 
+    function onTransferReceived(
+        address, /*operator*/
+        address from,
+        uint256 assets, /*amount*/
+        bytes memory data
+    ) external virtual returns (bytes4) {
+        require(msg.sender == asset());
+
+        // decode data
+        (address receiver) = data.length < 0x20 ? (from) : abi.decode(data, (address));
+
+        // check max deposit
+        uint256 maxAssets = maxDeposit(receiver);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+        }
+        // compute shares (rebasing), mint and emit event.
+        // cannot use `_deposit` here because `_deposit` handles the transfer of underlying assets.
+        uint256 shares = previewDeposit(assets);
+        _mint(receiver, shares);
+        emit Deposit(from, receiver, assets, shares);
+
+        return IERC1363Receiver.onTransferReceived.selector;
+    }
+
     /****************************************************************************************************************
      *                                        ERC-20 Overrides for rebasing                                         *
      ****************************************************************************************************************/
@@ -107,7 +134,11 @@ contract TokenRebasing is
             to,
             _convertToAssets(
                 value,
-                (msg.sig == IERC4626.deposit.selector || msg.sig == IERC4626.redeem.selector)
+                (
+                    msg.sig == IERC4626.deposit.selector ||
+                    msg.sig == IERC4626.redeem.selector ||
+                    msg.sig == IERC1363Receiver.onTransferReceived.selector
+                )
                     ? Math.Rounding.Floor
                     : Math.Rounding.Ceil
             )
