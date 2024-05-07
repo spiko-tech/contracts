@@ -1028,6 +1028,38 @@ describe("Main", function () {
           expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(shares);
         });
 
+        it("deposit (ERC1363 transferAndCall without data)", async function () {
+          const assets = 100n;
+          const shares = 150n;
+
+          const balanceBefore = await this.contracts.rebasing.balanceOf(this.accounts.alice);
+
+          expect(await this.contracts.rebasing.previewDeposit(assets)).to.be.equal(shares);
+          await expect(this.contracts.token.connect(this.accounts.alice).transferAndCall(this.contracts.rebasing, assets))
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.accounts.alice, this.contracts.rebasing, assets)
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(ethers.ZeroAddress, this.accounts.alice, assets)
+            .to.emit(this.contracts.rebasing, "Deposit").withArgs(this.accounts.alice, this.accounts.alice, assets, shares);
+
+          const balanceAfter = await this.contracts.rebasing.balanceOf(this.accounts.alice);
+          expect(balanceAfter - balanceBefore).to.be.equal(shares);
+        });
+
+        it("deposit (ERC1363 transferAndCall with data)", async function () {
+          const assets = 100n;
+          const shares = 150n;
+          const data = ethers.AbiCoder.defaultAbiCoder().encode([ 'address' ], [ this.accounts.bruce.address ]);
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(0n);
+
+          expect(await this.contracts.rebasing.previewDeposit(assets)).to.be.equal(shares);
+          await expect(this.contracts.token.connect(this.accounts.alice).transferAndCall(this.contracts.rebasing, assets, ethers.Typed.bytes(data)))
+            .to.emit(this.contracts.token, "Transfer").withArgs(this.accounts.alice, this.contracts.rebasing, assets)
+            .to.emit(this.contracts.rebasing, "Transfer").withArgs(ethers.ZeroAddress, this.accounts.bruce, assets)
+            .to.emit(this.contracts.rebasing, "Deposit").withArgs(this.accounts.alice, this.accounts.bruce, assets, shares);
+
+          expect(await this.contracts.rebasing.balanceOf(this.accounts.bruce)).to.be.equal(shares);
+        });
+
         it("mint", async function () {
           const shares = 100n;
           const assets = 67n;
