@@ -101,7 +101,7 @@ contract TokenRebasing is
             revert Token.UnauthorizedTo(address(this), to);
         }
 
-        super._update(from, to, _convertToAssets(value, Math.Rounding.Floor));
+        super._update(from, to, _convertToAssets(value, Math.Rounding.Ceil));
     }
 
     /****************************************************************************************************************
