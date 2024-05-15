@@ -111,6 +111,7 @@ async function migrate(config = {}, opts = {}) {
     const isConfigSane = sanityCheckConfig(config);
     expect(isConfigSane, 'Config is not correct').to.be.true;
 
+    
     const migration = new MigrationManager(provider, config);
     
     await migration.ready();
@@ -266,7 +267,7 @@ async function migrate(config = {}, opts = {}) {
             DEBUG('Events:');
             logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
         });
-
+    
     await verifyContracts(contracts, name);
 
     return {
