@@ -53,6 +53,8 @@ const networkNames = [
   'moonbeam', 'moonriver', 'moonbaseAlpha',
   // xdai
   'xdai', 'sokol',
+  // base
+  'baseSepolia',
 ];
 
 module.exports = {
@@ -88,6 +90,14 @@ module.exports = {
     //apiKey: '.....',
     customChains: [
       {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/api"
+        }
+      },
+      {
         network: "amoy",
         chainId: 80002,
         urls: {
@@ -104,5 +114,6 @@ module.exports = {
     coinmarketcap: argv.coinmarketcap,
   },
 };
+
 
 require('debug')('compilation')(JSON.stringify(module.exports.solidity.compilers, null, 2))
