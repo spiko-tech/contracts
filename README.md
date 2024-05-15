@@ -17,7 +17,7 @@ If you are curious about our design choices for these contracts, we've written a
 
 ## Third-party audit
 
-This repository has undergone an audit conducted by security firm Trail of Bits. Their audit report is available on their [repo](https://github.com/trailofbits/publications).
+This repository has undergone an audit conducted by security firm Trail of Bits. Their audit report is available [here](https://github.com/trailofbits/publications/blob/master/reviews/2023-10-spiko-securityreview.pdf).
 
 ## Prerequisites
 
