@@ -6,7 +6,6 @@ import { IAuthority                } from "@openzeppelin/contracts/access/manage
 import { IERC20                    } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IERC20Metadata            } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import { IERC1363Receiver          } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
-import { IERC4626                  } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC5313                  } from "@openzeppelin/contracts/interfaces/IERC5313.sol";
 import { SafeERC20                 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math                      } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -129,20 +128,37 @@ contract TokenRebasing is
             revert Token.UnauthorizedTo(address(this), to);
         }
 
-        super._update(
-            from,
-            to,
-            _convertToAssets(
-                value,
-                (
-                    msg.sig == IERC4626.deposit.selector ||
-                    msg.sig == IERC4626.redeem.selector ||
-                    msg.sig == IERC1363Receiver.onTransferReceived.selector
-                )
-                    ? Math.Rounding.Floor
-                    : Math.Rounding.Ceil
-            )
-        );
+        super._update(from, to, _convertToAssets(value, Math.Rounding.Ceil));
+    }
+
+    /****************************************************************************************************************
+     *                                       ERC-4626 Overrides for rebasing                                        *
+     ****************************************************************************************************************/
+    // Override the deposit and withdraw mechanism to mint/burn amount of assets and not virtual amount of shares
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal virtual override {
+        if (!authority.canCall(receiver, asset(), IERC20.transfer.selector)) {
+            revert Token.UnauthorizedTo(address(this), receiver);
+        }
+
+        SafeERC20.safeTransferFrom(IERC20(asset()), caller, address(this), assets);
+        super._update(address(0), receiver, assets); // without the convertion override
+
+        emit Deposit(caller, receiver, assets, shares);
+    }
+
+    function _withdraw(address caller, address receiver, address holder, uint256 assets, uint256 shares) internal virtual override {
+        if (!authority.canCall(holder, asset(), IERC20.transfer.selector)) {
+            revert Token.UnauthorizedFrom(address(this), holder);
+        }
+
+        if (caller != holder) {
+            _spendAllowance(holder, caller, shares);
+        }
+
+        super._update(holder, address(0), assets); // without the convertion override
+        SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
+
+        emit Withdraw(caller, receiver, holder, assets, shares);
     }
 
     /****************************************************************************************************************
