@@ -37,8 +37,8 @@ contract TokenRebasing is
     UUPSUpgradeable,
     MulticallUpgradeable
 {
-    using Math     for uint256;
-    using SafeCast for int256;
+    using Math     for *;
+    using SafeCast for *;
 
     Oracle  public oracle;
     uint256 private oracleDemoninator;
@@ -166,11 +166,11 @@ contract TokenRebasing is
      ****************************************************************************************************************/
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view virtual override returns (uint256) {
         // underlying to rebasing
-        return assets.mulDiv(oracle.getLatestPrice().toUint256(), oracleDemoninator, rounding);
+        return assets.mulDiv(oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), oracleDemoninator, rounding);
     }
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view virtual override returns (uint256) {
         // rebasing to underlying
-        return shares.mulDiv(oracleDemoninator, oracle.getLatestPrice().toUint256(), rounding);
+        return shares.mulDiv(oracleDemoninator, oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
     }
 
     /****************************************************************************************************************
