@@ -7,13 +7,13 @@ Welcome to the Spiko Contracts repository. Here you'll find the smart contracts 
 - **Spiko US T-Bills Money Market Fund** (USTBL)
 - **Spiko EU T-Bills Money Market Fund** (EUTBL)
 
-If you're eager to dive deeper into Spiko, explore our [website](https://www.spiko.xyz), delve into our [documentation](https://docs.spiko.xyz), and stay updated with our [blog](https://www.spiko.xyz/blog). Do not hesitate to reach out!
+If you're eager to dive deeper into Spiko, explore our [website](https://www.spiko.xyz), and stay updated with our [blog](https://www.spiko.xyz/blog). Do not hesitate to reach out!
 
 ## Overview
 
-The token contrat is an UUPS-upgradeable ERC-20 token leveraging OpenZeppelin's contracts. It is also ERC-1363 compliant. The redemption contract allows for token holders to redeem their fund shares. The oracle contract implements Chainlink's `AggregatorV3Interface`. A Permission Manager governs all the privileged functions of these contracts.
+The token contrat is an UUPS-upgradeable ERC-20 token leveraging OpenZeppelin's contracts. It is also ERC-1363 compliant and support both ERC-2612 (ERC-20 Permit Extension) and ERC-2771 (Meta Transactions). The redemption contract allows for token holders to redeem their fund shares. The oracle contract implements Chainlink's `AggregatorV3Interface`. A Permission Manager governs all the privileged functions of these contracts.
 
-If you are curious about our design choices for these contracts, we've written a [blogpost](https://www.spiko.xyz/blog) on the topic.
+If you are curious about our design choices for these contracts, we'll write an article on our [blog](https://www.spiko.xyz/blog) soon on the topic.
 
 ## Third-party audit
 
