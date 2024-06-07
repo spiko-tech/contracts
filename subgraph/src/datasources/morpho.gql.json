@@ -1,0 +1,39 @@
+[{
+    "name": "Account",
+    "fields": [
+        { "name": "id",                        "type": "Bytes!"                                      },
+        { "name": "morphoLiquidationCaller",   "type": "MorphoLiquidation!", "derived": "caller"     },
+        { "name": "morphoLiquidationBorrower", "type": "MorphoLiquidation!", "derived": "borrower"   }
+    ]
+},{
+    "name": "ERC20Contract",
+    "fields": [
+        { "name": "id",                        "type": "Bytes!"                                      },
+        { "name": "morphoLoanIn",              "type": "MorphoMarket!",      "derived": "loan"       }
+    ]
+},{
+    "name": "MorphoMarket",
+    "fields": [
+        { "name": "id",                        "type": "Bytes!"                                      },
+        { "name": "loan",                      "type": "ERC20Contract!"                              },
+        { "name": "collateral",                "type": "Account!"                                    },
+        { "name": "liquidations",              "type": "MorphoLiquidation!", "derived": "market"     }
+    ]
+},{
+    "name": "MorphoLiquidation",
+    "parent": "Event",
+    "immutable": true,
+    "fields": [
+        { "name": "emitter",                   "type": "Account!"                                    },
+        { "name": "transaction",               "type": "Transaction!"                                },
+        { "name": "timestamp",                 "type": "BigInt!"                                     },
+        { "name": "market",                    "type": "MorphoMarket!"                               },
+        { "name": "caller",                    "type": "Account!"                                    },
+        { "name": "borrower",                  "type": "Account!"                                    },
+        { "name": "repaidAssets",              "type": "BigInt!"                                     },
+        { "name": "repaidShares",              "type": "BigInt!"                                     },
+        { "name": "seizedAssets",              "type": "BigInt!"                                     },
+        { "name": "badDebtAssets",             "type": "BigInt!"                                     },
+        { "name": "badDebtShares",             "type": "BigInt!"                                     }
+    ]
+}]

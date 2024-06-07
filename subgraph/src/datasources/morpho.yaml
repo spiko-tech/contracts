@@ -1,0 +1,21 @@
+  - kind: ethereum/contract
+    name: {id}
+    network: {chain}
+    source:
+      address: "{address}"
+      abi: Morpho
+      startBlock: {startBlock}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - MorphoLiquidation
+      abis:
+        - name: Morpho
+          file: {root}/abis/Morpho.json
+      eventHandlers:
+        - event: CreateMarket(indexed bytes32,(address,address,address,address,uint256))
+          handler: handleCreateMarket
+        - event: Liquidate(indexed bytes32,indexed address,indexed address,uint256,uint256,uint256,uint256,uint256)
+          handler: handleLiquidate

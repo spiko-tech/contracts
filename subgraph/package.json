@@ -7,10 +7,10 @@
   "scripts": {
     "prepublish": "rimraf artifacts build cache generated",
     "prepare": "mkdir -p generated artifacts",
-    "prepare:subgraph": "graph-compiler --config config/sandbox-sepolia.json --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph",
+    "prepare:subgraph": "graph-compiler --config config/mainnet.json --include src/datasources --include node_modules/@openzeppelin/subgraphs/src/datasources --export-schema --export-subgraph",
     "build": "pnpm build:codegen && pnpm build:compile",
-    "build:codegen": "graph codegen ${SUBGRAPH:-generated/sandbox-sepolia.subgraph.yaml}",
-    "build:compile": "graph build ${SUBGRAPH:-generated/sandbox-sepolia.subgraph.yaml}",
+    "build:codegen": "graph codegen ${SUBGRAPH:-generated/mainnet.subgraph.yaml}",
+    "build:compile": "graph build ${SUBGRAPH:-generated/mainnet.subgraph.yaml}",
     "deploy:hosted": "config/deploy.sh"
   },
   "devDependencies": {
