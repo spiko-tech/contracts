@@ -2,20 +2,16 @@
     "name": "Account",
     "fields": [
         { "name": "id",                        "type": "Bytes!"                                      },
+        { "name": "morphoLoanIn",              "type": "MorphoMarket!",      "derived": "loan"       },
+        { "name": "morphoCollateralIn",        "type": "MorphoMarket!",      "derived": "collateral" },
         { "name": "morphoLiquidationCaller",   "type": "MorphoLiquidation!", "derived": "caller"     },
         { "name": "morphoLiquidationBorrower", "type": "MorphoLiquidation!", "derived": "borrower"   }
-    ]
-},{
-    "name": "ERC20Contract",
-    "fields": [
-        { "name": "id",                        "type": "Bytes!"                                      },
-        { "name": "morphoLoanIn",              "type": "MorphoMarket!",      "derived": "loan"       }
     ]
 },{
     "name": "MorphoMarket",
     "fields": [
         { "name": "id",                        "type": "Bytes!"                                      },
-        { "name": "loan",                      "type": "ERC20Contract!"                              },
+        { "name": "loan",                      "type": "Account!"                                    },
         { "name": "collateral",                "type": "Account!"                                    },
         { "name": "liquidations",              "type": "MorphoLiquidation!", "derived": "market"     }
     ]
