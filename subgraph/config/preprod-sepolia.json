@@ -1,5 +1,5 @@
 {
-  "output": "./generated/preprod-sepolia.",  
+  "output": "./generated/preprod-sepolia.",
   "version": "v0.0.1",
   "chain": "sepolia",
   "datasources": [
@@ -52,5 +52,7 @@
       "module": ["oracle"]
     }
   ],
-  "deploy": [{ "enabled": "off", "type": "subgraph-studio", "name": "preprod-sepolia" }]
+  "deploy": [
+    { "enabled": "off", "type": "subgraph-studio", "name": "preprod-sepolia" }
+  ]
 }
