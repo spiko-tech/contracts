@@ -14,6 +14,7 @@ do
   jq -cr '.deploy[].enabled+" "+.deploy[].type+" "+.deploy[].name' $config | while read enabled endpoint;
   do
     if [[ ! -z ${endpoint} ]] && [[ "${enabled}" == "on" ]]; then 
+      echo "Version = " ${version}
       pnpm graph deploy --product ${endpoint} ${subgraph}subgraph.yaml --version-label=${version}
     fi
   done

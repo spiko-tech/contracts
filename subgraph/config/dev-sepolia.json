@@ -1,5 +1,6 @@
 {
   "output": "./generated/dev-sepolia.",
+  "version": "v0.0.1",
   "chain": "sepolia",
   "datasources": [
     {
