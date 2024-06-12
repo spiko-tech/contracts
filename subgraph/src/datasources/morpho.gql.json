@@ -13,7 +13,18 @@
         { "name": "id",                        "type": "Bytes!"                                      },
         { "name": "loan",                      "type": "Account!"                                    },
         { "name": "collateral",                "type": "Account!"                                    },
+        { "name": "creation",                  "type": "MorphoMarketCreation!"                       },
         { "name": "liquidations",              "type": "MorphoLiquidation!", "derived": "market"     }
+    ]
+},{
+    "name": "MorphoMarketCreation",
+    "parent": "Event",
+    "immutable": true,
+    "fields": [
+        { "name": "emitter",                   "type": "Account!"                                    },
+        { "name": "transaction",               "type": "Transaction!"                                },
+        { "name": "timestamp",                 "type": "BigInt!"                                     },
+        { "name": "market",                    "type": "MorphoMarket!"                               }
     ]
 },{
     "name": "MorphoLiquidation",
