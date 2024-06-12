@@ -4,7 +4,6 @@ import { fetchAccount         } from '@openzeppelin/subgraphs/src/fetch/account'
 import {
 	ERC20Contract,
 	MorphoMarket,
-	MorphoMarketCreation,
 	MorphoLiquidation,
 } from '../../generated/schema'
 
@@ -21,22 +20,17 @@ export function handleCreateMarket(event: CreateMarketEvent): void {
 	// if neither token is of interrest, skip
 	if (loan == null && collateral == null) return;
 
-	const market      = new MorphoMarket(event.params.id);
-	market.loan       = fetchAccount(event.params.marketParams.loanToken).id
-	market.collateral = fetchAccount(event.params.marketParams.collateralToken).id
-	market.creation   = events.id(event)
+	const market               = new MorphoMarket(event.params.id.toHex());
+	market.emitter             = fetchAccount(event.address).id
+	market.transaction         = transactions.log(event).id
+	market.timestamp           = event.block.timestamp
+	market.loan                = fetchAccount(event.params.marketParams.loanToken).id
+	market.collateral          = fetchAccount(event.params.marketParams.collateralToken).id
 	market.save()
-
-	const ev          = new MorphoMarketCreation(events.id(event))
-	ev.emitter        = fetchAccount(event.address).id
-	ev.transaction    = transactions.log(event).id
-	ev.timestamp      = event.block.timestamp
-	ev.market         = market.id
-	ev.save()
 }
 
 export function handleLiquidate(event: LiquidateEvent): void {
-	const market = MorphoMarket.load(event.params.id)
+	const market = MorphoMarket.load(event.params.id.toHex())
 
 	// if market is not of interrest, skip
 	if (market == null) return;
