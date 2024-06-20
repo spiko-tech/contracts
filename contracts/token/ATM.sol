@@ -31,7 +31,8 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     IERC20  immutable public token;
     IERC20  immutable public stable;
     Oracle  immutable public oracle;
-    uint256 immutable private oracleDenominator;
+    uint256 immutable private numerator;
+    uint256 immutable private denominator;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder)
@@ -41,7 +42,12 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
         token             = _oracle.token();
         stable            = _stable;
         oracle            = _oracle;
-        oracleDenominator = 10 ** (oracle.decimals() + tryFetchDecimals(token) - tryFetchDecimals(stable));
+
+        // rate correction
+        uint256 x = tryFetchDecimals(token) + oracle.decimals();
+        uint256 y = tryFetchDecimals(stable);
+        numerator   = x < y ? 10 ** (y - x) : 1;
+        denominator = x > y ? 10 ** (x - y) : 1;
     }
 
     function previewBuy(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
@@ -79,11 +85,11 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     function _convertToStable(uint256 tokenAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return tokenAmount.mulDiv(oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), oracleDenominator, rounding);
+        return tokenAmount.mulDiv(numerator * oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), denominator, rounding);
     }
 
     function _convertToToken(uint256 stableAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return stableAmount.mulDiv(oracleDenominator, oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
+        return stableAmount.mulDiv(denominator, numerator * oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
     }
 
     /****************************************************************************************************************
