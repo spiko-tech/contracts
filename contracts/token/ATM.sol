@@ -23,7 +23,7 @@ function tryFetchDecimals(IERC20 token) view returns (uint8) {
 }
 
 /// @custom:security-contact security@spiko.tech
-contract TokenATM is ERC2771Context, PermissionManaged, Multicall
+contract ATM is ERC2771Context, PermissionManaged, Multicall
 {
     using Math     for *;
     using SafeCast for *;
@@ -31,7 +31,7 @@ contract TokenATM is ERC2771Context, PermissionManaged, Multicall
     IERC20  immutable public token;
     IERC20  immutable public stable;
     Oracle  immutable public oracle;
-    uint256 immutable private oracleDemoninator;
+    uint256 immutable private oracleDenominator;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder)
@@ -41,14 +41,14 @@ contract TokenATM is ERC2771Context, PermissionManaged, Multicall
         token             = _oracle.token();
         stable            = _stable;
         oracle            = _oracle;
-        oracleDemoninator = 10 ** (oracle.decimals() + tryFetchDecimals(token) - tryFetchDecimals(stable));
+        oracleDenominator = 10 ** (oracle.decimals() + tryFetchDecimals(token) - tryFetchDecimals(stable));
     }
 
     function previewBuy(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
         if (input == token) {
-            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Floor));
+            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Ceil));
         } else if (input == stable) {
-            return (_convertToToken(inputAmount, Math.Rounding.Ceil), inputAmount);
+            return (_convertToToken(inputAmount, Math.Rounding.Floor), inputAmount);
         } else {
             revert("invalid input token");
         }
@@ -56,9 +56,9 @@ contract TokenATM is ERC2771Context, PermissionManaged, Multicall
 
     function previewSell(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
         if (input == token) {
-            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Ceil));
+            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Floor));
         } else if (input == stable) {
-            return (_convertToToken(inputAmount, Math.Rounding.Floor), inputAmount);
+            return (_convertToToken(inputAmount, Math.Rounding.Ceil), inputAmount);
         } else {
             revert("invalid input token");
         }
@@ -79,11 +79,11 @@ contract TokenATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     function _convertToStable(uint256 tokenAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return tokenAmount.mulDiv(oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), oracleDemoninator, rounding);
+        return tokenAmount.mulDiv(oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), oracleDenominator, rounding);
     }
 
     function _convertToToken(uint256 stableAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return stableAmount.mulDiv(oracleDemoninator, oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
+        return stableAmount.mulDiv(oracleDenominator, oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
     }
 
     /****************************************************************************************************************
