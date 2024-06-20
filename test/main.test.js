@@ -1265,7 +1265,7 @@ describe("Main", function () {
   });
 
   describe("ATM", function () {
-    for (const stableDecimal of [ 6, 24 ]) {
+    for (const stableDecimal of [ 6, 18, 36 ]) {
       describe(`stable coint with ${stableDecimal} decimals`, function () {
         const formatToken = value => ethers.parseUnits(value, 5);
         const formatStable = value => ethers.parseUnits(value, stableDecimal);
