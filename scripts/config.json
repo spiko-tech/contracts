@@ -5,19 +5,31 @@
         "name": "Dev EUTB",
         "symbol": "EUTB",
         "decimals": 5,
-        "oracle": { "decimals": 6, "quote": "EUR" }
+        "oracle": { "decimals": 6, "quote": "EUR" },
+        "stable": {
+          "1": null,
+          "137": null
+        }
       },
       {
         "name": "Dev USTB",
         "symbol": "USTB",
         "decimals": 5,
-        "oracle": { "decimals": 6, "quote": "USD" }
+        "oracle": { "decimals": 6, "quote": "USD" },
+        "stable": {
+          "1": null,
+          "137": null
+        }
       },
       {
         "name": "Dev eurUSTB",
         "symbol": "eurUSTB",
         "decimals": 5,
-        "oracle": { "decimals": 6, "quote": "EUR" }
+        "oracle": { "decimals": 6, "quote": "EUR" },
+        "stable": {
+          "1": null,
+          "137": null
+        }
       }
     ],
     "fns": {
