@@ -115,7 +115,7 @@ async function migrate(config = {}, opts = {}) {
 
     await migration.ready();
 
-    const contracts = { tokens: {}, oracles: {} };
+    const contracts = { tokens: {}, oracles: {}, distributors: {} };
 
     contracts.forwarder = await ethers.getContractFactory('ERC2771Forwarder')
     .then(factory => migration.migrate(
@@ -144,7 +144,7 @@ async function migrate(config = {}, opts = {}) {
         ));
     DEBUG(`redemption: ${contracts.redemption.target}`);
 
-    for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
+    for (const { name, symbol, decimals, oracle, stable } of config?.contracts?.tokens || []) {
         // deploy token
         contracts.tokens[symbol] = await ethers.getContractFactory('Token')
             .then(factory => migration.migrate(
@@ -163,7 +163,16 @@ async function migrate(config = {}, opts = {}) {
                 [ contracts.tokens[symbol].target, oracle.decimals, oracle.quote ],
                 { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
             ));
-        DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol].target}`);
+        DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol]?.target}`);
+
+        contracts.distributors[symbol] = oracle && stable[chainId] && await ethers.getContractFactory('ATM')
+            .then(factory => migration.migrate(
+                `distributor-${symbol}-${stable[chainId]}}`,
+                factory,
+                [ contracts.oracles[symbol].target, stable[chainId], contracts.manager.target, contracts.forwarder.target ],
+                opts,
+            ));
+        DEBUG(`distributors[${symbol}]: ${contracts.distributors[symbol]?.target}`);
     }
 
     // HELPER
