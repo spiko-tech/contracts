@@ -7,8 +7,7 @@
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" },
         "stable": {
-          "1": null,
-          "137": null
+          "11155111": "0x04b2B7aB4161Ac93898558EeE6eD14038E12F0ED"
         }
       },
       {
@@ -17,8 +16,7 @@
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" },
         "stable": {
-          "1": null,
-          "137": null
+          "11155111": "0x915d58A9CD53De618964B4A7610F7c6EDc67dE4D"
         }
       },
       {
@@ -27,8 +25,7 @@
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" },
         "stable": {
-          "1": null,
-          "137": null
+          "11155111": "0x04b2B7aB4161Ac93898558EeE6eD14038E12F0ED"
         }
       }
     ],
