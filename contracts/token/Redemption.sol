@@ -84,7 +84,7 @@ contract Redemption is
         address /* from */,
         uint256 value,
         bytes calldata data
-    ) external returns (bytes4) {
+    ) public virtual returns (bytes4) {
         // Fetch input params
         Token input = Token(msg.sender);
         (address output, bytes32 salt) = abi.decode(data, (address, bytes32));

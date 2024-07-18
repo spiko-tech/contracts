@@ -16,6 +16,11 @@ abstract contract PermissionManaged {
         _;
     }
 
+    modifier restrictedCustom(bytes4 selector) {
+        _checkRestricted(selector);
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority) {
         authority = _authority;
