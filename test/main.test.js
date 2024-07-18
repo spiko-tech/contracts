@@ -6,6 +6,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy, deployUpgradeable } = require("@amxx/hre/scripts");
 const { migrate } = require("../scripts/migrate");
+const { upgrade } = require("../scripts/upgrade");
 const { Enum, toMask, combine, getDomain } = require("./helpers");
 
 const STATUS = Enum("NULL", "PENDING", "EXECUTED", "CANCELED");
@@ -45,6 +46,9 @@ async function fixture() {
     },
     { noCache: true, noConfirm: true }
   );
+
+  // Perform upgrade
+  await upgrade(config);
 
   // get token + oracle
   contracts.token = Object.values(contracts.tokens).find(Boolean);
