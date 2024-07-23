@@ -47,9 +47,6 @@ async function fixture() {
     { noCache: true, noConfirm: true }
   );
 
-  // Perform upgrade
-  await upgrade(config);
-
   // get token + oracle
   contracts.token = Object.values(contracts.tokens).find(Boolean);
   contracts.oracle = Object.values(contracts.oracles).find(Boolean);
@@ -58,6 +55,11 @@ async function fixture() {
     "Invalid configuration for testing"
   );
   const { oracle: oracleConfig, ...tokenConfig } = config.contracts.tokens.find(Boolean);
+
+  // Perform upgrade
+  await upgrade(config);
+  contracts.redemption = await ethers.getContractFactory('Redemption2').then(factory => factory.attach(getAddress(contracts.redemption)));
+  contracts.token      = await ethers.getContractFactory('Token2').then(factory => factory.attach(getAddress(contracts.token)));
 
   // build rebasing
   contracts.rebasing = await ethers.getContractFactory("TokenRebasing").then(factory => migration.migrate(
@@ -350,17 +352,9 @@ describe("Main", function () {
 
         it("can burn from not-whitelisted account", async function () {
           // whitelist, mint, blacklist
-          await Promise.all([
-            this.contracts.manager
-              .connect(this.accounts.whitelister)
-              .addGroup(this.accounts.chris, this.IDS.whitelisted),
-            this.contracts.token
-              .connect(this.accounts.operator)
-              .mint(this.accounts.chris, 1000),
-            this.contracts.manager
-              .connect(this.accounts.whitelister)
-              .remGroup(this.accounts.chris, this.IDS.whitelisted),
-          ]);
+          await this.contracts.manager.connect(this.accounts.whitelister).addGroup(this.accounts.chris, this.IDS.whitelisted);
+          await this.contracts.token.connect(this.accounts.operator).mint(this.accounts.chris, 1000);
+          await this.contracts.manager.connect(this.accounts.whitelister).remGroup(this.accounts.chris, this.IDS.whitelisted);
 
           await expect(
             this.contracts.token
@@ -2312,6 +2306,113 @@ describe("Main", function () {
           ).to.deep.equal(0n);
         });
       });
+    });
+  });
+
+  describe("Combined workflows", function () {
+    const output = ethers.Wallet.createRandom();
+    const amount = 1000n;
+    const rebased = 1500n;
+
+    beforeEach(async function () {
+      this.setPrice = price => Promise.all([
+        time.latest(),
+        this.contracts.oracle.decimals(),
+      ]).then(([ timepoint, decimals ]) => this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, ethers.parseUnits(price, decimals)));
+
+      // set initial price
+      await this.setPrice("1.5");
+
+      // authorize pair
+      await this.contracts.redemption.registerOutput(this.contracts.token, output, true);
+    });
+
+    it("mint rebased tokens directly", async function () {
+      const tx = this.contracts.token.connect(this.accounts.admin).mintAndCall(
+        this.contracts.rebasing,
+        amount,
+        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [getAddress(this.accounts.alice)]),
+      );
+      await expect(tx).to.changeTokenBalance(this.contracts.token, this.contracts.rebasing, amount);
+      await expect(tx).to.changeTokenBalance(this.contracts.rebasing, this.accounts.alice, rebased);
+    });
+
+    it("redeem rebasing token directly (redeemAndCall)", async function () {
+      const salt = ethers.hexlify(ethers.randomBytes(32));
+      const id = ethers.solidityPackedKeccak256(
+        ["address", "address", "address", "uint256", "bytes32"],
+        [
+          getAddress(this.accounts.alice),
+          getAddress(this.contracts.token),
+          getAddress(output),
+          amount,
+          salt,
+        ]
+      );
+
+      // give rebasing tokens to alice
+      await this.contracts.token.connect(this.accounts.admin).mintAndCall(
+        this.contracts.rebasing,
+        amount,
+        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [getAddress(this.accounts.alice)]),
+      );
+
+      const tx = this.contracts.rebasing.connect(this.accounts.alice).redeemAndCall(
+        rebased,
+        this.contracts.redemption,
+        this.accounts.alice,
+        ethers.AbiCoder.defaultAbiCoder().encode([
+          "address",
+          "bytes32",
+          "address"
+        ], [
+          getAddress(output),
+          salt,
+          getAddress(this.accounts.alice) // user: this is the person that recovers the funds if the redemption is canceled
+        ]),
+      );
+      await expect(tx).to.changeTokenBalance(this.contracts.rebasing, this.accounts.alice, -rebased);
+      await expect(tx).to.changeTokenBalances(this.contracts.token, [ this.contracts.rebasing, this.contracts.redemption], [-amount, amount]);
+      await expect(tx).to.emit(this.contracts.redemption, "RedemptionInitiated").withArgs(id, this.accounts.alice, this.contracts.token, output, amount, salt);
+    });
+
+    it("redeem rebasing token directly (withdrawAndCall)", async function () {
+      const salt = ethers.hexlify(ethers.randomBytes(32));
+      const id = ethers.solidityPackedKeccak256(
+        ["address", "address", "address", "uint256", "bytes32"],
+        [
+          getAddress(this.accounts.alice),
+          getAddress(this.contracts.token),
+          getAddress(output),
+          amount,
+          salt,
+        ]
+      );
+
+      // give rebasing tokens to alice
+      await this.contracts.token.connect(this.accounts.admin).mintAndCall(
+        this.contracts.rebasing,
+        amount,
+        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [getAddress(this.accounts.alice)]),
+      );
+
+      const tx = this.contracts.rebasing.connect(this.accounts.alice).withdrawAndCall(
+        amount,
+        this.contracts.redemption,
+        this.accounts.alice,
+        ethers.AbiCoder.defaultAbiCoder().encode([
+          "address",
+          "bytes32",
+          "address"
+        ], [
+          getAddress(output),
+          salt,
+          getAddress(this.accounts.alice) // user: this is the person that recovers the funds if the redemption is canceled
+        ]),
+      );
+      await expect(tx).to.changeTokenBalance(this.contracts.rebasing, this.accounts.alice, -rebased);
+      await expect(tx).to.changeTokenBalances(this.contracts.token, [ this.contracts.rebasing, this.contracts.redemption], [-amount, amount]);
+      await expect(tx).to.emit(this.contracts.redemption, "RedemptionInitiated").withArgs(id, this.accounts.alice, this.contracts.token, output, amount, salt);
     });
   });
 

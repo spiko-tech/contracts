@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import { IAuthority                } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
 import { IERC20                    } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IERC20Metadata            } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import { IERC1363                  } from "@openzeppelin/contracts/interfaces/IERC1363.sol";
 import { IERC1363Receiver          } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 import { IERC5313                  } from "@openzeppelin/contracts/interfaces/IERC5313.sol";
 import { SafeERC20                 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -102,6 +103,80 @@ contract TokenRebasing is
         emit Deposit(from, receiver, assets, shares);
 
         return IERC1363Receiver.onTransferReceived.selector;
+    }
+
+    /****************************************************************************************************************
+     *                                         ERC-4626 "AndCall" variants                                          *
+     ****************************************************************************************************************/
+    function depositAndCall(uint256 assets, address receiver, bytes memory data) public virtual returns (uint256) {
+        uint256 maxAssets = maxDeposit(receiver);
+        if (assets > maxAssets) revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+        uint256 shares = previewDeposit(assets);
+        _depositAndCall(_msgSender(), receiver, assets, shares, data);
+        return shares;
+    }
+
+    function mintAndCall(uint256 shares, address receiver, bytes memory data) public virtual returns (uint256) {
+        uint256 maxShares = maxMint(receiver);
+        if (shares > maxShares) revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
+        uint256 assets = previewMint(shares);
+        _depositAndCall(_msgSender(), receiver, assets, shares, data);
+        return assets;
+    }
+
+    function withdrawAndCall(uint256 assets, address receiver, address spender, bytes memory data) public virtual returns (uint256) {
+        uint256 maxAssets = maxWithdraw(spender);
+        if (assets > maxAssets) revert ERC4626ExceededMaxWithdraw(spender, assets, maxAssets);
+        uint256 shares = previewWithdraw(assets);
+        _withdrawAndCall(_msgSender(), receiver, spender, assets, shares, data);
+        return shares;
+    }
+
+    function redeemAndCall(uint256 shares, address receiver, address spender, bytes memory data) public virtual returns (uint256) {
+        uint256 maxShares = maxRedeem(spender);
+        if (shares > maxShares) revert ERC4626ExceededMaxRedeem(spender, shares, maxShares);
+        uint256 assets = previewRedeem(shares);
+        _withdrawAndCall(_msgSender(), receiver, spender, assets, shares, data);
+        return assets;
+    }
+
+    function _depositAndCall(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares,
+        bytes memory data
+    ) internal virtual {
+        SafeERC20.safeTransferFrom(IERC20(asset()), caller, address(this), assets);
+        _mint(receiver, shares);
+
+        try IERC1363Receiver(receiver).onTransferReceived(caller, address(0), shares, data) returns (bytes4 selector) {
+            require(selector == IERC1363Receiver.onTransferReceived.selector, "ERC1363: onTransferReceived invalid result");
+        } catch (bytes memory reason) {
+            if (reason.length == 0) {
+                revert("ERC1363: onTransferReceived reverted without reason");
+            } else {
+                assembly ("memory-safe") {
+                    revert(add(32, reason), mload(reason))
+                }
+            }
+        }
+
+        emit Deposit(caller, receiver, assets, shares);
+    }
+
+    function _withdrawAndCall(
+        address caller,
+        address receiver,
+        address spender,
+        uint256 assets,
+        uint256 shares,
+        bytes memory data
+    ) internal virtual {
+        if (caller != spender) _spendAllowance(spender, caller, shares);
+        _burn(spender, shares);
+        IERC1363(asset()).transferAndCall(receiver, assets, data);
+        emit Withdraw(caller, receiver, spender, assets, shares);
     }
 
     /****************************************************************************************************************
