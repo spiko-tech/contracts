@@ -1,0 +1,62 @@
+{
+  "output": "./generated/dev-arbitrum-sepolia.",
+  "version": "v0.0.1",
+  "chain": "arbitrum-sepolia",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0xc37Dfdb47175Eb80F2fBbDC67856b37d98f7431E",
+      "startBlock": 90758372,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0xDef2d582F8A8ef5808790A7D13f65b958efb9f0A",
+      "startBlock": 90758403,
+      "module": ["redemption"]
+    },
+    {
+      "name": "EUTBL-token",
+      "address": "0xC73e8149F7cF456743DEF1C9D72b8A786C6381E3",
+      "startBlock": 90758443,
+      "module": ["erc20"]
+    },
+    {
+      "name": "EUTBL-oracle",
+      "address": "0xe2Da36c119ed470DAa4f029F45557E3D751AAB93",
+      "startBlock": 90758682,
+      "module": ["oracle"]
+    },
+    {
+      "name": "USTBL-token",
+      "address": "0xde357F02243417c23503c8c518a0abCeD29f4e26",
+      "startBlock": 90758698,
+      "module": ["erc20"]
+    },
+    {
+      "name": "USTBL-oracle",
+      "address": "0x0290593a4c90dA1A3058f214bb6A1D47e7D68CC3",
+      "startBlock": 90758711,
+      "module": ["oracle"]
+    },
+    {
+      "name": "eurUSTBL-token",
+      "address": "0x7bb39e7AFdCa46B678BfdDA5Bfc956240a70199c",
+      "startBlock": 90758723,
+      "module": ["erc20"]
+    },
+    {
+      "name": "eurUSTBL-oracle",
+      "address": "0xf42fa2720233fDDafAb7c25D4333bcb55e487185",
+      "startBlock": 90758731,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [
+    {
+      "enabled": "on",
+      "type": "subgraph-studio",
+      "name": "dev-arbitrum-sepolia"
+    }
+  ]
+}

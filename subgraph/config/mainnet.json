@@ -41,6 +41,6 @@
     }
   ],
   "deploy": [
-    { "enabled": "on", "type": "subgraph-studio", "name": "spiko-mainnet" }
+    { "enabled": "off", "type": "subgraph-studio", "name": "spiko-mainnet" }
   ]
 }
