@@ -46,7 +46,7 @@ const networkNames = [
   // polygon
   'polygon', 'polygonAmoy',
   // arbitrum
-  'arbitrumOne', 'arbitrumTestnet',
+  'arbitrumOne', 'arbitrumSepolia',
   // avalanche
   'avalanche', 'avalancheFujiTestnet',
   // moonbeam
