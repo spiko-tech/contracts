@@ -98,6 +98,14 @@ module.exports = {
         }
       },
       {
+        network: "arbitrumSepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io"
+        }
+      },
+      {
         network: "amoy",
         chainId: 80002,
         urls: {
