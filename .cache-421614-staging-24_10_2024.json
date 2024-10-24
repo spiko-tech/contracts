@@ -1,0 +1,38 @@
+{
+	"forwarder": {
+		"txHash": "0x3c88b2bea2542cc470f65cef1f4ebd84c6d0e85c9605af0f4995f0ec2d1cb0f2",
+		"address": "0x827a8909055B54299bA285B202671D1919256dA6"
+	},
+	"manager": {
+		"txHash": "0xe26cb3e6ea09c609a2c4ef57d245290431ac9c76f561fa78b839bd19940cda86",
+		"address": "0x6580bC276c78bC7B94A255697Ee2c0806cAF7d3e"
+	},
+	"redemption": {
+		"txHash": "0xbe406b94e8a87e6cff5823877d0c3eeb4e0b144280823d7f075e7d19ae1f60ac",
+		"address": "0xC98e25282B272F692763dbB8AF5d7ED2358Cd306"
+	},
+	"token-EUTBL": {
+		"txHash": "0x6e82f16a10952a89ce4e56f08f31f169f5fa9220f811525d019c4fd60651efd8",
+		"address": "0x709d47c7cE0736D32e06756AFADede6a58fb94f0"
+	},
+	"oracle-EUTBL": {
+		"txHash": "0xa78955f457f1dd09b12870425486e279ee0f8f7e770fa2f889ba8e96331a4d0e",
+		"address": "0x7E7Ba6474ceff15b710a22552F61131f928F3D30"
+	},
+	"token-USTBL": {
+		"txHash": "0x153e52a5f07e02b2a562db517c6630738de5687231952d91386d4e0580556750",
+		"address": "0x16a889740c4B6e93eE1DcD2F9C66de816E4C0b36"
+	},
+	"oracle-USTBL": {
+		"txHash": "0xb222b2043aaf6adf4e59cb8ab354860298222fb0618eb00f79206e9d73b7924b",
+		"address": "0x3faCe52Fe40f5D1719842297d345FF74d15851D8"
+	},
+	"token-eurUSTBL": {
+		"txHash": "0x0db8b35296b46b68440b3d49c36b644476c4e12887d4a282c8ab0d33248ec13e",
+		"address": "0x517e0E7ad71eb2515741773b455Ef3D033192163"
+	},
+	"oracle-eurUSTBL": {
+		"txHash": "0x7518265c85a768446351bcdb1cc7c5681ebae60dd5b2e6f7f47537b1d1501e29",
+		"address": "0x49E99840bcfF11C1Fa9dc8C2F65B177411C649dD"
+	}
+}
