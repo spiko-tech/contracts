@@ -26,5 +26,13 @@
 	"oracle-USTBL": {
 		"txHash": "0xfc3f1a26edb0c0dcd80561b4fdb20d3841375ff19ead5e8a6f2ea9ba3082b1c1",
 		"address": "0xA260D72df8FF2696f3A8d0BE46B7bc4d743Be764"
+	},
+	"token-eurUSTBL": {
+		"txHash": "0xbea4a296a5782e72bc9bdc3ee01e53fdd0b862a1f81fed757dd6c20732fb8806",
+		"address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068"
+	},
+	"oracle-eurUSTBL": {
+		"txHash": "0xeab534b48c7f37b2ef7b02c1625a026076dc075afc6a27aa71674c888b61019c",
+		"address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D"
 	}
 }
