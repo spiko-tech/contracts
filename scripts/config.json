@@ -14,13 +14,6 @@
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" },
         "stable": {}
-      },
-      {
-        "name": "Dev eurUSTBL",
-        "symbol": "eurUSTBL",
-        "decimals": 5,
-        "oracle": { "decimals": 6, "quote": "EUR" },
-        "stable": {}
       }
     ],
     "fns": {
