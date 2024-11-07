@@ -12,6 +12,12 @@
         "symbol": "USTBL",
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Spiko US T-Bills Money Market Fund (EUR)",
+        "symbol": "eurUSTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
       }
     ],
     "fns": {
