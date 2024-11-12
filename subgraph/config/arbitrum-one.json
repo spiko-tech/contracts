@@ -1,6 +1,6 @@
 {
   "output": "./generated/arbitrum-one.",
-  "version": "v0.0.1",
+  "version": "v0.0.2",
   "chain": "arbitrum-one",
   "datasources": [
     {
@@ -37,6 +37,18 @@
       "name": "oracle-USTBL",
       "address": "0xA260D72df8FF2696f3A8d0BE46B7bc4d743Be764",
       "startBlock": 267473542,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-eurUSTBL",
+      "address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068",
+      "startBlock": 272040775,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-eurUSTBL",
+      "address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D",
+      "startBlock": 272040819,
       "module": ["oracle"]
     }
   ],

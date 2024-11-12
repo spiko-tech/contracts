@@ -1,6 +1,6 @@
 {
   "output": "./generated/mainnet.",
-  "version": "v0.0.2",
+  "version": "v0.0.3",
   "chain": "mainnet",
   "datasources": [
     {
@@ -37,6 +37,18 @@
       "name": "oracle-USTBL",
       "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
       "startBlock": 19690267,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-eurUSTBL",
+      "address": "0x0183ace58bc8B8F1f84CC8b9eD1210E1c87dF7e0",
+      "startBlock": 21137180,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-eurUSTBL",
+      "address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068",
+      "startBlock": 21137184,
       "module": ["oracle"]
     }
   ],
