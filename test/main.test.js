@@ -7,6 +7,7 @@ const {
 const { deploy, deployUpgradeable } = require("@amxx/hre/scripts");
 const { migrate } = require("../scripts/migrate");
 const { upgrade } = require("../scripts/upgrade");
+const { upgrade: upgrade2 } = require("../scripts/upgrade2");
 const { Enum, toMask, combine, getDomain } = require("./helpers");
 
 const STATUS = Enum("NULL", "PENDING", "EXECUTED", "CANCELED");
@@ -58,7 +59,8 @@ async function fixture() {
 
   // Perform upgrade
   await upgrade(config);
-  contracts.redemption = await ethers.getContractFactory('Redemption2').then(factory => factory.attach(getAddress(contracts.redemption)));
+  await upgrade2(config);
+  contracts.redemption = await ethers.getContractFactory('Redemption3').then(factory => factory.attach(getAddress(contracts.redemption)));
   contracts.token      = await ethers.getContractFactory('Token2').then(factory => factory.attach(getAddress(contracts.token)));
 
   // build rebasing
@@ -2113,7 +2115,7 @@ describe("Main", function () {
         ).to.be.revertedWith("Operation is not pending");
       });
 
-      it("too late", async function () {
+      it("too early", async function () {
         await expect(
           this.contracts.redemption
             .connect(this.accounts.other)
@@ -2125,6 +2127,33 @@ describe("Main", function () {
               this.operation.salt
             )
         ).to.be.revertedWith("Deadline not passed");
+      });
+
+      it("too early by admin", async function () {
+        await expect(
+          this.contracts.redemption
+            .connect(this.accounts.operator)
+            .cancelRedemption(
+              this.operation.user,
+              this.operation.input,
+              this.operation.output,
+              this.operation.value,
+              this.operation.salt
+            )
+        )
+        .to.emit(this.operation.input, "Transfer")
+        .withArgs(
+          this.contracts.redemption,
+          this.operation.user,
+          this.operation.value
+        )
+        .to.emit(this.contracts.redemption, "RedemptionCanceled")
+        .withArgs(this.operation.id);
+
+      const { status: statusAfter } = await this.contracts.redemption.details(
+        this.operation.id
+      );
+      expect(statusAfter).to.equal(STATUS.CANCELED);
       });
     });
 

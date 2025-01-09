@@ -36,7 +36,8 @@
       "tokens[]-unpause": ["operator-exceptional"],
       "tokens[]-transfer": ["whitelisted"],
       "oracles[]-publishPrice": ["operator-oracle"],
-      "redemption-executeRedemption": ["operator-daily"]
+      "redemption-executeRedemption": ["operator-daily"],
+      "redemption-cancelRedemption": ["operator-daily"]
     }
   },
   "roles": {
