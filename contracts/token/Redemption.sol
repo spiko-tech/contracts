@@ -146,7 +146,7 @@ contract Redemption is
         address output,
         uint256 inputValue,
         bytes32 salt
-    ) external {
+    ) external virtual {
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, inputValue, salt);
 
