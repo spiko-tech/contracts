@@ -1,0 +1,58 @@
+{
+  "output": "./generated/arbitrum-one.",
+  "version": "v0.0.2",
+  "chain": "arbitrum-one",
+  "datasources": [
+    {
+      "name": "manager",
+      "address": "0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A",
+      "startBlock": 267473304,
+      "module": ["manager"]
+    },
+    {
+      "name": "redemption",
+      "address": "0x15EA0EC460a0E6847EC0AA8D50A84B3A51B95f74",
+      "startBlock": 267473367,
+      "module": ["redemption"]
+    },
+    {
+      "name": "token-EUTBL",
+      "address": "0xCBeb19549054CC0a6257A77736FC78C367216cE7",
+      "startBlock": 267473436,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-EUTBL",
+      "address": "0xe4880249745eAc5F1eD9d8F7DF844792D560e750",
+      "startBlock": 267473497,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-USTBL",
+      "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
+      "startBlock": 267473526,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-USTBL",
+      "address": "0xA260D72df8FF2696f3A8d0BE46B7bc4d743Be764",
+      "startBlock": 267473542,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-eurUSTBL",
+      "address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068",
+      "startBlock": 272040775,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-eurUSTBL",
+      "address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D",
+      "startBlock": 272040819,
+      "module": ["oracle"]
+    }
+  ],
+  "deploy": [
+    { "enabled": "on", "type": "subgraph-studio", "name": "spiko-arbitrum-one" }
+  ]
+}

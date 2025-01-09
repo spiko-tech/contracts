@@ -1,6 +1,6 @@
 {
   "output": "./generated/polygon.",
-  "version": "v0.0.2",
+  "version": "v0.0.3",
   "chain": "matic",
   "datasources": [
     {
@@ -37,6 +37,18 @@
       "name": "oracle-USTBL",
       "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
       "startBlock": 56007443,
+      "module": ["oracle"]
+    },
+    {
+      "name": "token-eurUSTBL",
+      "address": "0x75cB1BD539eE2cb22031603a7b437F1F7077B05e",
+      "startBlock": 64001504,
+      "module": ["erc20"]
+    },
+    {
+      "name": "oracle-eurUSTBL",
+      "address": "0x0183ace58bc8B8F1f84CC8b9eD1210E1c87dF7e0",
+      "startBlock": 64001536,
       "module": ["oracle"]
     }
   ],

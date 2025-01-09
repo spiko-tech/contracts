@@ -1,0 +1,62 @@
+{
+  "contracts": {
+    "tokens": [
+      {
+        "name": "Spiko EU T-Bills Money Market Fund",
+        "symbol": "EUTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
+        "name": "Spiko US T-Bills Money Market Fund",
+        "symbol": "USTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Spiko US T-Bills Money Market Fund (EUR)",
+        "symbol": "eurUSTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      }
+    ],
+    "fns": {
+      "tokens[]-mint": ["operator-daily"],
+      "tokens[]-burn": ["burner"],
+      "tokens[]-pause": ["operator-exceptional"],
+      "tokens[]-unpause": ["operator-exceptional"],
+      "tokens[]-transfer": ["whitelisted"],
+      "oracles[]-publishPrice": ["operator-oracle"],
+      "redemption-executeRedemption": ["operator-daily"]
+    }
+  },
+  "roles": {
+    "admin": {
+      "members": ["0x7843225BA488cf780A4Fe2c842B5dc2aBCf8A03e"]
+    },
+    "operator-exceptional": {
+      "admins": ["admin"],
+      "members": ["0xF95d1B86C502D3Ef235392a1CAB1137A14c5Cc5e"]
+    },
+    "operator-daily": {
+      "admins": ["admin"],
+      "members": ["0x7B74cf5FEfC3f5D1caad04CA07e8AB0f32E3b73d"]
+    },
+    "operator-oracle": {
+      "admins": ["admin"],
+      "members": ["0x7B74cf5FEfC3f5D1caad04CA07e8AB0f32E3b73d"]
+    },
+    "burner": {
+      "admins": ["admin"],
+      "members": ["redemption"]
+    },
+    "whitelister": {
+      "admins": ["admin"],
+      "members": ["0x7B74cf5FEfC3f5D1caad04CA07e8AB0f32E3b73d"]
+    },
+    "whitelisted": {
+      "admins": ["whitelister"],
+      "members": ["redemption"]
+    }
+  }
+}

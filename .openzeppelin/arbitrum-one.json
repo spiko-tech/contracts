@@ -2,50 +2,50 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x344278aff344d6fb960705dc18a4912221608472",
-      "txHash": "0x9412b83b4aeddf2d1408d31d95b5e062f4b5e43714e2cbc3e8f1e20f2a8a3d49",
+      "address": "0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A",
+      "txHash": "0x8f9440d3fbd17c078374707647c3390273428fa985fc1312ba651e46e00130b6",
       "kind": "uups"
     },
     {
-      "address": "0xDA5599f04e9b437C8394b0c2BC68B502A66ebFe8",
-      "txHash": "0xb06597ba15cff62131ffe34147310287d4aa458f71b97ceff41d0e6a85abd285",
+      "address": "0x15EA0EC460a0E6847EC0AA8D50A84B3A51B95f74",
+      "txHash": "0x14b87e2ec50a12dda975ec63cb41748f9dc1e81a5de7eedb508b23c1127fcc2b",
       "kind": "uups"
     },
     {
-      "address": "0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80",
-      "txHash": "0x6d3489ea81e74ec51b63f6c6e8a0a96b8e8d0ff02fe97e909ec065674b2004f3",
-      "kind": "uups"
-    },
-    {
-      "address": "0x29503f31B73F0734455942Eb888E13acA1588a4e",
-      "txHash": "0x3fbafb7fce42772071dc4d6a69f532df5b6a1365787b20b6fb6a88ed049a993d",
+      "address": "0xCBeb19549054CC0a6257A77736FC78C367216cE7",
+      "txHash": "0x84d8641ce12bdb8587e839644401360580a974a540513dd885be098c2e0a7b5a",
       "kind": "uups"
     },
     {
       "address": "0xe4880249745eAc5F1eD9d8F7DF844792D560e750",
-      "txHash": "0x958995eb61d9ae70b717e979aa3c57a1024175465c3eb7f49ba1cb51442d79fd",
+      "txHash": "0xf00be3c1855d77bc1d5a90f66be7989fa5b56acd256ddfed3db413c719a5a160",
       "kind": "uups"
     },
     {
       "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
-      "txHash": "0x3161a4c6590c1b2d99d8cdc47de35fb4d36d643638be28199ca56eb1a98ca042",
+      "txHash": "0xd4e7fd482fbdc3b298f81dae8399cde63b084c9700174daf865897e0a4d8bd7a",
       "kind": "uups"
     },
     {
-      "address": "0x75cB1BD539eE2cb22031603a7b437F1F7077B05e",
-      "txHash": "0xab11d731f92bc5d1fee8044f62d2a8a4f5a24f2406b8785ba82952834400b7f0",
+      "address": "0xA260D72df8FF2696f3A8d0BE46B7bc4d743Be764",
+      "txHash": "0xfc3f1a26edb0c0dcd80561b4fdb20d3841375ff19ead5e8a6f2ea9ba3082b1c1",
       "kind": "uups"
     },
     {
-      "address": "0x0183ace58bc8B8F1f84CC8b9eD1210E1c87dF7e0",
-      "txHash": "0x3071f57193ea877ce48205deee47578fd73545339678a197f65cfe31bf7c20cc",
+      "address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068",
+      "txHash": "0xbea4a296a5782e72bc9bdc3ee01e53fdd0b862a1f81fed757dd6c20732fb8806",
+      "kind": "uups"
+    },
+    {
+      "address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D",
+      "txHash": "0xeab534b48c7f37b2ef7b02c1625a026076dc075afc6a27aa71674c888b61019c",
       "kind": "uups"
     }
   ],
   "impls": {
     "0c3a62f80f0032c053f2baad421feb98f03d98d2f5576c2a580d10d0a8f981b7": {
-      "address": "0xd3f5f1524e1A472B51374A3ff41B8936EB5B658E",
-      "txHash": "0x5eb6ac7027b5bb49f08b061c296ffad5c34995fe977dd32a60912243e09c2a35",
+      "address": "0x344278aff344d6fb960705dc18a4912221608472",
+      "txHash": "0x5a000135da98e385c9898762fcd6a2b28a878c42a6391e18c552d26c2eea0da6",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -160,9 +160,9 @@
         }
       }
     },
-    "30e673afae37ae90ac8ea2a7100e1032ea7e133ab50b61dc3e0c270af7c9d8eb": {
-      "address": "0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A",
-      "txHash": "0x0b31f1af4dd5c13d58c2eceb2349575a6ba9031579ae22dc6d2a05b6ca947667",
+    "d865f12c5a5b4bca897f9d784f1aa9d81a99d01b2d5121c6b973b7ed3580dbc0": {
+      "address": "0xDA5599f04e9b437C8394b0c2BC68B502A66ebFe8",
+      "txHash": "0x2f275909844674e5ed122a22bbd8a477eb49bb85b6aa9b5015997984d3191005",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -170,7 +170,7 @@
             "label": "details",
             "offset": 0,
             "slot": "0",
-            "type": "t_mapping(t_bytes32,t_struct(Details)12895_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(Details)10590_storage)",
             "contract": "Redemption",
             "src": "contracts/token/Redemption.sol:42"
           },
@@ -178,7 +178,7 @@
             "label": "minimum",
             "offset": 0,
             "slot": "1",
-            "type": "t_mapping(t_contract(IERC20)4734,t_uint256)",
+            "type": "t_mapping(t_contract(IERC20)3569,t_uint256)",
             "contract": "Redemption",
             "src": "contracts/token/Redemption.sol:43"
           },
@@ -186,7 +186,7 @@
             "label": "_outputs",
             "offset": 0,
             "slot": "2",
-            "type": "t_mapping(t_contract(IERC20)4734,t_struct(AddressSet)11603_storage)",
+            "type": "t_mapping(t_contract(IERC20)3569,t_struct(AddressSet)9926_storage)",
             "contract": "Redemption",
             "src": "contracts/token/Redemption.sol:44"
           }
@@ -196,7 +196,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_struct(InitializableStorage)941_storage": {
+          "t_struct(InitializableStorage)830_storage": {
             "label": "struct Initializable.InitializableStorage",
             "members": [
               {
@@ -226,11 +226,11 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IERC20)4734": {
+          "t_contract(IERC20)3569": {
             "label": "contract IERC20",
             "numberOfBytes": "20"
           },
-          "t_enum(Status)12889": {
+          "t_enum(Status)10584": {
             "label": "enum Redemption.Status",
             "members": [
               "NULL",
@@ -240,7 +240,7 @@
             ],
             "numberOfBytes": "1"
           },
-          "t_mapping(t_bytes32,t_struct(Details)12895_storage)": {
+          "t_mapping(t_bytes32,t_struct(Details)10590_storage)": {
             "label": "mapping(bytes32 => struct Redemption.Details)",
             "numberOfBytes": "32"
           },
@@ -248,32 +248,32 @@
             "label": "mapping(bytes32 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(IERC20)4734,t_struct(AddressSet)11603_storage)": {
+          "t_mapping(t_contract(IERC20)3569,t_struct(AddressSet)9926_storage)": {
             "label": "mapping(contract IERC20 => struct EnumerableSet.AddressSet)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(IERC20)4734,t_uint256)": {
+          "t_mapping(t_contract(IERC20)3569,t_uint256)": {
             "label": "mapping(contract IERC20 => uint256)",
             "numberOfBytes": "32"
           },
-          "t_struct(AddressSet)11603_storage": {
+          "t_struct(AddressSet)9926_storage": {
             "label": "struct EnumerableSet.AddressSet",
             "members": [
               {
                 "label": "_inner",
-                "type": "t_struct(Set)11288_storage",
+                "type": "t_struct(Set)9611_storage",
                 "offset": 0,
                 "slot": "0"
               }
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(Details)12895_storage": {
+          "t_struct(Details)10590_storage": {
             "label": "struct Redemption.Details",
             "members": [
               {
                 "label": "status",
-                "type": "t_enum(Status)12889",
+                "type": "t_enum(Status)10584",
                 "offset": 0,
                 "slot": "0"
               },
@@ -286,7 +286,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(Set)11288_storage": {
+          "t_struct(Set)9611_storage": {
             "label": "struct EnumerableSet.Set",
             "members": [
               {
@@ -335,9 +335,9 @@
         }
       }
     },
-    "7f4f74d84e6b0c203efb9fe85ed69632742f47f65e33db522f46a5e44381a9c1": {
-      "address": "0x15EA0EC460a0E6847EC0AA8D50A84B3A51B95f74",
-      "txHash": "0xe906f0a544626e74fa6ae65f6aa6930523c28974c4e83669f25bb98acbdcf07a",
+    "603f28b94970a1e0eaf277e6bc2d7c8f17781f176c3c1bbeb97c7b1469e0742f": {
+      "address": "0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80",
+      "txHash": "0x01d1ce2e467b672d216e67bc3875bb8fd1e7dea63b2114775467b0e799f015e2",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -636,9 +636,9 @@
         }
       }
     },
-    "53b03670a3f4d6b49506a39dd8d91ea3c392fc0d164b974a9f7fa361ada412d3": {
-      "address": "0xCBeb19549054CC0a6257A77736FC78C367216cE7",
-      "txHash": "0xd6f8f25bf5022446590421d4cc676b0b27ce615871be5d310863517f79f1b8cd",
+    "2babd14cfc18702704d47e339ed0604174600aa2822ed256befbca180f371322": {
+      "address": "0x29503f31B73F0734455942Eb888E13acA1588a4e",
+      "txHash": "0xc7e3d026e3b27c4357a9d62366415c714c7a751a4a6000102df1a1e4a9142706",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -646,7 +646,7 @@
             "label": "token",
             "offset": 0,
             "slot": "0",
-            "type": "t_contract(IERC20Metadata)4760",
+            "type": "t_contract(IERC20Metadata)3595",
             "contract": "Oracle",
             "src": "contracts/oracle/Oracle.sol:26"
           },
@@ -670,7 +670,7 @@
             "label": "_history",
             "offset": 0,
             "slot": "2",
-            "type": "t_struct(Trace208)10239_storage",
+            "type": "t_struct(Trace208)8562_storage",
             "contract": "Oracle",
             "src": "contracts/oracle/Oracle.sol:30"
           }
@@ -680,7 +680,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_struct(InitializableStorage)941_storage": {
+          "t_struct(InitializableStorage)830_storage": {
             "label": "struct Initializable.InitializableStorage",
             "members": [
               {
@@ -702,11 +702,11 @@
             "label": "uint64",
             "numberOfBytes": "8"
           },
-          "t_array(t_struct(Checkpoint208)10244_storage)dyn_storage": {
+          "t_array(t_struct(Checkpoint208)8567_storage)dyn_storage": {
             "label": "struct Checkpoints.Checkpoint208[]",
             "numberOfBytes": "32"
           },
-          "t_contract(IERC20Metadata)4760": {
+          "t_contract(IERC20Metadata)3595": {
             "label": "contract IERC20Metadata",
             "numberOfBytes": "20"
           },
@@ -714,7 +714,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Checkpoint208)10244_storage": {
+          "t_struct(Checkpoint208)8567_storage": {
             "label": "struct Checkpoints.Checkpoint208",
             "members": [
               {
@@ -732,12 +732,12 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(Trace208)10239_storage": {
+          "t_struct(Trace208)8562_storage": {
             "label": "struct Checkpoints.Trace208",
             "members": [
               {
                 "label": "_checkpoints",
-                "type": "t_array(t_struct(Checkpoint208)10244_storage)dyn_storage",
+                "type": "t_array(t_struct(Checkpoint208)8567_storage)dyn_storage",
                 "offset": 0,
                 "slot": "0"
               }
