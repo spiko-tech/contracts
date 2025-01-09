@@ -1,7 +1,7 @@
 const defaultsDeep         = require('lodash.defaultsdeep');
 const { ethers, upgrades } = require('hardhat');
 const { MigrationManager } = require('@amxx/hre/scripts');
-const DEFAULT              = require('./config');
+const DEFAULT              = require('./config-default');
 const DEBUG                = require('debug')('migration');
 
 require('dotenv').config();
@@ -27,7 +27,7 @@ async function upgrade(config = {}, opts = {}) {
 
     // load & upgrade redemption contract
     const redemption = await migration.cache.get('redemption');
-    await ethers.getContractFactory('Redemption2').then(factory => upgrades.upgradeProxy(redemption.address, factory, { constructorArgs: [ manager.address ] }));
+    await ethers.getContractFactory('Redemption3').then(factory => upgrades.upgradeProxy(redemption.address, factory, { constructorArgs: [ manager.address ] }));
     // TODO: verify implementation
 
     // load & upgrade token contracts

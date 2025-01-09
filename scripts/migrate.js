@@ -4,7 +4,7 @@ const { ethers, run }                = require('hardhat');
 const { task }                       = require('hardhat/config');
 const { MigrationManager }           = require('@amxx/hre/scripts');
 const { toMask, combine  }           = require('../test/helpers');
-const DEFAULT                        = require('./config');
+const DEFAULT                        = require('./config-default');
 const DEBUG                          = require('debug')('migration');
 
 require('dotenv').config();
@@ -111,7 +111,7 @@ async function migrate(config = {}, opts = {}) {
     const isConfigSane = sanityCheckConfig(config);
     expect(isConfigSane, 'Config is not correct').to.be.true;
 
-    
+
     const migration = new MigrationManager(provider, config);
 
     await migration.ready();
@@ -276,7 +276,7 @@ async function migrate(config = {}, opts = {}) {
             DEBUG('Events:');
             logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
         });
-    
+
     await verifyContracts(contracts, name);
 
     return {

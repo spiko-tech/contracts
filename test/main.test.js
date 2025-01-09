@@ -4,10 +4,9 @@ const {
   loadFixture,
   time,
 } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy, deployUpgradeable } = require("@amxx/hre/scripts");
+const { deploy } = require("@amxx/hre/scripts");
 const { migrate } = require("../scripts/migrate");
 const { upgrade } = require("../scripts/upgrade");
-const { upgrade: upgrade2 } = require("../scripts/upgrade2");
 const { Enum, toMask, combine, getDomain } = require("./helpers");
 
 const STATUS = Enum("NULL", "PENDING", "EXECUTED", "CANCELED");
@@ -59,7 +58,6 @@ async function fixture() {
 
   // Perform upgrade
   await upgrade(config);
-  await upgrade2(config);
   contracts.redemption = await ethers.getContractFactory('Redemption3').then(factory => factory.attach(getAddress(contracts.redemption)));
   contracts.token      = await ethers.getContractFactory('Token2').then(factory => factory.attach(getAddress(contracts.token)));
 
