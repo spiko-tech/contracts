@@ -4,7 +4,7 @@ const {
   loadFixture,
   time,
 } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("@amxx/hre/scripts");
+const { deploy, deployUpgradeable } = require("@amxx/hre/scripts");
 const { migrate } = require("../scripts/migrate");
 const { upgrade } = require("../scripts/upgrade");
 const { Enum, toMask, combine, getDomain } = require("./helpers");
