@@ -53,6 +53,8 @@ const networkNames = [
   'moonbeam', 'moonriver', 'moonbaseAlpha',
   // xdai
   'xdai', 'sokol',
+  // base
+  'base'
 ];
 
 module.exports = {
