@@ -54,7 +54,9 @@ const networkNames = [
   // xdai
   'xdai', 'sokol',
   // base
-  'base'
+  'base',
+  // etherlink
+  'etherlinkMainnet',
 ];
 
 module.exports = {
@@ -87,6 +89,16 @@ module.exports = {
   },
   etherscan: {
     apiKey: Object.fromEntries(networkNames.map(name => [name, argv.etherscan])),
+    customChains: [
+      {
+        network: "etherlinkMainnet",
+        chainId: 42793,
+        urls: {
+          apiURL: "https://explorer.etherlink.com/api",
+          browserURL: "https://explorer.etherlink.com",
+        },
+      },
+    ]
   },
   gasReporter: {
     enabled: argv.report,
