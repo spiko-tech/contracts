@@ -6,7 +6,7 @@
   "license": "MIT",
   "engines": {
     "node": "20.x",
-    "pnpm": "9.x"
+    "pnpm": "10.x"
   },
   "files": [
     "/contracts/**/*.sol",
