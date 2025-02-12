@@ -78,6 +78,8 @@ const networkNames = [
   "sokol",
   // base
   "baseSepolia",
+  // Etherlink
+  "etherlinkTestnet",
 ];
 
 module.exports = {

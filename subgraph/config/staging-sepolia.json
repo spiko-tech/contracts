@@ -1,5 +1,5 @@
 {
-  "veresion": "v0.0.1",
+  "version": "v0.0.1",
   "output": "./generated/staging-sepolia.",
   "chain": "sepolia",
   "datasources": [
