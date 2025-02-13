@@ -2,7 +2,7 @@
 
 set -xo errexit
 
-configs=config/*-base-sepolia*.json
+configs=config/*.json
 
 for config in $configs;
 do
