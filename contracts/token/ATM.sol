@@ -51,20 +51,22 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     function previewBuy(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
+        int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
         if (input == token) {
-            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Ceil));
+            return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Ceil));
         } else if (input == stable) {
-            return (_convertToToken(inputAmount, Math.Rounding.Floor), inputAmount);
+            return (_convertToToken(inputAmount, price, Math.Rounding.Floor), inputAmount);
         } else {
             revert("invalid input token");
         }
     }
 
     function previewSell(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
+        int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
         if (input == token) {
-            return (inputAmount, _convertToStable(inputAmount, Math.Rounding.Floor));
+            return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Floor));
         } else if (input == stable) {
-            return (_convertToToken(inputAmount, Math.Rounding.Ceil), inputAmount);
+            return (_convertToToken(inputAmount, price, Math.Rounding.Ceil), inputAmount);
         } else {
             revert("invalid input token");
         }
@@ -84,12 +86,12 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
         return (tokenAmount, stableAmount);
     }
 
-    function _convertToStable(uint256 tokenAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return tokenAmount.mulDiv(numerator * oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), denominator, rounding);
+    function _convertToStable(uint256 tokenAmount, int256 price, Math.Rounding rounding) internal view virtual returns (uint256) {
+        return tokenAmount.mulDiv(numerator * price.toUint256(), denominator, rounding);
     }
 
-    function _convertToToken(uint256 stableAmount, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return stableAmount.mulDiv(denominator, numerator * oracle.getHistoricalPrice(block.timestamp.toUint48()).toUint256(), rounding);
+    function _convertToToken(uint256 stableAmount, int256 price, Math.Rounding rounding) internal view virtual returns (uint256) {
+        return stableAmount.mulDiv(denominator, numerator * price.toUint256(), rounding);
     }
 
     /****************************************************************************************************************
