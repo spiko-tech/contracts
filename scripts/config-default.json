@@ -1,0 +1,60 @@
+{
+  "contracts": {
+    "tokens": [
+      {
+        "name": "Dev EUTB",
+        "symbol": "EUTB",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
+        "name": "Dev USTB",
+        "symbol": "USTB",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Dev eurUSTB",
+        "symbol": "eurUSTB",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      }
+    ],
+    "fns": {
+      "tokens[]-mint": ["operator-daily"],
+      "tokens[]-burn": ["burner"],
+      "tokens[]-pause": ["operator-exceptional"],
+      "tokens[]-unpause": ["operator-exceptional"],
+      "tokens[]-transfer": ["whitelisted"],
+      "oracles[]-publishPrice": ["operator-oracle"],
+      "redemption-executeRedemption": ["operator-daily"],
+      "redemption-cancelRedemption": ["operator-daily"]
+    }
+  },
+  "roles": {
+    "operator-exceptional": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "operator-daily": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "operator-oracle": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "burner": {
+      "admins": ["admin"],
+      "members": ["redemption"]
+    },
+    "whitelister": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "whitelisted": {
+      "admins": ["whitelister"],
+      "members": ["redemption"]
+    }
+  }
+}
