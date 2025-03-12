@@ -4,7 +4,7 @@ const { ethers, run }                = require('hardhat');
 const { task }                       = require('hardhat/config');
 const { MigrationManager }           = require('@amxx/hre/scripts');
 const { toMask, combine  }           = require('../test/helpers');
-const DEFAULT                        = require('./config');
+const DEFAULT                        = require('./config-default');
 const DEBUG                          = require('debug')('migration');
 
 require('dotenv').config();
@@ -17,7 +17,7 @@ task("verify-contract", "Verify deployed contract on Etherscan")
     .setAction(async (_args, hre) => {
         try {
             const constructorArguments = [_args.permissionManagerAddress, _args.forwarderAddress].filter((add)=> add !== "");
-            
+
             await hre.run("verify:verify", {
                 address: _args.address,
                 chain: _args.chain,
@@ -42,7 +42,7 @@ async function verifyContract(contractName, contractAddress, chain, permissionMa
    });
 }
 
-async function verifyContracts(contracts, chainName) { 
+async function verifyContracts(contracts, chainName) {
     DEBUG(`Verifying contracts for chain ${chainName}:`)
     DEBUG('----------------------------------------------------');
     const permissionManagerAddress = contracts.manager.target;
@@ -53,7 +53,7 @@ async function verifyContracts(contracts, chainName) {
 
     await verifyContract("PermissionManager", permissionManagerAddress, chainName);
     await verifyContract("Redemption", redemptionAddress, chainName, permissionManagerAddress);
-    
+
     for (const tokenAddress of tokenAddresses){
         await verifyContract("Token", tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
     }
@@ -69,7 +69,7 @@ const Role = {
     Whitelisted : 'whitelisted'
 }
 
-const PermissionedContracts = { 
+const PermissionedContracts = {
     Redemption: 'redemption',
 }
 
@@ -83,10 +83,10 @@ const sanityCheckConfig = (config) => {
             const isPermissionedContract = Object.values(PermissionedContracts).includes(member);
             const isValidEthereumAddress = ethers.isAddress(member);
             const isCorrectMember = isPermissionedContract || isValidEthereumAddress
-            
+
             return isCorrectMember
         })
-        
+
         return membersCorrectness.every((memberCorrectness) => memberCorrectness === true)
     })
 
@@ -107,12 +107,12 @@ async function migrate(config = {}, opts = {}) {
     DEBUG(`Network:  ${name} (${chainId})`);
     DEBUG(`Deployer: ${deployer.address}`);
     DEBUG('----------------------------------------------------');
-    
+
     const isConfigSane = sanityCheckConfig(config);
     expect(isConfigSane, 'Config is not correct').to.be.true;
 
     const migration = new MigrationManager(provider, config);
-    
+
     await migration.ready();
 
     const contracts = { tokens: {}, oracles: {} };
