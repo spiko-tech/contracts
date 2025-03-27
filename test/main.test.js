@@ -1076,6 +1076,8 @@ describe("Main", function () {
   });
 
   describe("ATM v2", function () {
+    const oraclettl = time.duration.days(7);
+
     for (const stableDecimal of [ 6, 18, 36 ]) {
       describe(`stable coin with ${stableDecimal} decimals`, function () {
         const formatToken = value => ethers.parseUnits(value, 5);
@@ -1084,7 +1086,7 @@ describe("Main", function () {
         beforeEach(async function () {
           /// deployment
           this.contracts.stable = await deploy('ERC20DecimalsMock', [ stableDecimal ]);
-          this.contracts.atm = await deploy('ATM2', [ this.contracts.oracle.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target ]);
+          this.contracts.atm = await deploy('ATM2', [ this.contracts.oracle.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target, oraclettl ]);
 
           ///. set atm permissions
           await this.contracts.manager.setRequirements(this.contracts.atm, [ this.contracts.atm.interface.getFunction('drain').selector ], [ this.IDS['operator-exceptional'] ]);
@@ -1156,6 +1158,14 @@ describe("Main", function () {
               await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
               await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
             });
+
+            it('oracle not updated recently', async function () {
+              await time.increase(oraclettl);
+              await expect(this.contracts.atm.previewBuy(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.previewBuy(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.buy(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.buy(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+            });
           });
 
           describe('sell', function () {
@@ -1183,6 +1193,14 @@ describe("Main", function () {
               const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.token, amountToken, this.accounts.bruce);
               await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
               await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
+            });
+
+            it('oracle not updated recently', async function () {
+              await time.increase(oraclettl);
+              await expect(this.contracts.atm.previewSell(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.previewSell(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.sell(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.sell(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
             });
           });
         });

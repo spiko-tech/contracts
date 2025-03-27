@@ -16,9 +16,13 @@ contract ATM2 is ATM
     using Math     for *;
     using SafeCast for *;
 
-    constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder)
+    uint256 immutable public oraclettl;
+
+    constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder, uint256 _oraclettl)
         ATM(_oracle, _stable, _authority, _trustedForwarder)
-    {}
+    {
+        oraclettl = _oraclettl;
+    }
 
     function previewBuy(IERC20 input, uint256 inputAmount) public view virtual override returns (uint256 tokenAmount, uint256 stableAmount) {
         (,int256 price) = _getPrices(); // max
@@ -44,7 +48,8 @@ contract ATM2 is ATM
 
     function _getPrices() internal view virtual returns (int256 min, int256 max) {
         (uint80 roundId, int256 latest,,,) = oracle.latestRoundData();
-        (, int256 previous,,,) = oracle.getRoundData(roundId - 1);
+        (, int256 previous,,uint256 updatedAt,) = oracle.getRoundData(roundId - 1);
+        require(block.timestamp < updatedAt + oraclettl, "oracle value too old");
         min = SignedMath.min(latest, previous);
         max = SignedMath.max(latest, previous);
     }
