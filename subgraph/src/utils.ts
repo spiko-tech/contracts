@@ -1,5 +1,5 @@
-import { ethereum } from "@graphprotocol/graph-ts";
+import { ethereum } from '@graphprotocol/graph-ts';
 
 export function unwrapWithFallback<T>(call: ethereum.CallResult<T>, fallback: T): T {
-	return call.reverted ? fallback : call.value
+  return call.reverted ? fallback : call.value;
 }

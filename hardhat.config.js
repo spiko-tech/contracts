@@ -1,85 +1,82 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const { argv } = require("yargs/yargs")(process.argv.slice(2))
-  .env("")
+const { argv } = require('yargs/yargs')(process.argv.slice(2))
+  .env('')
   .options({
     // modules
-    coverage: { type: "boolean", default: false },
-    report: { type: "boolean", default: false },
+    coverage: { type: 'boolean', default: false },
+    report: { type: 'boolean', default: false },
     // compilations
-    compiler: { type: "string", default: "0.8.24" },
-    evmVersion: { type: "string", default: "cancun" },
+    compiler: { type: 'string', default: '0.8.24' },
+    evmVersion: { type: 'string', default: 'cancun' },
     mode: {
-      type: "string",
-      choices: ["production", "development"],
-      default: "production",
+      type: 'string',
+      choices: ['production', 'development'],
+      default: 'production',
     },
-    runs: { type: "number", default: 200 },
-    viaIr: { type: "boolean", default: false },
+    runs: { type: 'number', default: 200 },
+    viaIr: { type: 'boolean', default: false },
     revertStrings: {
-      type: "string",
-      choices: ["default", "strip"],
-      default: "default",
+      type: 'string',
+      choices: ['default', 'strip'],
+      default: 'default',
     },
     // chain
-    chainId: { type: "number", default: 1337 },
-    hardfork: { type: "string", default: "cancun" },
-    slow: { type: "boolean", default: false },
+    chainId: { type: 'number', default: 1337 },
+    hardfork: { type: 'string', default: 'cancun' },
+    slow: { type: 'boolean', default: false },
     // APIs
-    coinmarketcap: { type: "string" },
-    etherscan: { type: "string" },
+    coinmarketcap: { type: 'string' },
+    etherscan: { type: 'string' },
   });
 
-require("@nomicfoundation/hardhat-toolbox");
-require("@nomicfoundation/hardhat-ethers");
-require("@openzeppelin/hardhat-upgrades");
-require("solidity-coverage");
+require('@nomicfoundation/hardhat-toolbox');
+require('@nomicfoundation/hardhat-ethers');
+require('@openzeppelin/hardhat-upgrades');
+require('solidity-coverage');
 
-const accounts = [
-  argv.mnemonic && { mnemonic: argv.mnemonic },
-  argv.privateKey && [argv.privateKey],
-].find(Boolean);
+const accounts = [argv.mnemonic && { mnemonic: argv.mnemonic }, argv.privateKey && [argv.privateKey]].find(Boolean);
 
 const networkNames = [
   // main
-  "mainnet",
-  "ropsten",
-  "rinkeby",
-  "goerli",
-  "kovan",
-  "sepolia",
+  'mainnet',
+  'ropsten',
+  'rinkeby',
+  'goerli',
+  'kovan',
+  'sepolia',
   // binance smart chain
-  "bsc",
-  "bscTestnet",
+  'bsc',
+  'bscTestnet',
   // huobi eco chain
-  "heco",
-  "hecoTestnet",
+  'heco',
+  'hecoTestnet',
   // fantom mainnet
-  "opera",
-  "ftmTestnet",
+  'opera',
+  'ftmTestnet',
   // optimism
-  "optimisticEthereum",
-  "optimisticKovan",
+  'optimisticEthereum',
+  'optimisticKovan',
   // polygon
-  "polygon",
-  "polygonAmoy",
+  'polygon',
+  'polygonAmoy',
   // arbitrum
-  "arbitrumOne",
-  "arbitrumSepolia",
+  'arbitrumOne',
+  'arbitrumSepolia',
   // avalanche
-  "avalanche",
-  "avalancheFujiTestnet",
+  'avalanche',
+  'avalancheFujiTestnet',
   // moonbeam
-  "moonbeam",
-  "moonriver",
-  "moonbaseAlpha",
+  'moonbeam',
+  'moonriver',
+  'moonbaseAlpha',
   // xdai
-  "xdai",
-  "sokol",
+  'xdai',
+  'sokol',
   // base
-  "baseSepolia",
+  'baseSepolia',
   // Etherlink
-  "etherlinkTestnet",
+  'etherlinkTestnet',
 ];
 
 module.exports = {
@@ -90,7 +87,7 @@ module.exports = {
         settings: {
           evmVersion: argv.evmVersion,
           optimizer: {
-            enabled: argv.mode === "production" || argv.report,
+            enabled: argv.mode === 'production' || argv.report,
             runs: argv.runs,
           },
           viaIR: argv.viaIr,
@@ -109,55 +106,51 @@ module.exports = {
       forking: argv.fork ? { url: argv.fork } : undefined,
     },
     ...Object.fromEntries(
-      networkNames
-        .map((name) => [name, { url: argv[`${name}Node`], accounts }])
-        .filter(([, { url }]) => url)
+      networkNames.map((name) => [name, { url: argv[`${name}Node`], accounts }]).filter(([, { url }]) => url)
     ),
   },
   etherscan: {
-    apiKey: Object.fromEntries(
-      networkNames.map((name) => [name, argv.etherscan])
-    ),
+    apiKey: Object.fromEntries(networkNames.map((name) => [name, argv.etherscan])),
     //apiKey: '.....',
     customChains: [
       {
-        network: "baseSepolia",
+        network: 'baseSepolia',
         chainId: 84532,
         urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/api",
+          apiURL: 'https://api-sepolia.basescan.org/api',
+          browserURL: 'https://sepolia.basescan.org/api',
         },
       },
       {
-        network: "arbitrumSepolia",
+        network: 'arbitrumSepolia',
         chainId: 421614,
         urls: {
-          apiURL: "https://api-sepolia.arbiscan.io/api",
-          browserURL: "https://sepolia.arbiscan.io",
+          apiURL: 'https://api-sepolia.arbiscan.io/api',
+          browserURL: 'https://sepolia.arbiscan.io',
         },
       },
       {
-        network: "amoy",
+        network: 'amoy',
         chainId: 80002,
         urls: {
-          apiURL: "https://api-amoy.polygonscan.com/api",
-          browserURL: "https://amoy.polygonscan.com",
+          apiURL: 'https://api-amoy.polygonscan.com/api',
+          browserURL: 'https://amoy.polygonscan.com',
         },
       },
       {
-        network: "etherlinkMainnet",
+        network: 'etherlinkMainnet',
         chainId: 42793,
         urls: {
-          apiURL: "https://explorer.etherlink.com/api",
-          browserURL: "https://explorer.etherlink.com",
+          apiURL: 'https://explorer.etherlink.com/api',
+          browserURL: 'https://explorer.etherlink.com',
         },
       },
       {
-        network: "etherlinkTestnet",
+        network: 'etherlinkTestnet',
         chainId: 128123,
         urls: {
-          apiURL: "https://testnet.explorer.etherlink.com/api",
-          browserURL: "https://testnet.explorer.etherlink.com/",
+          apiURL: 'https://testnet.explorer.etherlink.com/api',
+          browserURL: 'https://testnet.explorer.etherlink.com/',
         },
       },
     ],
@@ -165,11 +158,9 @@ module.exports = {
   gasReporter: {
     enabled: argv.report,
     showMethodSig: true,
-    currency: "USD",
+    currency: 'USD',
     coinmarketcap: argv.coinmarketcap,
   },
 };
 
-require("debug")("compilation")(
-  JSON.stringify(module.exports.solidity.compilers, null, 2)
-);
+require('debug')('compilation')(JSON.stringify(module.exports.solidity.compilers, null, 2));

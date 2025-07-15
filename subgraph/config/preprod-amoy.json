@@ -52,7 +52,5 @@
       "module": ["oracle"]
     }
   ],
-  "deploy": [
-    { "enabled": "off", "type": "subgraph-studio", "name": "preprod-amoy" }
-  ]
+  "deploy": [{ "enabled": "off", "type": "subgraph-studio", "name": "preprod-amoy" }]
 }

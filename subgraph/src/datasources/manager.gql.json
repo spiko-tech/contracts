@@ -1,49 +1,56 @@
-[{
+[
+  {
     "name": "Account",
     "fields": [
-        { "name": "id",           "type": "Bytes!"                            },
-        { "name": "memberOf",     "type": "Membership!",  "derived": "user"   },
-        { "name": "requirements", "type": "Requirement!", "derived": "target" }
+      { "name": "id", "type": "Bytes!" },
+      { "name": "memberOf", "type": "Membership!", "derived": "user" },
+      { "name": "requirements", "type": "Requirement!", "derived": "target" }
     ]
-},{
+  },
+  {
     "name": "Group",
     "fields": [
-        { "name": "members",      "type": "Membership!",  "derived": "group"  },
-        { "name": "admins",       "type": "[Group!]!"                         }
+      { "name": "members", "type": "Membership!", "derived": "group" },
+      { "name": "admins", "type": "[Group!]!" }
     ]
-},{
+  },
+  {
     "name": "Membership",
     "fields": [
-        { "name": "user",         "type": "Account!"                          },
-        { "name": "group",        "type": "Group!"                            }
+      { "name": "user", "type": "Account!" },
+      { "name": "group", "type": "Group!" }
     ]
-},{
+  },
+  {
     "name": "Requirement",
     "fields": [
-        { "name": "target",       "type": "Account!"                          },
-        { "name": "selector",     "type": "Bytes!"                            },
-        { "name": "groups",       "type": "[Group!]!"                         }
+      { "name": "target", "type": "Account!" },
+      { "name": "selector", "type": "Bytes!" },
+      { "name": "groups", "type": "[Group!]!" }
     ]
-},{
+  },
+  {
     "name": "GroupAdded",
     "parent": "Event",
     "immutable": true,
     "fields": [
-        { "name": "emitter",      "type": "Account!"                          },
-        { "name": "transaction",  "type": "Transaction!"                      },
-        { "name": "timestamp",    "type": "BigInt!"                           },
-        { "name": "user",         "type": "Account!"                          },
-        { "name": "group",        "type": "Group!"                            }
+      { "name": "emitter", "type": "Account!" },
+      { "name": "transaction", "type": "Transaction!" },
+      { "name": "timestamp", "type": "BigInt!" },
+      { "name": "user", "type": "Account!" },
+      { "name": "group", "type": "Group!" }
     ]
-},{
+  },
+  {
     "name": "GroupRemoved",
     "parent": "Event",
     "immutable": true,
     "fields": [
-        { "name": "emitter",      "type": "Account!"                          },
-        { "name": "transaction",  "type": "Transaction!"                      },
-        { "name": "timestamp",    "type": "BigInt!"                           },
-        { "name": "user",         "type": "Account!"                          },
-        { "name": "group",        "type": "Group!"                            }
+      { "name": "emitter", "type": "Account!" },
+      { "name": "transaction", "type": "Transaction!" },
+      { "name": "timestamp", "type": "BigInt!" },
+      { "name": "user", "type": "Account!" },
+      { "name": "group", "type": "Group!" }
     ]
-}]
+  }
+]

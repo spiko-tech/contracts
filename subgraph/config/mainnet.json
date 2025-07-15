@@ -40,7 +40,5 @@
       "module": ["oracle"]
     }
   ],
-  "deploy": [
-    { "enabled": "off", "type": "subgraph-studio", "name": "spiko-mainnet" }
-  ]
+  "deploy": [{ "enabled": "off", "type": "subgraph-studio", "name": "spiko-mainnet" }]
 }

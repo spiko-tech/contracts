@@ -1,299 +1,329 @@
-const { expect }                     = require('chai');
-const defaultsDeep                   = require('lodash.defaultsdeep');
-const { ethers, run }                = require('hardhat');
-const { task }                       = require('hardhat/config');
-const { MigrationManager }           = require('@amxx/hre/scripts');
-const { toMask, combine  }           = require('../test/helpers');
-const DEFAULT                        = require('./config');
-const DEBUG                          = require('debug')('migration');
+const { expect } = require('chai');
+const defaultsDeep = require('lodash.defaultsdeep');
+const { ethers, run } = require('hardhat');
+const { task } = require('hardhat/config');
+const { MigrationManager } = require('@amxx/hre/scripts');
+const { toMask, combine } = require('../test/helpers');
+const DEFAULT = require('./config');
+const DEBUG = require('debug')('migration');
 
 require('dotenv').config();
 
-task("verify-contract", "Verify deployed contract on Etherscan")
-    .addParam("address", "Contract address deployed")
-    .addParam("chain", "chain to deploy")
-    .addParam("permissionManagerAddress", "Arguments permission manager")
-    .addParam("forwarderAddress", "Arguments forwarder")
-    .setAction(async (_args, hre) => {
-        try {
-            const constructorArguments = [_args.permissionManagerAddress, _args.forwarderAddress].filter((add)=> add !== "");
+task('verify-contract', 'Verify deployed contract on Etherscan')
+  .addParam('address', 'Contract address deployed')
+  .addParam('chain', 'chain to deploy')
+  .addParam('permissionManagerAddress', 'Arguments permission manager')
+  .addParam('forwarderAddress', 'Arguments forwarder')
+  .setAction(async (_args, hre) => {
+    try {
+      const constructorArguments = [_args.permissionManagerAddress, _args.forwarderAddress].filter((add) => add !== '');
 
-            await hre.run("verify:verify", {
-                address: _args.address,
-                chain: _args.chain,
-                constructorArguments
-            })
-        } catch (message) {
-            const host = _args.chain === "mainnet" || _args.chain ===  "sepolia" ? "etherscan" : `polygonscan`;
-            const ending = host === "etherscan" ? "io" : "com";
-            const chain = _args.chain === "amoyPolygon" ? "amoy" : _args.chain;
+      await hre.run('verify:verify', {
+        address: _args.address,
+        chain: _args.chain,
+        constructorArguments,
+      });
+    } catch (message) {
+      const host = _args.chain === 'mainnet' || _args.chain === 'sepolia' ? 'etherscan' : `polygonscan`;
+      const ending = host === 'etherscan' ? 'io' : 'com';
+      const chain = _args.chain === 'amoyPolygon' ? 'amoy' : _args.chain;
 
-            DEBUG(`AUTOMATIC VERIFICIATION NOK, Please visit: https://${chain}.${host}.${ending}/proxyContractChecker?a=${_args.address}`)
-        }
-    });
+      DEBUG(
+        `AUTOMATIC VERIFICIATION NOK, Please visit: https://${chain}.${host}.${ending}/proxyContractChecker?a=${_args.address}`
+      );
+    }
+  });
 
-async function verifyContract(contractName, contractAddress, chain, permissionManagerAddress = "", forwarderAddress = ""){
-    DEBUG(`Verifying ${contractName} at ${contractAddress} on ${chain}`);
-    await run("verify-contract", {
-        address: contractAddress,
-        chain,
-        permissionManagerAddress,
-        forwarderAddress
-   });
+async function verifyContract(
+  contractName,
+  contractAddress,
+  chain,
+  permissionManagerAddress = '',
+  forwarderAddress = ''
+) {
+  DEBUG(`Verifying ${contractName} at ${contractAddress} on ${chain}`);
+  await run('verify-contract', {
+    address: contractAddress,
+    chain,
+    permissionManagerAddress,
+    forwarderAddress,
+  });
 }
 
 async function verifyContracts(contracts, chainName) {
-    DEBUG(`Verifying contracts for chain ${chainName}:`)
-    DEBUG('----------------------------------------------------');
-    const permissionManagerAddress = contracts.manager.target;
-    const redemptionAddress = contracts.redemption.target;
-    const forwarderAddress = contracts.forwarder.target;
-    const tokenAddresses = Object.values(contracts.tokens).map(token => token.target);
-    // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
+  DEBUG(`Verifying contracts for chain ${chainName}:`);
+  DEBUG('----------------------------------------------------');
+  const permissionManagerAddress = contracts.manager.target;
+  const redemptionAddress = contracts.redemption.target;
+  const forwarderAddress = contracts.forwarder.target;
+  const tokenAddresses = Object.values(contracts.tokens).map((token) => token.target);
+  // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
 
-    await verifyContract("PermissionManager", permissionManagerAddress, chainName);
-    await verifyContract("Redemption", redemptionAddress, chainName, permissionManagerAddress);
+  await verifyContract('PermissionManager', permissionManagerAddress, chainName);
+  await verifyContract('Redemption', redemptionAddress, chainName, permissionManagerAddress);
 
-    for (const tokenAddress of tokenAddresses){
-        await verifyContract("Token", tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
-    }
+  for (const tokenAddress of tokenAddresses) {
+    await verifyContract('Token', tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
+  }
 }
 
 const Role = {
-    Admin : 'admin',
-    OperatorExceptional : 'operator-exceptional',
-    OperatorDaily : 'operator-daily',
-    OperatorOracle : 'operator-oracle',
-    Burner : 'burner',
-    Whitelister : 'whitelister',
-    Whitelisted : 'whitelisted'
-}
+  Admin: 'admin',
+  OperatorExceptional: 'operator-exceptional',
+  OperatorDaily: 'operator-daily',
+  OperatorOracle: 'operator-oracle',
+  Burner: 'burner',
+  Whitelister: 'whitelister',
+  Whitelisted: 'whitelisted',
+};
 
 const PermissionedContracts = {
-    Redemption: 'redemption',
-}
+  Redemption: 'redemption',
+};
 
 const sanityCheckConfig = (config) => {
-    DEBUG('Sanity checking config');
+  DEBUG('Sanity checking config');
 
-    // check that all members are correctly declared
-    const rolesSanity = Object.keys(Role).map((roleKey) => {
-        const roleValue = Role[roleKey];
-        const membersCorrectness = config.roles[roleValue].members.map((member) => {
-            const isPermissionedContract = Object.values(PermissionedContracts).includes(member);
-            const isValidEthereumAddress = ethers.isAddress(member);
-            const isCorrectMember = isPermissionedContract || isValidEthereumAddress
+  // check that all members are correctly declared
+  const rolesSanity = Object.keys(Role).map((roleKey) => {
+    const roleValue = Role[roleKey];
+    const membersCorrectness = config.roles[roleValue].members.map((member) => {
+      const isPermissionedContract = Object.values(PermissionedContracts).includes(member);
+      const isValidEthereumAddress = ethers.isAddress(member);
+      const isCorrectMember = isPermissionedContract || isValidEthereumAddress;
 
-            return isCorrectMember
-        })
+      return isCorrectMember;
+    });
 
-        return membersCorrectness.every((memberCorrectness) => memberCorrectness === true)
-    })
+    return membersCorrectness.every((memberCorrectness) => memberCorrectness === true);
+  });
 
-    return rolesSanity.every((roleSanity) => roleSanity === true)
-}
+  return rolesSanity.every((roleSanity) => roleSanity === true);
+};
 
 async function migrate(config = {}, opts = {}) {
-    config = defaultsDeep(config, DEFAULT);
+  config = defaultsDeep(config, DEFAULT);
 
-    opts.noCache   ??= process.env.FORCE;
-    opts.noConfirm ??= process.env.FORCE;
+  opts.noCache ??= process.env.FORCE;
+  opts.noConfirm ??= process.env.FORCE;
 
-    const provider = config.provider ?? ethers.provider;
-    const deployer = config.deployer ?? await provider.getSigner();
-    deployer.address = await deployer.getAddress();
+  const provider = config.provider ?? ethers.provider;
+  const deployer = config.deployer ?? (await provider.getSigner());
+  deployer.address = await deployer.getAddress();
 
-    const { name, chainId } = await provider.getNetwork();
-    DEBUG(`Network:  ${name} (${chainId})`);
-    DEBUG(`Deployer: ${deployer.address}`);
-    DEBUG('----------------------------------------------------');
+  const { name, chainId } = await provider.getNetwork();
+  DEBUG(`Network:  ${name} (${chainId})`);
+  DEBUG(`Deployer: ${deployer.address}`);
+  DEBUG('----------------------------------------------------');
 
-    const isConfigSane = sanityCheckConfig(config);
-    expect(isConfigSane, 'Config is not correct').to.be.true;
+  const isConfigSane = sanityCheckConfig(config);
+  expect(isConfigSane, 'Config is not correct').to.be.true;
 
-    
-    const migration = new MigrationManager(provider, config);
+  const migration = new MigrationManager(provider, config);
 
-    await migration.ready();
+  await migration.ready();
 
-    const contracts = { tokens: {}, oracles: {}, distributors: {} };
+  const contracts = { tokens: {}, oracles: {}, distributors: {} };
 
-    contracts.forwarder = await ethers.getContractFactory('ERC2771Forwarder')
-    .then(factory => migration.migrate(
-        'forwarder',
-        factory,
-        [ 'Forwarder' ],
-        { ...opts },
-    ));
-    DEBUG(`forwarder: ${contracts.forwarder.target}`);
+  contracts.forwarder = await ethers
+    .getContractFactory('ERC2771Forwarder')
+    .then((factory) => migration.migrate('forwarder', factory, ['Forwarder'], { ...opts }));
+  DEBUG(`forwarder: ${contracts.forwarder.target}`);
 
-    contracts.manager = await ethers.getContractFactory('PermissionManager')
-        .then(factory => migration.migrate(
-            'manager',
+  contracts.manager = await ethers
+    .getContractFactory('PermissionManager')
+    .then((factory) => migration.migrate('manager', factory, [deployer.address], { ...opts, kind: 'uups' }));
+  DEBUG(`manager: ${contracts.manager.target}`);
+
+  contracts.redemption = await ethers.getContractFactory('Redemption').then((factory) =>
+    migration.migrate('redemption', factory, [], {
+      ...opts,
+      kind: 'uups',
+      constructorArgs: [contracts.manager.target],
+    })
+  );
+  DEBUG(`redemption: ${contracts.redemption.target}`);
+
+  for (const { name, symbol, decimals, oracle, stable } of config?.contracts?.tokens || []) {
+    // deploy token
+    contracts.tokens[symbol] = await ethers.getContractFactory('Token').then((factory) =>
+      migration.migrate(`token-${symbol}`, factory, [name, symbol, decimals], {
+        ...opts,
+        kind: 'uups',
+        constructorArgs: [contracts.manager.target, contracts.forwarder.target],
+      })
+    );
+    DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
+
+    // deploy oracle (if quote is set)
+    contracts.oracles[symbol] =
+      oracle &&
+      (await ethers
+        .getContractFactory('Oracle')
+        .then((factory) =>
+          migration.migrate(
+            `oracle-${symbol}`,
             factory,
-            [ deployer.address ],
-            { ...opts, kind: 'uups' },
+            [contracts.tokens[symbol].target, oracle.decimals, oracle.quote],
+            { ...opts, kind: 'uups', constructorArgs: [contracts.manager.target] }
+          )
         ));
-    DEBUG(`manager: ${contracts.manager.target}`);
+    DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol]?.target}`);
 
-    contracts.redemption = await ethers.getContractFactory('Redemption')
-        .then(factory => migration.migrate(
-            'redemption',
+    contracts.distributors[symbol] =
+      oracle &&
+      stable[chainId] &&
+      (await ethers
+        .getContractFactory('ATM')
+        .then((factory) =>
+          migration.migrate(
+            `distributor-${symbol}-${stable[chainId]}}`,
             factory,
-            [],
-            { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
+            [contracts.oracles[symbol].target, stable[chainId], contracts.manager.target, contracts.forwarder.target],
+            opts
+          )
         ));
-    DEBUG(`redemption: ${contracts.redemption.target}`);
+    DEBUG(`distributors[${symbol}]: ${contracts.distributors[symbol]?.target}`);
+  }
 
-    for (const { name, symbol, decimals, oracle, stable } of config?.contracts?.tokens || []) {
-        // deploy token
-        contracts.tokens[symbol] = await ethers.getContractFactory('Token')
-            .then(factory => migration.migrate(
-                `token-${symbol}`,
-                factory,
-                [ name, symbol, decimals ],
-                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target, contracts.forwarder.target ] },
-            ));
-        DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
+  // HELPER
+  const getContractByName = (name) =>
+    name.endsWith('[]') ? Object.values(contracts[name.slice(0, -2)]) : [contracts[name]];
+  const getAddresses = (name) =>
+    ethers.isAddress(name) ? [ethers.getAddress(name)] : getContractByName(name).map(({ target }) => target);
+  const asyncFilter = (promise, expected, yes, no) =>
+    Promise.resolve(promise).then((result) =>
+      (typeof expected == 'function' ? expected(result) : result == expected) ? yes : no
+    );
 
-        // deploy oracle (if quote is set)
-        contracts.oracles[symbol] = oracle && await ethers.getContractFactory('Oracle')
-            .then(factory => migration.migrate(
-                `oracle-${symbol}`,
-                factory,
-                [ contracts.tokens[symbol].target, oracle.decimals, oracle.quote ],
-                { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
-            ));
-        DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol]?.target}`);
+  // GROUP MANAGEMENT
+  const ROLES = Object.keys(config.roles);
+  const IDS = Object.assign(Object.fromEntries(ROLES.map((role, i) => [role, i])), {
+    admin: 0,
+    ADMIN: 0,
+    public: 255,
+    PUBLIC: 255,
+  });
+  const MASKS = Object.assign(Object.fromEntries(ROLES.map((role, i) => [role, toMask(i)])), {
+    admin: toMask(0),
+    ADMIN: toMask(0),
+    public: toMask(255),
+    PUBLIC: toMask(255),
+  });
 
-        contracts.distributors[symbol] = oracle && stable[chainId] && await ethers.getContractFactory('ATM')
-            .then(factory => migration.migrate(
-                `distributor-${symbol}-${stable[chainId]}}`,
-                factory,
-                [ contracts.oracles[symbol].target, stable[chainId], contracts.manager.target, contracts.forwarder.target ],
-                opts,
-            ));
-        DEBUG(`distributors[${symbol}]: ${contracts.distributors[symbol]?.target}`);
-    }
+  // CHECKS
+  expect(['admin', 'ADMIN']).to.include(ROLES[0], 'First role must be admin or ADMIN');
+  expect(ROLES).to.include.members(
+    [].concat(...Object.values(config.roles).map(({ admins = [] }) => admins), ...Object.values(config.contracts.fns)),
+    `One roles was not properly declared`
+  );
 
-    // HELPER
-    const getContractByName = name => name.endsWith('[]') ? Object.values(contracts[name.slice(0, -2)]) : [ contracts[name] ];
-    const getAddresses      = name => ethers.isAddress(name) ? [ ethers.getAddress(name) ] : getContractByName(name).map(({ target }) => target);
-    const asyncFilter       = (promise, expected, yes, no) => Promise.resolve(promise).then(result => (typeof(expected) == 'function' ? expected(result) : result == expected) ? yes : no);
+  // CONFIGURATION
+  // Configure role admins
+  const roleConfigOps = Object.entries(config.roles)
+    .filter(([_, { admins }]) => admins)
+    .map(([role, { admins }]) =>
+      asyncFilter(
+        contracts.manager.getGroupAdmins(IDS[role]),
+        combine(MASKS.ADMIN, ...admins.map((admin) => MASKS[admin])),
+        null,
+        { fn: 'setGroupAdmins', args: [IDS[role], admins.map((admin) => IDS[admin])] }
+      )
+    );
 
-    // GROUP MANAGEMENT
-    const ROLES  = Object.keys(config.roles);
-    const IDS    = Object.assign(Object.fromEntries(ROLES.map((role, i) => [ role, i         ])), { admin: 0,         ADMIN: 0,         public: 255,         PUBLIC: 255         });
-    const MASKS  = Object.assign(Object.fromEntries(ROLES.map((role, i) => [ role, toMask(i) ])), { admin: toMask(0), ADMIN: toMask(0), public: toMask(255), PUBLIC: toMask(255) });
-
-    // CHECKS
-    expect([ 'admin', 'ADMIN' ]).to.include(ROLES[0], 'First role must be admin or ADMIN');
-    expect(ROLES).to.include.members([].concat(
-        ...Object.values(config.roles).map(({ admins = [] }) => admins),
-        ...Object.values(config.contracts.fns),
-    ), `One roles was not properly declared`);
-
-    // CONFIGURATION
-    // Configure role admins
-    const roleConfigOps =
-        Object.entries(config.roles)
-            .filter(([ _, { admins } ]) => admins)
-            .map(([ role, { admins } ]) => asyncFilter(
-                contracts.manager.getGroupAdmins(IDS[role]),
-                combine(MASKS.ADMIN, ...admins.map(admin => MASKS[admin])),
-                null,
-                { fn: 'setGroupAdmins', args: [ IDS[role], admins.map(admin => IDS[admin]) ] },
-            ));
-
-    // Set requirements
-    const fnRequirementOps =
-        Object.values(
-            Object.entries(config?.contracts?.fns ?? [])
-                .map(([ id, roles ]) => ({
-                    name: id.split('-')[0],
-                    fn: id.split('-')[1],
-                    roles: roles,
-                }))
-                .flatMap(({ name, fn, roles}) => getContractByName(name).map(({ target, interface }) => ({
-                    address: target,
-                    selector: interface.getFunction(fn).selector,
-                    groups: roles.map(role => IDS[role]),
-                })))
-                .reduce((acc, { address, selector, groups }) => {
-                    const key = `${address}-${combine(...groups)}`;
-                    acc[key] ??= { address, groups, selectors: [] };
-                    acc[key].selectors.push(selector);
-                    return acc;
-                }, {})
+  // Set requirements
+  const fnRequirementOps = Object.values(
+    Object.entries(config?.contracts?.fns ?? [])
+      .map(([id, roles]) => ({
+        name: id.split('-')[0],
+        fn: id.split('-')[1],
+        roles: roles,
+      }))
+      .flatMap(({ name, fn, roles }) =>
+        getContractByName(name).map(({ target, interface }) => ({
+          address: target,
+          selector: interface.getFunction(fn).selector,
+          groups: roles.map((role) => IDS[role]),
+        }))
+      )
+      .reduce((acc, { address, selector, groups }) => {
+        const key = `${address}-${combine(...groups)}`;
+        acc[key] ??= { address, groups, selectors: [] };
+        acc[key].selectors.push(selector);
+        return acc;
+      }, {})
+  ).map(({ address, selectors, groups }) =>
+    Promise.all(
+      selectors.map((selector) =>
+        asyncFilter(
+          contracts.manager.getRequirements(address, selector),
+          combine(...groups.map(toMask)),
+          [],
+          [selector]
         )
-        .map(({ address, selectors, groups }) =>
-            Promise.all(selectors.map(selector => asyncFilter(
-                contracts.manager.getRequirements(address, selector),
-                combine(...groups.map(toMask)),
-                [],
-                [ selector ],
-            )))
-            .then(blocks => [].concat(...blocks))
-            .then(selectors => selectors.length && { fn: 'setRequirements', args: [ address, selectors, groups ] })
-        );
+      )
+    )
+      .then((blocks) => [].concat(...blocks))
+      .then((selectors) => selectors.length && { fn: 'setRequirements', args: [address, selectors, groups] })
+  );
 
-    // Add members to groups
-    const membershipOps =
-        Object.entries(config.roles)
-            .flatMap(([ role, { members = [] }]) =>
-                members
-                    .flatMap(getAddresses)
-                    .unique()
-                    .map(address => asyncFilter(
-                        contracts.manager.getGroups(address),
-                        groups => BigInt(groups) & BigInt(MASKS[role]),
-                        null,
-                        { fn: 'addGroup', args: [ address, IDS[role] ] },
-                    ))
-            );
+  // Add members to groups
+  const membershipOps = Object.entries(config.roles).flatMap(([role, { members = [] }]) =>
+    members
+      .flatMap(getAddresses)
+      .unique()
+      .map((address) =>
+        asyncFilter(contracts.manager.getGroups(address), (groups) => BigInt(groups) & BigInt(MASKS[role]), null, {
+          fn: 'addGroup',
+          args: [address, IDS[role]],
+        })
+      )
+  );
 
-    // Deployer renounce admin
-    const admins = Object.values(config.roles)[0].members
-        .flatMap(getAddresses)
-        .unique();
+  // Deployer renounce admin
+  const admins = Object.values(config.roles)[0].members.flatMap(getAddresses).unique();
 
-    const renounceOps = !admins.includes(deployer.address) && admins.length && { fn: 'remGroup', args: [ deployer.address, IDS.ADMIN ]};
+  const renounceOps = !admins.includes(deployer.address) &&
+    admins.length && { fn: 'remGroup', args: [deployer.address, IDS.ADMIN] };
 
-    // all configuration operations
-    const allOps = await Promise.all([
-        ...roleConfigOps,
-        ...fnRequirementOps,
-        ...membershipOps,
-        renounceOps,
-    ]).then(fns => fns.filter(Boolean));
+  // all configuration operations
+  const allOps = await Promise.all([...roleConfigOps, ...fnRequirementOps, ...membershipOps, renounceOps]).then((fns) =>
+    fns.filter(Boolean)
+  );
 
-    DEBUG('Configuration calls:')
-    allOps.forEach(({ fn, args }) => DEBUG(`- ${fn}(${args.map(JSON.stringify).join(', ')})`));
+  DEBUG('Configuration calls:');
+  allOps.forEach(({ fn, args }) => DEBUG(`- ${fn}(${args.map(JSON.stringify).join(', ')})`));
 
-    await contracts.manager.multicall(allOps.map(({ fn, args }) => contracts.manager.interface.encodeFunctionData(fn, args)))
-        .then(txPromise => txPromise.wait())
-        .then(({ logs }) => {
-            DEBUG('Events:');
-            logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
-        });
-    
-    await verifyContracts(contracts, name);
+  await contracts.manager
+    .multicall(allOps.map(({ fn, args }) => contracts.manager.interface.encodeFunctionData(fn, args)))
+    .then((txPromise) => txPromise.wait())
+    .then(({ logs }) => {
+      DEBUG('Events:');
+      logs.forEach(({ eventName, args }) => DEBUG(`- ${eventName}: ${args?.join(', ')}`));
+    });
 
-    return {
-        migration,
-        config,
-        opts,
-        deployer,
-        contracts,
-        roles: { ROLES, IDS, MASKS },
-    }
+  await verifyContracts(contracts, name);
+
+  return {
+    migration,
+    config,
+    opts,
+    deployer,
+    contracts,
+    roles: { ROLES, IDS, MASKS },
+  };
 }
 
 if (require.main === module) {
-    migrate()
-        .then(() => process.exit(0), error => { console.error(error); process.exit(1); });
+  migrate().then(
+    () => process.exit(0),
+    (error) => {
+      console.error(error);
+      process.exit(1);
+    }
+  );
 }
 
 module.exports = {
-    migrate,
+  migrate,
 };

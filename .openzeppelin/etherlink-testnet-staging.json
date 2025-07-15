@@ -242,12 +242,7 @@
           },
           "t_enum(Status)14377": {
             "label": "enum Redemption.Status",
-            "members": [
-              "NULL",
-              "PENDING",
-              "EXECUTED",
-              "CANCELED"
-            ],
+            "members": ["NULL", "PENDING", "EXECUTED", "CANCELED"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_bytes32,t_struct(Details)14383_storage)": {
@@ -417,12 +412,7 @@
           },
           "t_enum(Status)14377": {
             "label": "enum Redemption.Status",
-            "members": [
-              "NULL",
-              "PENDING",
-              "EXECUTED",
-              "CANCELED"
-            ],
+            "members": ["NULL", "PENDING", "EXECUTED", "CANCELED"],
             "numberOfBytes": "1"
           },
           "t_mapping(t_bytes32,t_struct(Details)14383_storage)": {
