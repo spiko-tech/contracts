@@ -39,8 +39,8 @@
         "0x21c35116e99255528B75CBc153BF3c954778a1F5",
         "0x231eF26299caD78950A353832739B9f7245467F0",
         "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
-        "0x3dD0C7Db33cDdc31Aed428f04037FdC649DE95b8",
-        "0x91D6b53500c3134CF1136182E028f1c73Bf25DA8"
+        "0x32147b850dAB1d6C9259bFfF432390910f1fBE64",
+        "0x96e94C48165a07ad230fc3a7eaFE0141b2494e35"
       ]
     },
     "operator-exceptional": {
@@ -49,14 +49,16 @@
         "0x21c35116e99255528B75CBc153BF3c954778a1F5",
         "0x231eF26299caD78950A353832739B9f7245467F0",
         "0xDa878A3dEcD5bB5aDa02f2DF3aaDCdc27bFEb752",
-        "0x3dD0C7Db33cDdc31Aed428f04037FdC649DE95b8",
-        "0x91D6b53500c3134CF1136182E028f1c73Bf25DA8"
+        "0x32147b850dAB1d6C9259bFfF432390910f1fBE64",
+        "0x96e94C48165a07ad230fc3a7eaFE0141b2494e35"
       ]
     },
     "operator-daily": {
       "admins": ["admin"],
       "members": [
         "0x9799B27d383e4DDe1517fAa79fa224474Bd8EbAa",
+        "0x98fb0523bf01c6eee7053c2babe395f745e3812e",
+        "0x6cb522c2f87195a757b7a5b51086296ce9ac2d98",
         "0xcfb9b185429685bf3c3f5f4cc8754babb0b92bef"
       ]
     },
@@ -64,6 +66,8 @@
       "admins": ["admin"],
       "members": [
         "0x9799B27d383e4DDe1517fAa79fa224474Bd8EbAa",
+        "0x98fb0523bf01c6eee7053c2babe395f745e3812e",
+        "0x6cb522c2f87195a757b7a5b51086296ce9ac2d98",
         "0xcfb9b185429685bf3c3f5f4cc8754babb0b92bef"
       ]
     },
@@ -75,6 +79,8 @@
       "admins": ["admin"],
       "members": [
         "0x9799B27d383e4DDe1517fAa79fa224474Bd8EbAa",
+        "0x98fb0523bf01c6eee7053c2babe395f745e3812e",
+        "0x6cb522c2f87195a757b7a5b51086296ce9ac2d98",
         "0xcfb9b185429685bf3c3f5f4cc8754babb0b92bef"
       ]
     },
