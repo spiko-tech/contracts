@@ -34,5 +34,29 @@
 	"oracle-eurUSTBL": {
 		"txHash": "0x4f61aee79f4841274e9cb4090ce10156cf74f4d66f625e9c022b7dfa38d201aa",
 		"address": "0x27BB2B34998F127D03f44D90f148248a3932F492"
+	},
+	"token-UKTBL": {
+		"txHash": "0x987af2551c987bdf13d020ce0cfa98d2dba13b2410411eb5fc2830220413e9b1",
+		"address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D"
+	},
+	"oracle-UKTBL": {
+		"txHash": "0xe984dd0b1d1ae4af55a6f8dff9d71372179c74c27e5c3a3290847e7749b5e8b8",
+		"address": "0x903d5990119bC799423e9C25c56518Ba7DD19474"
+	},
+	"token-SPKCC": {
+		"txHash": "0x3ca7f4f3bcd3c02f51cb7edb546c258fef4a1769c6eea7861ce04bfc479a4827",
+		"address": "0x4f33aCf823E6eEb697180d553cE0c710124C8D59"
+	},
+	"oracle-SPKCC": {
+		"txHash": "0xc2f2ee4e1ba35ba4760f86e030e3176b8687764a40cafcd219efb68cb58c8ee4",
+		"address": "0x99F70A0e1786402a6796c6B0AA997ef340a5c6da"
+	},
+	"token-eurSPKCC": {
+		"txHash": "0xd3b9ec539c57fade97973f4afa303ba752adf2a5ef31534617834872ba57e84f",
+		"address": "0x3868D4e336d14D38031cf680329d31e4712e11cC"
+	},
+	"oracle-eurSPKCC": {
+		"txHash": "0xab42f167332bc9025367c8325360e009a2df66f6cc564f65ef08564c7ba38d05",
+		"address": "0x0e389C83Bc1d16d86412476F6103027555C03265"
 	}
 }
