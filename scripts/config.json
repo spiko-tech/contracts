@@ -21,6 +21,27 @@
         "decimals": 5,
         "oracle": { "decimals": 6, "quote": "EUR" },
         "stable": {}
+      },
+      {
+        "name": "Dev UKTBL",
+        "symbol": "UKTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "GBP" },
+        "stable": {}
+      },
+      {
+        "name": "Dev SPKCC",
+        "symbol": "SPKCC",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "USD" },
+        "stable": {}
+      },
+      {
+        "name": "Dev eurSPKCC",
+        "symbol": "eurSPKCC",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" },
+        "stable": {}
       }
     ],
     "fns": {
