@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "license": "MIT",
   "engines": {
-    "node": "20.x",
+    "node": "22.x",
     "pnpm": "10.x"
   },
   "files": [
