@@ -78,7 +78,7 @@ pnpm hardhat run scripts/migrate.js --network <sepolia or polygonAmoy>
 - Verify contracts and publish source code on Etherscan
 
 ```sh
-pnpm hardhat verify --network <sepolia or polygonAmoy> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager>
+pnpm hardhat verify --network <sepolia or polygonAmoy> <proxy address of the smart contracts to be verified> <for all contracts except PermissionManager, address of the PermissionManager> <address of the Forwarder>
 ```
 
 Note: if verification is failing with following error:
