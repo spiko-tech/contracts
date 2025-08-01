@@ -11,27 +11,27 @@
 		"txHash": "0x0bd0e5e160176489436486d42cdb65bfa638c4f5aafbac118007dcdc848638b4",
 		"address": "0x2B3deF32e08ecc4A2B4Ede20463C0772214136d5"
 	},
-	"token-EUTB": {
+	"token-EUTBL": {
 		"txHash": "0x6f378e628c4d9fee540369cab5e40998eed409574437e22052c3d3f3f56069c6",
 		"address": "0x2328FcFeee0C0917a8F4beC994003d7661093eAE"
 	},
-	"oracle-EUTB": {
+	"oracle-EUTBL": {
 		"txHash": "0x50379eebbbf0356794b513dd90ca18820bd2add588abfbd59aa83457d5fa8921",
 		"address": "0x94C6251f402415446aca39fAeA43B6979fa14980"
 	},
-	"token-USTB": {
+	"token-USTBL": {
 		"txHash": "0x7393caf7ab92c2991523614de07ffd6eb1f2e8120989fc16bb327b76bb87f6eb",
 		"address": "0xDAF7fFf080B38e1B8970730Cafb41Ff6947D035B"
 	},
-	"oracle-USTB": {
+	"oracle-USTBL": {
 		"txHash": "0x8f7b4b804a290fd6753627ba00de8452847f41462bf5034864a5416479c2486a",
 		"address": "0x4d3DC44cc6346987418551855e1ddD418E643c7d"
 	},
-	"token-eurUSTB": {
+	"token-eurUSTBL": {
 		"txHash": "0x18ff16ec67b28d4860b91d2179d418b1406263e59fafc41af0eb656849b77c49",
 		"address": "0x09CbbA9026C83f82aAA1eA875f9a40C4113CE2e6"
 	},
-	"oracle-eurUSTB": {
+	"oracle-eurUSTBL": {
 		"txHash": "0x5e310aa4f0cb41b8474b407d849ada32ceef779804a3b89bc2991750c1c4833b",
 		"address": "0xFF94c1E8650c133aA55d5E6224a80a49eC8a3C46"
 	}
