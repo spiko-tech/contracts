@@ -34,5 +34,9 @@
 	"oracle-eurUSTBL": {
 		"txHash": "0xf383bc63aed9b65caece23440cfb1e1b77a36cb65e382219b8ae2b39359ae724",
 		"address": "0xD3F16cA1fd610374f44cF7B13Ce88df2895E4Ec7"
+	},
+	"token-UKTBL": {
+		"txHash": "0xe179f9e80ca5b7a490d9db4125e124095171a83e3225c337dfe898d84628d311",
+		"address": "0x713a2AeA45eFE7979F9fB347f79c1AB11daa02E4"
 	}
 }
