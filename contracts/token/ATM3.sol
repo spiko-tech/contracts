@@ -41,10 +41,10 @@ contract ATM3 is ERC2771Context, PermissionManaged, Multicall
         PermissionManaged(_authority)
         ERC2771Context(_trustedForwarder)
     {
-        token             = _token;
-        stable            = _stable;
-        oracle            = _oracle;
-        oraclettl         = _oraclettl;
+        token     = _token;
+        stable    = _stable;
+        oracle    = _oracle;
+        oraclettl = _oraclettl;
 
         // rate correction
         uint256 x = tryFetchDecimals(token) + oracle.decimals();
