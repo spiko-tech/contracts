@@ -1227,6 +1227,158 @@ describe("Main", function () {
     }
   });
 
+  describe("ATM v3", function () {
+    const oraclettl = time.duration.days(7);
+
+    for (const stableDecimal of [ 6, 18, 36 ]) {
+      describe(`stable coin with ${stableDecimal} decimals`, function () {
+        const formatToken = value => ethers.parseUnits(value, 5);
+        const formatStable = value => ethers.parseUnits(value, stableDecimal);
+
+        beforeEach(async function () {
+          /// deployment
+          this.contracts.stable = await deploy('ERC20DecimalsMock', [ stableDecimal ]);
+          this.contracts.atm = await deploy('ATM3', [ this.contracts.oracle.target, this.contracts.token.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target, oraclettl ]);
+
+          ///. set atm permissions
+          await this.contracts.manager.setRequirements(this.contracts.atm, [ this.contracts.atm.interface.getFunction('drain').selector ], [ this.IDS['operator-exceptional'] ]);
+          await this.contracts.manager.addGroup(this.contracts.atm, this.IDS['whitelisted']);
+
+          /// mint and approve
+          await this.contracts.token.mint(this.contracts.atm, formatToken('100'));
+          await this.contracts.stable.mint(this.contracts.atm, formatStable('100'));
+          await this.contracts.token.mint(this.accounts.alice, formatToken('100'));
+          await this.contracts.stable.mint(this.accounts.bruce, formatStable('100'));
+          await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.stable.connect(this.accounts.bruce).approve(this.contracts.atm, ethers.MaxUint256);
+        });
+
+        it('post deployment state', async function () {
+          expect(await this.contracts.atm.token()).to.equal(this.contracts.token.target);
+          expect(await this.contracts.atm.stable()).to.equal(this.contracts.stable.target);
+          expect(await this.contracts.atm.oracle()).to.equal(this.contracts.oracle.target);
+        });
+
+        for (const { description, oldPrice, newPrice } of [
+          { description: 'with price increase', oldPrice: ethers.parseUnits('2.15467', 6), newPrice: ethers.parseUnits('2.17832', 6) },
+          { description: 'with price decrease', oldPrice: ethers.parseUnits('2.17832', 6), newPrice: ethers.parseUnits('2.15467', 6) },
+        ])
+        describe(description, function () {
+          const buyPrice = oldPrice > newPrice ? oldPrice : newPrice;
+          const sellPrice = oldPrice < newPrice ? oldPrice : newPrice;
+          const numFactor = stableDecimal < 11 ? 10n ** BigInt(11 - stableDecimal) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+          const denFactor = stableDecimal > 11 ? 10n ** BigInt(stableDecimal - 11) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+
+          const stableToToken = (amount, price, up = false) => up
+            ? divUp(amount * numFactor, price * denFactor)
+            : amount * numFactor / price / denFactor;
+
+          const tokenToStable = (amount, price, up = false) => up
+            ? divUp(amount * denFactor * price, numFactor)
+            : amount * denFactor * price / numFactor;
+
+
+          beforeEach(async function () {
+            const timestamp = await time.latest();
+            await this.contracts.oracle.publishPrice(timestamp - 3600, oldPrice);
+            await this.contracts.oracle.publishPrice(timestamp + 3600, newPrice);
+          });
+
+          describe('buy', function () {
+            it('preview', async function () {
+              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), buyPrice), formatStable("1.0"     ) ]);
+              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), buyPrice), formatStable("1.000001") ]); // round down
+              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), buyPrice, true) ]);
+              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), buyPrice, true) ]);
+              await expect(this.contracts.atm.previewBuy(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
+            });
+
+            it('buy (given amount of stable)', async function () {
+              const amountStable = formatStable("1.000001");
+              const amountToken  = stableToToken(amountStable, buyPrice);
+
+              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.stable, amountStable, this.accounts.alice);
+              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
+              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
+            });
+
+            it('buy (given amount of token)', async function () {
+              const amountToken  = formatToken("1.00001");
+              const amountStable = tokenToStable(amountToken, buyPrice, true);
+
+              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.token, amountToken, this.accounts.alice);
+              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
+              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
+            });
+
+            it('oracle not updated recently', async function () {
+              await time.increase(oraclettl);
+              await expect(this.contracts.atm.previewBuy(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.previewBuy(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.buy(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.buy(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+            });
+          });
+
+          describe('sell', function () {
+            it('preview', async function () {
+              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), sellPrice, true), formatStable("1.0"     ) ]);
+              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), sellPrice, true), formatStable("1.000001") ]); // round down
+              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), sellPrice) ]);
+              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), sellPrice) ]);
+              await expect(this.contracts.atm.previewSell(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
+            });
+
+            it('sell (given amount of stable)', async function () {
+              const amountStable = formatStable("1.000001");
+              const amountToken  = stableToToken(amountStable, sellPrice, true);
+
+              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.stable, amountStable, this.accounts.bruce);
+              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
+              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
+            });
+
+            it('sell (given amount of token)', async function () {
+              const amountToken  = formatToken("1.00001");
+              const amountStable = tokenToStable(amountToken, sellPrice);
+
+              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.token, amountToken, this.accounts.bruce);
+              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
+              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
+            });
+
+            it('oracle not updated recently', async function () {
+              await time.increase(oraclettl);
+              await expect(this.contracts.atm.previewSell(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.previewSell(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.sell(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+              await expect(this.contracts.atm.sell(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
+            });
+          });
+        });
+
+        describe('drain', function () {
+          it('unauthorized', async function () {
+            await expect(this.contracts.atm.connect(this.accounts.other).drain(this.contracts.token, this.accounts.alice, 1))
+              .to.be.revertedWithCustomError(this.contracts.atm, "RestrictedAccess")
+              .withArgs(this.accounts.other, this.contracts.atm, this.contracts.atm.interface.getFunction("drain").selector);
+          });
+
+          it('partial', async function () {
+            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, 42))
+              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -42, 42 ]);
+          });
+
+          it('total', async function () {
+            const balance = await this.contracts.token.balanceOf(this.contracts.atm);
+            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, ethers.MaxUint256))
+              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -balance, balance ]);
+          });
+        });
+      });
+    }
+  });
+
   describe("Permission Manager", function () {
     const { address: caller } = ethers.Wallet.createRandom();
     const { address: target } = ethers.Wallet.createRandom();
