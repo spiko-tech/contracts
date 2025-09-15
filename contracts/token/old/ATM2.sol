@@ -7,7 +7,7 @@ import { IERC20     } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { Math       } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SignedMath } from "@openzeppelin/contracts/utils/math/SignedMath.sol";
 import { SafeCast   } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { Oracle     } from "../oracle/Oracle.sol";
+import { Oracle     } from "../../oracle/Oracle.sol";
 import { ATM        } from "./ATM.sol";
 
 /// @custom:security-contact security@spiko.tech
