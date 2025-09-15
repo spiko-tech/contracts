@@ -9,6 +9,7 @@ import { ERC2771Context    } from "@openzeppelin/contracts/metatx/ERC2771Context
 import { SafeERC20         } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math              } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast          } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { SignedMath        } from "@openzeppelin/contracts/utils/math/SignedMath.sol";
 import { Context           } from "@openzeppelin/contracts/utils/Context.sol";
 import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { Oracle            } from "../oracle/Oracle.sol";
@@ -23,7 +24,7 @@ function tryFetchDecimals(IERC20 token) view returns (uint8) {
 }
 
 /// @custom:security-contact security@spiko.tech
-contract ATM is ERC2771Context, PermissionManaged, Multicall
+contract ATM3 is ERC2771Context, PermissionManaged, Multicall
 {
     using Math     for *;
     using SafeCast for *;
@@ -31,17 +32,19 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     IERC20  immutable public token;
     IERC20  immutable public stable;
     Oracle  immutable public oracle;
+    uint256 immutable public oraclettl;
     uint256 immutable private numerator;
     uint256 immutable private denominator;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder)
+    constructor(Oracle _oracle, IERC20 _token, IERC20 _stable, IAuthority _authority, address _trustedForwarder, uint256 _oraclettl)
         PermissionManaged(_authority)
         ERC2771Context(_trustedForwarder)
     {
-        token             = _oracle.token();
+        token             = _token;
         stable            = _stable;
         oracle            = _oracle;
+        oraclettl         = _oraclettl;
 
         // rate correction
         uint256 x = tryFetchDecimals(token) + oracle.decimals();
@@ -51,7 +54,7 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     function previewBuy(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
-        int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
+        (,int256 price) = _getPrices(); // max
         if (input == token) {
             return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Ceil));
         } else if (input == stable) {
@@ -62,7 +65,7 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     function previewSell(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
-        int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
+        (int256 price,) = _getPrices(); // min
         if (input == token) {
             return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Floor));
         } else if (input == stable) {
@@ -70,6 +73,14 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
         } else {
             revert("invalid input token");
         }
+    }
+
+    function _getPrices() internal view virtual returns (int256 min, int256 max) {
+        (uint80 roundId, int256 latest,,,) = oracle.latestRoundData();
+        (, int256 previous,,uint256 updatedAt,) = oracle.getRoundData(roundId - 1);
+        require(block.timestamp < updatedAt + oraclettl, "oracle value too old");
+        min = SignedMath.min(latest, previous);
+        max = SignedMath.max(latest, previous);
     }
 
     function buy(IERC20 input, uint256 inputAmount, address to) public virtual returns (uint256, uint256) {
