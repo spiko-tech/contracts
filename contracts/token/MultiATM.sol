@@ -39,10 +39,11 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
 
     mapping(bytes32 id => Pair) private _pairs;
 
-    event swapExact(IERC20 indexed input, IERC20 indexed output, uint256 inputAmount, uint256 outputAmount, address from, address to);
+    event SwapExact(IERC20 indexed input, IERC20 indexed output, uint256 inputAmount, uint256 outputAmount, address from, address to);
     event PairUpdated(bytes32 indexed id, IERC20 indexed token1, IERC20 indexed token2, Oracle oracle, uint256 oracleTTL);
     event PairRemoved(bytes32 indexed id);
     error OracleValueTooOld(Oracle oracle);
+    error UnknownPair(IERC20 input, IERC20 output);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority, address _trustedForwarder)
@@ -78,8 +79,8 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
 
     function hashPair(IERC20 input, IERC20 output) public view virtual returns (bytes32) {
         return Hashes.commutativeKeccak256(
-            bytes32(bytes20(address(input))),
-            bytes32(bytes20(address(output)))
+            bytes32(uint256(uint160(address(input)))),
+            bytes32(uint256(uint160(address(output))))
         );
     }
 
@@ -113,10 +114,12 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
             uint256 denominator
         ) = viewPairDetails(input, output);
 
-        (int256 price,) = _getPrices(oracle, oracleTTL); // min
+        require(address(oracle) != address(0), UnknownPair(input, output));
+
+        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL);
         return inputAmount.mulDiv(
-            Math.ternary(input == token1, numerator * price.toUint256(), denominator),
-            Math.ternary(input == token1, denominator, numerator * price.toUint256()),
+            Math.ternary(input == token1, numerator * minPrice.toUint256(), denominator),
+            Math.ternary(input == token1, denominator, numerator * maxPrice.toUint256()),
             Math.Rounding.Floor
         );
     }
@@ -132,10 +135,12 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
             uint256 denominator
         ) = viewPairDetails(input, output);
 
-        (,int256 price) = _getPrices(oracle, oracleTTL); // max
+        require(address(oracle) != address(0), UnknownPair(input, output));
+
+        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL);
         return outputAmount.mulDiv(
-            Math.ternary(input == token1, denominator, numerator * price.toUint256()),
-            Math.ternary(input == token1, numerator * price.toUint256(), denominator),
+            Math.ternary(input == token1, denominator, numerator * minPrice.toUint256()),
+            Math.ternary(input == token1, numerator * maxPrice.toUint256(), denominator),
             Math.Rounding.Ceil
         );
     }
@@ -170,7 +175,7 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     function _swapExact(IERC20 input, IERC20 output, uint256 inputAmount, uint256 outputAmount, address from, address to) private {
         SafeERC20.safeTransferFrom(input, from, address(this), inputAmount);
         SafeERC20.safeTransfer(output, to, outputAmount);
-        emit swapExact(input, output, inputAmount, outputAmount, from, to);
+        emit SwapExact(input, output, inputAmount, outputAmount, from, to);
     }
 
     function _getPrices(Oracle oracle, uint256 oracleTTL) internal view virtual returns (int256 min, int256 max) {
