@@ -139,8 +139,8 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
 
         (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL);
         return outputAmount.mulDiv(
-            Math.ternary(input == token1, denominator, numerator * minPrice.toUint256()),
-            Math.ternary(input == token1, numerator * maxPrice.toUint256(), denominator),
+            Math.ternary(input == token1, denominator, numerator * maxPrice.toUint256()),
+            Math.ternary(input == token1, numerator * minPrice.toUint256(), denominator),
             Math.Rounding.Ceil
         );
     }
