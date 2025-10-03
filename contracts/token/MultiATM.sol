@@ -215,7 +215,7 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
         //
         // Therefore:
         // (<Amount of token A> / 10**18) * (rate / 10**8) = (<Amount of token B> / 10**6)
-        // i.e. <Amount of token A> * 10**6 = <Amount of token B> * 10**(18 + 6)
+        // i.e. <Amount of token A> * 10**6 = <Amount of token B> * 10**(18 + 8)
         //
         // Which gives us the following conversion rate:
         // * <Amount of token A> * <numerator> / <denominator> = <Amount of token B>
