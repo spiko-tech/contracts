@@ -39,6 +39,25 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
         uint256 numerator;
         uint256 denominator;
     }
+    // Numerator and denominator account for the difference in decimals between the two tokens AND for the decimals
+    // of the oracle. They are used to scale the conversion rate between the two tokens.
+    //
+    // For example, if token A has 18 decimals and token B has 6 decimals, and the oracle has 8 decimals, then
+    // - 1 token A correspond to 10**18 units (wei),
+    // - 1 token B correspond to 10**6 units (wei),
+    // - the rate provided by the oracle must be divided by 10**8.
+    //
+    // Therefore:
+    // (<Amount of token A> / 10**18) * (rate / 10**8) = (<Amount of token B> / 10**6)
+    // i.e. <Amount of token A> * rate * 10**6 = <Amount of token B> * 10**(18 + 8)
+    //
+    // Which gives us the following conversion rate:
+    // * <Amount of token A> * rate * <numerator> / <denominator> = <Amount of token B>
+    // * <Amount of token B> / rate / <numerator> * <denominator> = <Amount of token A>
+    //
+    // with:
+    // * numerator = 10**<decimals of token B>
+    // * denominator = 10**(<decimals of token A> + <decimals of oracle>).
 
     mapping(bytes32 id => Pair) private _pairs;
     uint256 public feeBasisPoints;
@@ -201,29 +220,10 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     /****************************************************************************************************************
-     *                                                 Admin drain                                                  *
+     *                                                 Admin actions                                                  *
      ****************************************************************************************************************/
     function setPair(IERC20 token1, IERC20 token2, Oracle oracle, uint256 oracleTTL) public virtual restricted() {
         bytes32 id = hashPair(token1, token2);
-        // Numerator and denomiator account for the difference in decimals between the two tokens AND for the decimals
-        // of the oracle. The are used to scale the conversion rate between the two tokens.
-        //
-        // For example, if token A has 18 decimals and token B has 6 decimals, and the oracle has 8 decimals, then
-        // - 1 token A correspond to 10**18 units (wei),
-        // - 1 token B correspond to 10**6 units (wei),
-        // - the rate provided by the oracle must be divided by 10**8.
-        //
-        // Therefore:
-        // (<Amount of token A> / 10**18) * (rate / 10**8) = (<Amount of token B> / 10**6)
-        // i.e. <Amount of token A> * rate * 10**6 = <Amount of token B> * 10**(18 + 8)
-        //
-        // Which gives us the following conversion rate:
-        // * <Amount of token A> * rate * <numerator> / <denominator> = <Amount of token B>
-        // * <Amount of token B> / rate / <numerator> * <denominator> = <Amount of token A>
-        //
-        // with:
-        // * numerator = 10**<decimals of token B>
-        // * denominator = 10**(<decimals of token A> + <decimals of oracle>).
         _pairs[id] = Pair({
             token1: token1,
             token2: token2,
