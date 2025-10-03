@@ -7,7 +7,7 @@ const { argv } = require('yargs/yargs')(process.argv.slice(2))
     coverage:      { type: 'boolean', default: false },
     report:        { type: 'boolean', default: false },
     // compilations
-    compiler:      { type: 'string', default: '0.8.24' },
+    compiler:      { type: 'string', default: '0.8.27' },
     evmVersion:    { type: 'string', default: 'cancun' },
     mode:          { type: 'string', choices: ['production', 'development'], default: 'production' },
     runs:          { type: 'number', default: 200 },
