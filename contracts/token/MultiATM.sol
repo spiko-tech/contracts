@@ -23,10 +23,13 @@ function tryFetchDecimals(IERC20 token) view returns (uint8) {
         return 18;
     }
 }
+
 contract MultiATM is ERC2771Context, PermissionManaged, Multicall
 {
     using Math     for *;
     using SafeCast for *;
+
+    uint256 private constant _BASIS_POINT_SCALE = 1e4;
 
     struct Pair {
         IERC20 token1;
@@ -38,12 +41,15 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     }
 
     mapping(bytes32 id => Pair) private _pairs;
+    uint256 public feeBasisPoints;
 
     event SwapExact(IERC20 indexed input, IERC20 indexed output, uint256 inputAmount, uint256 outputAmount, address from, address to);
     event PairUpdated(bytes32 indexed id, IERC20 indexed token1, IERC20 indexed token2, Oracle oracle, uint256 oracleTTL);
     event PairRemoved(bytes32 indexed id);
+    event FeeUpdated(uint256 newFeeBasisPoints);
     error OracleValueTooOld(Oracle oracle);
     error UnknownPair(IERC20 input, IERC20 output);
+    error InvalidFee(uint256 feeBasisPoints);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority, address _trustedForwarder)
@@ -90,20 +96,28 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     function previewExactInput(IERC20[] memory path, uint256 inputAmount) public view virtual returns (uint256 /*outputAmount*/) {
         uint256 outputAmount = inputAmount;
         for (uint256 i = 0; i < path.length - 1; ++i) {
-            outputAmount = previewExactInputSingle(path[i], path[i+1], outputAmount);
+            outputAmount = _exactInput(path[i], path[i+1], outputAmount);
         }
-        return outputAmount;
+        return outputAmount.mulDiv(_BASIS_POINT_SCALE - feeBasisPoints, _BASIS_POINT_SCALE, Math.Rounding.Floor);
     }
 
     function previewExactOutput(IERC20[] memory path, uint256 outputAmount) public view virtual returns (uint256 /*inputAmount*/) {
         uint256 inputAmount = outputAmount;
         for (uint256 i = path.length - 1; i > 0; --i) {
-            inputAmount = previewExactOutputSingle(path[i-1], path[i], inputAmount);
+            inputAmount = _exactOutput(path[i-1], path[i], inputAmount);
         }
-        return inputAmount;
+        return inputAmount.mulDiv(_BASIS_POINT_SCALE, _BASIS_POINT_SCALE - feeBasisPoints, Math.Rounding.Ceil);
     }
 
     function previewExactInputSingle(IERC20 input, IERC20 output, uint256 inputAmount) public view virtual returns (uint256 /*outputAmount*/) {
+        return _exactInput(input, output, inputAmount).mulDiv(_BASIS_POINT_SCALE - feeBasisPoints, _BASIS_POINT_SCALE, Math.Rounding.Floor);
+    }
+
+    function previewExactOutputSingle(IERC20 input, IERC20 output, uint256 outputAmount) public view virtual returns (uint256 /*inputAmount*/) {
+        return _exactOutput(input, output, outputAmount).mulDiv(_BASIS_POINT_SCALE, _BASIS_POINT_SCALE - feeBasisPoints, Math.Rounding.Ceil);
+    }
+
+    function _exactInput(IERC20 input, IERC20 output, uint256 inputAmount) internal view virtual returns (uint256 /*outputAmount*/) {
         (
             ,
             IERC20 token1,
@@ -124,7 +138,7 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
         );
     }
 
-    function previewExactOutputSingle(IERC20 input, IERC20 output, uint256 outputAmount) public view virtual returns (uint256 /*inputAmount*/) {
+    function _exactOutput(IERC20 input, IERC20 output, uint256 outputAmount) internal view virtual returns (uint256 /*inputAmount*/) {
         (
             ,
             IERC20 token1,
@@ -191,15 +205,32 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
      ****************************************************************************************************************/
     function setPair(IERC20 token1, IERC20 token2, Oracle oracle, uint256 oracleTTL) public virtual restricted() {
         bytes32 id = hashPair(token1, token2);
-        uint256 x = tryFetchDecimals(token1) + oracle.decimals();
-        uint256 y = tryFetchDecimals(token2);
+        // Numerator and denomiator account for the difference in decimals between the two tokens AND for the decimals
+        // of the oracle. The are used to scale the conversion rate between the two tokens.
+        //
+        // For example, if token A has 18 decimals and token B has 6 decimals, and the oracle has 8 decimals, then
+        // - 1 token A correspond to 10**18 units (wei),
+        // - 1 token B correspond to 10**6 units (wei),
+        // - the rate provided by the oracle must be divided by 10**8.
+        //
+        // Therefore:
+        // (<Amount of token A> / 10**18) * (rate / 10**8) = (<Amount of token B> / 10**6)
+        // i.e. <Amount of token A> * 10**6 = <Amount of token B> * 10**(18 + 6)
+        //
+        // Which gives us the following conversion rate:
+        // * <Amount of token A> * <numerator> / <denominator> = <Amount of token B>
+        // * <Amount of token B> / <numerator> * <denominator> = <Amount of token A>
+        //
+        // with:
+        // * numerator = 10**<decimals of token B>
+        // * denominator = 10**(<decimals of token A> + <decimals of oracle>).
         _pairs[id] = Pair({
             token1: token1,
             token2: token2,
             oracle: oracle,
             oracleTTL: oracleTTL,
-            numerator: 10 ** Math.saturatingSub(y, x),
-            denominator: 10 ** Math.saturatingSub(x, y)
+            numerator: 10 ** tryFetchDecimals(token2),
+            denominator: 10 ** (tryFetchDecimals(token1) + oracle.decimals())
         });
 
         emit PairUpdated(id, token1, token2, oracle, oracleTTL);
@@ -212,7 +243,13 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
         emit PairRemoved(id);
     }
 
-    function drain(IERC20 _token, address _to, uint256 _amount) public virtual restricted() {
+    function setFee(uint256 newFeeBasisPoints) public virtual restricted() {
+        require(newFeeBasisPoints <= 50, InvalidFee(newFeeBasisPoints)); // Max 0.5%
+        feeBasisPoints = newFeeBasisPoints;
+        emit FeeUpdated(newFeeBasisPoints);
+    }
+
+    function withdraw(IERC20 _token, address _to, uint256 _amount) public virtual restricted() {
         SafeERC20.safeTransfer(
             _token,
             _to,
