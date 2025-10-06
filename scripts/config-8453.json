@@ -26,6 +26,12 @@
         "oracle": { "decimals": 6, "quote": "GBP" }
       },
       {
+        "name": "Spiko UK T-Bills Money Market Fund (EUR)",
+        "symbol": "eurUKTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
         "name": "Spiko Digital Assets Cash and Carry Fund",
         "symbol": "SPKCC",
         "decimals": 5,
