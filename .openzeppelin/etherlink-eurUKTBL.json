@@ -2,382 +2,20 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A",
-      "txHash": "0x8f9440d3fbd17c078374707647c3390273428fa985fc1312ba651e46e00130b6",
-      "kind": "uups"
-    },
-    {
-      "address": "0x15EA0EC460a0E6847EC0AA8D50A84B3A51B95f74",
-      "txHash": "0x14b87e2ec50a12dda975ec63cb41748f9dc1e81a5de7eedb508b23c1127fcc2b",
-      "kind": "uups"
-    },
-    {
-      "address": "0xCBeb19549054CC0a6257A77736FC78C367216cE7",
-      "txHash": "0x84d8641ce12bdb8587e839644401360580a974a540513dd885be098c2e0a7b5a",
-      "kind": "uups"
-    },
-    {
-      "address": "0xe4880249745eAc5F1eD9d8F7DF844792D560e750",
-      "txHash": "0xf00be3c1855d77bc1d5a90f66be7989fa5b56acd256ddfed3db413c719a5a160",
-      "kind": "uups"
-    },
-    {
-      "address": "0x021289588cd81dC1AC87ea91e91607eEF68303F5",
-      "txHash": "0xd4e7fd482fbdc3b298f81dae8399cde63b084c9700174daf865897e0a4d8bd7a",
-      "kind": "uups"
-    },
-    {
-      "address": "0xA260D72df8FF2696f3A8d0BE46B7bc4d743Be764",
-      "txHash": "0xfc3f1a26edb0c0dcd80561b4fdb20d3841375ff19ead5e8a6f2ea9ba3082b1c1",
-      "kind": "uups"
-    },
-    {
-      "address": "0xA8De1f55Aa0E381cb456e1DcC9ff781eA0079068",
-      "txHash": "0xbea4a296a5782e72bc9bdc3ee01e53fdd0b862a1f81fed757dd6c20732fb8806",
-      "kind": "uups"
-    },
-    {
-      "address": "0x970E2aDC2fdF53AEa6B5fa73ca6dc30eAFEDfe3D",
-      "txHash": "0xeab534b48c7f37b2ef7b02c1625a026076dc075afc6a27aa71674c888b61019c",
-      "kind": "uups"
-    },
-    {
-      "address": "0x903d5990119bC799423e9C25c56518Ba7DD19474",
-      "txHash": "0x4a61e103859e35ccca270a2370ec7e3c1bb7fdf77ab9667c0be6113ba46cd7f8",
-      "kind": "uups"
-    },
-    {
-      "address": "0x4f33aCf823E6eEb697180d553cE0c710124C8D59",
-      "txHash": "0xcfc718bd3854d9595677392d9832f47c5a186c6439c53c743e444818435ba1c5",
-      "kind": "uups"
-    },
-    {
-      "address": "0x99F70A0e1786402a6796c6B0AA997ef340a5c6da",
-      "txHash": "0xb8600cede4f1dc71d4a7195eb2fc495c23524d28e79fc29ab265fb88d2c26c56",
-      "kind": "uups"
-    },
-    {
-      "address": "0x3868D4e336d14D38031cf680329d31e4712e11cC",
-      "txHash": "0x35b05b70041189fbefe5a5d2e3f1896d90010d74688e7edcaed6e9cf759cbc45",
-      "kind": "uups"
-    },
-    {
-      "address": "0x0e389C83Bc1d16d86412476F6103027555C03265",
-      "txHash": "0x52848c75aedadbc389f93ae557e85be8fe5e74b08b31f0ed011c228e2b768a13",
-      "kind": "uups"
-    },
-    {
-      "address": "0x7A16Df1C2Cd8B9EEb9ED9942c82C2e7c90Bb93Db",
-      "txHash": "0x48ef8ab6dce51bbf798acfbda5893ff9d18a3b815d615bbee3c630fb75df09d3",
-      "kind": "uups"
-    },
-    {
       "address": "0x8226E968eFD24d9bAF156Eca15179D1cc1bFD828",
-      "txHash": "0xca21be4398a7148f3e11ec99809293599ac9bb25e59f159c89102b964b295431",
+      "txHash": "0xf20c421908534fd39c3fbf317006932fc0eea2a8ca1b810bcefaaaa56a33c627",
       "kind": "uups"
     },
     {
-      "address": "0x4C3bA0eAE5AB65C9510769a2877Cf4d93330Bc87",
-      "txHash": "0xfb1abe60ee62991a0892cf91d444e17c37f7a65158fc3fe1d655b6bb5f4d993f",
+      "address": "0x8513fCDD66E148E4b5E4940be21F50C20D112731",
+      "txHash": "0x95bf7a3fd3f542ed9b67f062f7bc34de0f12d9cab6bff938d14504b126d1e489",
       "kind": "uups"
     }
   ],
   "impls": {
-    "0c3a62f80f0032c053f2baad421feb98f03d98d2f5576c2a580d10d0a8f981b7": {
-      "address": "0x344278aff344d6fb960705dc18a4912221608472",
-      "txHash": "0x5a000135da98e385c9898762fcd6a2b28a878c42a6391e18c552d26c2eea0da6",
-      "layout": {
-        "solcVersion": "0.8.24",
-        "storage": [
-          {
-            "label": "_permissions",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_mapping(t_address,t_userDefinedValueType(Mask)13963)",
-            "contract": "PermissionManager",
-            "src": "contracts/permissions/PermissionManager.sol:26"
-          },
-          {
-            "label": "_restrictions",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_mapping(t_address,t_mapping(t_bytes4,t_userDefinedValueType(Mask)13963))",
-            "contract": "PermissionManager",
-            "src": "contracts/permissions/PermissionManager.sol:27"
-          },
-          {
-            "label": "_admin",
-            "offset": 0,
-            "slot": "2",
-            "type": "t_mapping(t_uint8,t_userDefinedValueType(Mask)13963)",
-            "contract": "PermissionManager",
-            "src": "contracts/permissions/PermissionManager.sol:28"
-          }
-        ],
-        "types": {
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_struct(InitializableStorage)941_storage": {
-            "label": "struct Initializable.InitializableStorage",
-            "members": [
-              {
-                "label": "_initialized",
-                "type": "t_uint64",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "_initializing",
-                "type": "t_bool",
-                "offset": 8,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint64": {
-            "label": "uint64",
-            "numberOfBytes": "8"
-          },
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_bytes4": {
-            "label": "bytes4",
-            "numberOfBytes": "4"
-          },
-          "t_mapping(t_address,t_mapping(t_bytes4,t_userDefinedValueType(Mask)13963))": {
-            "label": "mapping(address => mapping(bytes4 => Masks.Mask))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_userDefinedValueType(Mask)13963)": {
-            "label": "mapping(address => Masks.Mask)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_bytes4,t_userDefinedValueType(Mask)13963)": {
-            "label": "mapping(bytes4 => Masks.Mask)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint8,t_userDefinedValueType(Mask)13963)": {
-            "label": "mapping(uint8 => Masks.Mask)",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          },
-          "t_userDefinedValueType(Mask)13963": {
-            "label": "Masks.Mask",
-            "numberOfBytes": "32",
-            "underlying": "t_bytes32"
-          },
-          "t_bytes32": {
-            "label": "bytes32"
-          }
-        },
-        "namespaces": {
-          "erc7201:openzeppelin.storage.Initializable": [
-            {
-              "contract": "Initializable",
-              "label": "_initialized",
-              "type": "t_uint64",
-              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:69",
-              "offset": 0,
-              "slot": "0"
-            },
-            {
-              "contract": "Initializable",
-              "label": "_initializing",
-              "type": "t_bool",
-              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:73",
-              "offset": 8,
-              "slot": "0"
-            }
-          ]
-        }
-      }
-    },
-    "d865f12c5a5b4bca897f9d784f1aa9d81a99d01b2d5121c6b973b7ed3580dbc0": {
-      "address": "0xDA5599f04e9b437C8394b0c2BC68B502A66ebFe8",
-      "txHash": "0x2f275909844674e5ed122a22bbd8a477eb49bb85b6aa9b5015997984d3191005",
-      "layout": {
-        "solcVersion": "0.8.24",
-        "storage": [
-          {
-            "label": "details",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_mapping(t_bytes32,t_struct(Details)10590_storage)",
-            "contract": "Redemption",
-            "src": "contracts/token/Redemption.sol:42"
-          },
-          {
-            "label": "minimum",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_mapping(t_contract(IERC20)3569,t_uint256)",
-            "contract": "Redemption",
-            "src": "contracts/token/Redemption.sol:43"
-          },
-          {
-            "label": "_outputs",
-            "offset": 0,
-            "slot": "2",
-            "type": "t_mapping(t_contract(IERC20)3569,t_struct(AddressSet)9926_storage)",
-            "contract": "Redemption",
-            "src": "contracts/token/Redemption.sol:44"
-          }
-        ],
-        "types": {
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_struct(InitializableStorage)830_storage": {
-            "label": "struct Initializable.InitializableStorage",
-            "members": [
-              {
-                "label": "_initialized",
-                "type": "t_uint64",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "_initializing",
-                "type": "t_bool",
-                "offset": 8,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint64": {
-            "label": "uint64",
-            "numberOfBytes": "8"
-          },
-          "t_array(t_bytes32)dyn_storage": {
-            "label": "bytes32[]",
-            "numberOfBytes": "32"
-          },
-          "t_bytes32": {
-            "label": "bytes32",
-            "numberOfBytes": "32"
-          },
-          "t_contract(IERC20)3569": {
-            "label": "contract IERC20",
-            "numberOfBytes": "20"
-          },
-          "t_enum(Status)10584": {
-            "label": "enum Redemption.Status",
-            "members": [
-              "NULL",
-              "PENDING",
-              "EXECUTED",
-              "CANCELED"
-            ],
-            "numberOfBytes": "1"
-          },
-          "t_mapping(t_bytes32,t_struct(Details)10590_storage)": {
-            "label": "mapping(bytes32 => struct Redemption.Details)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_bytes32,t_uint256)": {
-            "label": "mapping(bytes32 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(IERC20)3569,t_struct(AddressSet)9926_storage)": {
-            "label": "mapping(contract IERC20 => struct EnumerableSet.AddressSet)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(IERC20)3569,t_uint256)": {
-            "label": "mapping(contract IERC20 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(AddressSet)9926_storage": {
-            "label": "struct EnumerableSet.AddressSet",
-            "members": [
-              {
-                "label": "_inner",
-                "type": "t_struct(Set)9611_storage",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Details)10590_storage": {
-            "label": "struct Redemption.Details",
-            "members": [
-              {
-                "label": "status",
-                "type": "t_enum(Status)10584",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "deadline",
-                "type": "t_uint48",
-                "offset": 1,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_struct(Set)9611_storage": {
-            "label": "struct EnumerableSet.Set",
-            "members": [
-              {
-                "label": "_values",
-                "type": "t_array(t_bytes32)dyn_storage",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "_positions",
-                "type": "t_mapping(t_bytes32,t_uint256)",
-                "offset": 0,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint48": {
-            "label": "uint48",
-            "numberOfBytes": "6"
-          }
-        },
-        "namespaces": {
-          "erc7201:openzeppelin.storage.Initializable": [
-            {
-              "contract": "Initializable",
-              "label": "_initialized",
-              "type": "t_uint64",
-              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:69",
-              "offset": 0,
-              "slot": "0"
-            },
-            {
-              "contract": "Initializable",
-              "label": "_initializing",
-              "type": "t_bool",
-              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:73",
-              "offset": 8,
-              "slot": "0"
-            }
-          ]
-        }
-      }
-    },
-    "603f28b94970a1e0eaf277e6bc2d7c8f17781f176c3c1bbeb97c7b1469e0742f": {
-      "address": "0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80",
-      "txHash": "0x01d1ce2e467b672d216e67bc3875bb8fd1e7dea63b2114775467b0e799f015e2",
+    "7f4f74d84e6b0c203efb9fe85ed69632742f47f65e33db522f46a5e44381a9c1": {
+      "address": "0xF10890d77840D9186AC0Aa438EAB9a078CBb2A93",
+      "txHash": "0x441bda7fde281cd152d9d99440392a4257cab90676a543507eeb7facfcbe4d8e",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -676,9 +314,9 @@
         }
       }
     },
-    "2babd14cfc18702704d47e339ed0604174600aa2822ed256befbca180f371322": {
-      "address": "0x29503f31B73F0734455942Eb888E13acA1588a4e",
-      "txHash": "0xc7e3d026e3b27c4357a9d62366415c714c7a751a4a6000102df1a1e4a9142706",
+    "53b03670a3f4d6b49506a39dd8d91ea3c392fc0d164b974a9f7fa361ada412d3": {
+      "address": "0x4C3bA0eAE5AB65C9510769a2877Cf4d93330Bc87",
+      "txHash": "0xe0887b8a59c8ab5710dfa9cefe617e6ac56a11433d233ce011e260523edf6529",
       "layout": {
         "solcVersion": "0.8.24",
         "storage": [
@@ -686,7 +324,7 @@
             "label": "token",
             "offset": 0,
             "slot": "0",
-            "type": "t_contract(IERC20Metadata)3595",
+            "type": "t_contract(IERC20Metadata)4760",
             "contract": "Oracle",
             "src": "contracts/oracle/Oracle.sol:26"
           },
@@ -710,7 +348,7 @@
             "label": "_history",
             "offset": 0,
             "slot": "2",
-            "type": "t_struct(Trace208)8562_storage",
+            "type": "t_struct(Trace208)10239_storage",
             "contract": "Oracle",
             "src": "contracts/oracle/Oracle.sol:30"
           }
@@ -720,7 +358,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_struct(InitializableStorage)830_storage": {
+          "t_struct(InitializableStorage)941_storage": {
             "label": "struct Initializable.InitializableStorage",
             "members": [
               {
@@ -742,11 +380,11 @@
             "label": "uint64",
             "numberOfBytes": "8"
           },
-          "t_array(t_struct(Checkpoint208)8567_storage)dyn_storage": {
+          "t_array(t_struct(Checkpoint208)10244_storage)dyn_storage": {
             "label": "struct Checkpoints.Checkpoint208[]",
             "numberOfBytes": "32"
           },
-          "t_contract(IERC20Metadata)3595": {
+          "t_contract(IERC20Metadata)4760": {
             "label": "contract IERC20Metadata",
             "numberOfBytes": "20"
           },
@@ -754,7 +392,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Checkpoint208)8567_storage": {
+          "t_struct(Checkpoint208)10244_storage": {
             "label": "struct Checkpoints.Checkpoint208",
             "members": [
               {
@@ -772,12 +410,12 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(Trace208)8562_storage": {
+          "t_struct(Trace208)10239_storage": {
             "label": "struct Checkpoints.Trace208",
             "members": [
               {
                 "label": "_checkpoints",
-                "type": "t_array(t_struct(Checkpoint208)8567_storage)dyn_storage",
+                "type": "t_array(t_struct(Checkpoint208)10244_storage)dyn_storage",
                 "offset": 0,
                 "slot": "0"
               }

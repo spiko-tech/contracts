@@ -58,5 +58,13 @@
 	"oracle-eurSPKCC": {
 		"txHash": "0x3ee39d63a293961701265862e7c21efd7057f3dd5ecd7f9d6d523b31b610ea19",
 		"address": "0x0e389C83Bc1d16d86412476F6103027555C03265"
+	},
+	"token-eurUKTBL": {
+		"txHash": "0x9e43893db69f1399e2735a0a46eeec1ad59302d2dbb592813fd590f0cf1bab91",
+		"address": "0x8513fCDD66E148E4b5E4940be21F50C20D112731"
+	},
+	"oracle-eurUKTBL": {
+		"txHash": "0xe6a38f69e65bf026162c87761ed6d10cbc2eb6bd485ee09dc41f234d14a20702",
+		"address": "0x77926AF72CaDBC6D6a308C6a6b6AaA5FBdF43218"
 	}
 }
