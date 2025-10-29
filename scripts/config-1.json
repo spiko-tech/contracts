@@ -51,7 +51,10 @@
       "tokens[]-unpause": ["operator-exceptional"],
       "tokens[]-transfer": ["whitelisted"],
       "oracles[]-publishPrice": ["operator-oracle"],
-      "redemption-executeRedemption": ["operator-daily"]
+      "redemption-executeRedemption": ["operator-daily"],
+      "minter-initiateMint": ["mint-initiator"],
+      "minter-approveMint": ["mint-approver"],
+      "minter-cancelMint": ["mint-approver"]
     }
   },
   "roles": {
@@ -81,6 +84,22 @@
     "whitelisted": {
       "admins": ["whitelister"],
       "members": ["redemption"]
+    },
+    "treasury-manager": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "redemption-executor": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "mint-approver": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "mint-initiator": {
+      "admins": ["admin"],
+      "members": []
     }
   }
 }

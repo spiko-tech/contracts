@@ -81,6 +81,21 @@
     "whitelisted": {
       "admins": ["whitelister"],
       "members": ["redemption"]
+    },
+    "treasury-manager": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "redemption-executor": {
+      "admins": ["admin"],
+      "members": []
+    }, "mint-approver": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "mint-initiator": {
+      "admins": ["admin"],
+      "members": []
     }
   }
 }

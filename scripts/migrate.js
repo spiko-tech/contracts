@@ -47,13 +47,15 @@ async function verifyContracts(contracts, chainName) {
     DEBUG('----------------------------------------------------');
     const permissionManagerAddress = contracts.manager.target;
     const redemptionAddress = contracts.redemption.target;
+    const minterAddress = contracts.minter.target;
     const forwarderAddress = contracts.forwarder.target;
     const tokenAddresses = Object.values(contracts.tokens).map(token => token.target);
     // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
 
     await verifyContract("PermissionManager", permissionManagerAddress, chainName);
     await verifyContract("Redemption", redemptionAddress, chainName, permissionManagerAddress);
-
+    await verifyContract("Minter", minterAddress, chainName, permissionManagerAddress);
+    
     for (const tokenAddress of tokenAddresses){
         await verifyContract("Token", tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
     }
@@ -66,11 +68,16 @@ const Role = {
     OperatorOracle : 'operator-oracle',
     Burner : 'burner',
     Whitelister : 'whitelister',
-    Whitelisted : 'whitelisted'
+    Whitelisted : 'whitelisted',
+    TreasuryManager : 'treasury-manager',
+    RedemptionExecutor : 'redemption-executor',
+    MintInitiator : 'mint-initiator',
+    MintApprover : 'mint-approver'
 }
 
 const PermissionedContracts = {
     Redemption: 'redemption',
+    Minter: 'minter',
 }
 
 const sanityCheckConfig = (config) => {
@@ -143,6 +150,15 @@ async function migrate(config = {}, opts = {}) {
             { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
         ));
     DEBUG(`redemption: ${contracts.redemption.target}`);
+
+    contracts.minter = await ethers.getContractFactory('Minter')
+        .then(factory => migration.migrate(
+            'minter',
+            factory,
+            [],
+            { ...opts, kind: 'uups', constructorArgs: [ contracts.manager.target ] },
+        ));
+    DEBUG(`minter: ${contracts.minter.target}`);
 
     for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
         // deploy token
