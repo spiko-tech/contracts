@@ -1,0 +1,16 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[solidity]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 4
+  },
+  "prettier.requireConfig": false,
+  "prettier.resolveGlobalModules": true,
+  "prettier.documentSelectors": ["**/*.sol"],
+  "files.associations": {
+    "*.sol": "solidity"
+  }
+}
+
