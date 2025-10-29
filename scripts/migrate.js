@@ -55,12 +55,14 @@ async function verifyContracts(contracts, chainName) {
   DEBUG('----------------------------------------------------');
   const permissionManagerAddress = contracts.manager.target;
   const redemptionAddress = contracts.redemption.target;
+  const minterAddress = contracts.minter.target;
   const forwarderAddress = contracts.forwarder.target;
   const tokenAddresses = Object.values(contracts.tokens).map((token) => token.target);
   // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
 
   await verifyContract('PermissionManager', permissionManagerAddress, chainName);
   await verifyContract('Redemption', redemptionAddress, chainName, permissionManagerAddress);
+  await verifyContract('Minter', minterAddress, chainName, permissionManagerAddress);
 
   for (const tokenAddress of tokenAddresses) {
     await verifyContract('Token', tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
@@ -75,10 +77,15 @@ const Role = {
   Burner: 'burner',
   Whitelister: 'whitelister',
   Whitelisted: 'whitelisted',
+  TreasuryManager: 'treasury-manager',
+  RedemptionExecutor: 'redemption-executor',
+  MintInitiator: 'mint-initiator',
+  MintApprover: 'mint-approver',
 };
 
 const PermissionedContracts = {
   Redemption: 'redemption',
+  Minter: 'minter',
 };
 
 const sanityCheckConfig = (config) => {
@@ -130,48 +137,58 @@ async function migrate(config = {}, opts = {}) {
     .then((factory) => migration.migrate('forwarder', factory, ['Forwarder'], { ...opts }));
   DEBUG(`forwarder: ${contracts.forwarder.target}`);
 
-  contracts.manager = await ethers
-    .getContractFactory('PermissionManager')
-    .then((factory) => migration.migrate('manager', factory, [deployer.address], { ...opts, kind: 'uups' }));
+  contracts.manager = await ethers.getContractFactory('PermissionManager').then((factory) =>
+    migration.migrate('manager', factory, [deployer.address], {
+      ...opts,
+      kind: 'uups',
+    })
+  );
   DEBUG(`manager: ${contracts.manager.target}`);
 
-  contracts.redemption = await ethers
-    .getContractFactory('Redemption')
-    .then((factory) =>
-      migration.migrate('redemption', factory, [], {
-        ...opts,
-        kind: 'uups',
-        constructorArgs: [contracts.manager.target],
-      })
-    );
+  contracts.redemption = await ethers.getContractFactory('Redemption').then((factory) =>
+    migration.migrate('redemption', factory, [], {
+      ...opts,
+      kind: 'uups',
+      constructorArgs: [contracts.manager.target],
+    })
+  );
   DEBUG(`redemption: ${contracts.redemption.target}`);
+
+  contracts.minter = await ethers.getContractFactory('Minter').then((factory) =>
+    migration.migrate('minter', factory, [], {
+      ...opts,
+      kind: 'uups',
+      constructorArgs: [contracts.manager.target],
+    })
+  );
+  DEBUG(`minter: ${contracts.minter.target}`);
 
   for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
     // deploy token
-    contracts.tokens[symbol] = await ethers
-      .getContractFactory('Token')
-      .then((factory) =>
-        migration.migrate(`token-${symbol}`, factory, [name, symbol, decimals], {
-          ...opts,
-          kind: 'uups',
-          constructorArgs: [contracts.manager.target, contracts.forwarder.target],
-        })
-      );
+    contracts.tokens[symbol] = await ethers.getContractFactory('Token').then((factory) =>
+      migration.migrate(`token-${symbol}`, factory, [name, symbol, decimals], {
+        ...opts,
+        kind: 'uups',
+        constructorArgs: [contracts.manager.target, contracts.forwarder.target],
+      })
+    );
     DEBUG(`token[${symbol}]: ${contracts.tokens[symbol].target}`);
 
     // deploy oracle (if quote is set)
     contracts.oracles[symbol] =
       oracle &&
-      (await ethers
-        .getContractFactory('Oracle')
-        .then((factory) =>
-          migration.migrate(
-            `oracle-${symbol}`,
-            factory,
-            [contracts.tokens[symbol].target, oracle.decimals, oracle.quote],
-            { ...opts, kind: 'uups', constructorArgs: [contracts.manager.target] }
-          )
-        ));
+      (await ethers.getContractFactory('Oracle').then((factory) =>
+        migration.migrate(
+          `oracle-${symbol}`,
+          factory,
+          [contracts.tokens[symbol].target, oracle.decimals, oracle.quote],
+          {
+            ...opts,
+            kind: 'uups',
+            constructorArgs: [contracts.manager.target],
+          }
+        )
+      ));
     DEBUG(`oracle[${symbol}]: ${contracts.oracles[symbol].target}`);
   }
 
@@ -216,7 +233,10 @@ async function migrate(config = {}, opts = {}) {
         contracts.manager.getGroupAdmins(IDS[role]),
         combine(MASKS.ADMIN, ...admins.map((admin) => MASKS[admin])),
         null,
-        { fn: 'setGroupAdmins', args: [IDS[role], admins.map((admin) => IDS[admin])] }
+        {
+          fn: 'setGroupAdmins',
+          args: [IDS[role], admins.map((admin) => IDS[admin])],
+        }
       )
     );
 
@@ -253,7 +273,13 @@ async function migrate(config = {}, opts = {}) {
       )
     )
       .then((blocks) => [].concat(...blocks))
-      .then((selectors) => selectors.length && { fn: 'setRequirements', args: [address, selectors, groups] })
+      .then(
+        (selectors) =>
+          selectors.length && {
+            fn: 'setRequirements',
+            args: [address, selectors, groups],
+          }
+      )
   );
 
   // Add members to groups

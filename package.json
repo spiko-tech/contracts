@@ -16,7 +16,9 @@
     "prepublish": "rimraf artifacts build cache generated",
     "compile": "hardhat compile",
     "coverage": "COVERAGE=true hardhat coverage",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "format": "prettier --write \"contracts/**/*.sol\"",
+    "format:check": "prettier --check \"contracts/**/*.sol\""
   },
   "repository": {
     "type": "git",
@@ -34,6 +36,8 @@
     "@amxx/hre": "^0.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
     "hardhat": "^2.22.3",
-    "lodash.defaultsdeep": "^4.6.1"
+    "lodash.defaultsdeep": "^4.6.1",
+    "prettier": "^3.2.5",
+    "prettier-plugin-solidity": "^2.0.0"
   }
 }
