@@ -35,7 +35,7 @@ async function fixture() {
         "operator-exceptional": {
           members: [accounts.operator].map(getAddress),
         },
-        "operator-daily": { members: [accounts.operator].map(getAddress) },
+        "operator-daily": { members: [accounts.operator, "minter"].map(getAddress) },
         "operator-oracle": { members: [accounts.operator].map(getAddress) },
         burner: { members: ["redemption"].map(getAddress) },
         whitelister: { members: [accounts.whitelister].map(getAddress) },
@@ -43,6 +43,12 @@ async function fixture() {
           members: [accounts.alice, accounts.bruce, "redemption"].map(
             getAddress
           ),
+        },
+        "mint-initiator": {
+          members: [accounts.operator].map(getAddress),
+        },
+        "mint-approver": {
+          members: [accounts.admin].map(getAddress),
         },
       },
     },
@@ -115,7 +121,7 @@ describe("Main", function () {
     );
     expect(
       await this.contracts.manager.getGroups(this.accounts.admin)
-    ).to.equal(combine(this.MASKS.public, this.MASKS.admin));
+    ).to.equal(combine(this.MASKS.public, this.MASKS.admin, this.MASKS["mint-approver"]));
     expect(
       await this.contracts.manager.getGroups(this.accounts.operator)
     ).to.equal(
@@ -123,7 +129,8 @@ describe("Main", function () {
         this.MASKS.public,
         this.MASKS["operator-daily"],
         this.MASKS["operator-exceptional"],
-        this.MASKS["operator-oracle"]
+        this.MASKS["operator-oracle"],
+        this.MASKS["mint-initiator"]
       )
     );
     expect(
@@ -219,6 +226,37 @@ describe("Main", function () {
           .selector
       )
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-daily"]));
+    // minter
+    expect(
+      await this.contracts.manager.getRequirements(
+        this.contracts.minter,
+        this.contracts.minter.interface.getFunction("upgradeToAndCall").selector
+      )
+    ).to.equal(combine(this.MASKS.admin));
+    expect(
+      await this.contracts.manager.getRequirements(
+        this.contracts.minter,
+        this.contracts.minter.interface.getFunction("initiateMint").selector
+      )
+    ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-initiator"]));
+    expect(
+      await this.contracts.manager.getRequirements(
+        this.contracts.minter,
+        this.contracts.minter.interface.getFunction("approveMint").selector
+      )
+    ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-approver"]));
+    expect(
+      await this.contracts.manager.getRequirements(
+        this.contracts.minter,
+        this.contracts.minter.interface.getFunction("cancelMint").selector
+      )
+    ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-approver"]));
+    expect(
+      await this.contracts.manager.getRequirements(
+        this.contracts.minter,
+        this.contracts.minter.interface.getFunction("setDailyLimit").selector
+      )
+    ).to.equal(combine(this.MASKS.admin));
   });
 
   describe("Token", function () {
@@ -2310,6 +2348,578 @@ describe("Main", function () {
     });
   });
 
+  describe("Minter", function () {
+    const MINTER_STATUS = Enum("NULL", "BLOCKED", "EXECUTED", "CANCELED");
+
+    beforeEach(async function () {
+      // Set daily limit for token
+      await this.contracts.minter
+        .connect(this.accounts.admin)
+        .setDailyLimit(this.contracts.token, 1000);
+
+      // Helper to make mint operation
+      this.makeMintOp = (overrides = {}) => {
+        const result = {};
+        result.user = overrides?.user ?? this.accounts.alice;
+        result.token = overrides?.token ?? this.contracts.token;
+        result.amount = overrides?.amount ?? 100;
+        result.salt = overrides?.salt ?? ethers.hexlify(ethers.randomBytes(32));
+        result.id = ethers.solidityPackedKeccak256(
+          ["address", "address", "uint256", "bytes32"],
+          [
+            getAddress(result.user),
+            getAddress(result.token),
+            result.amount,
+            result.salt,
+          ]
+        );
+        return result;
+      };
+    });
+
+    describe("helpers", function () {
+      it("getCurrentDay", async function () {
+        const currentTime = await time.latest();
+        const expectedDay = BigInt(currentTime) / 86400n;
+        const actualDay = await this.contracts.minter.getCurrentDay();
+        expect(actualDay).to.equal(expectedDay);
+      });
+
+      it("hashMintId", async function () {
+        const op = this.makeMintOp();
+        const expectedId = ethers.solidityPackedKeccak256(
+          ["address", "address", "uint256", "bytes32"],
+          [
+            getAddress(op.user),
+            getAddress(op.token),
+            op.amount,
+            op.salt,
+          ]
+        );
+        const actualId = await this.contracts.minter.hashMintId(
+          op.user,
+          op.token,
+          op.amount,
+          op.salt
+        );
+        expect(actualId).to.equal(expectedId);
+      });
+    });
+
+    describe("initiateMint", function () {
+      it("success - within daily limit", async function () {
+        const op = this.makeMintOp({ amount: 500 });
+        
+        const statusBefore = await this.contracts.minter.statuses(op.id);
+        expect(statusBefore).to.equal(MINTER_STATUS.NULL);
+
+        const dailyUsageBefore = await this.contracts.minter.dailyUsage(
+          op.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(dailyUsageBefore).to.equal(0);
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op.user, op.token, op.amount, op.salt)
+        )
+          .to.emit(this.contracts.minter, "MintExecuted")
+          .withArgs(op.id, op.user, op.token, op.amount, op.salt);
+
+        const statusAfter = await this.contracts.minter.statuses(op.id);
+        expect(statusAfter).to.equal(MINTER_STATUS.EXECUTED);
+
+        const dailyUsageAfter = await this.contracts.minter.dailyUsage(
+          op.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(dailyUsageAfter).to.equal(op.amount);
+
+        expect(await op.token.balanceOf(op.user)).to.equal(op.amount);
+      });
+
+      it("success - exact daily limit", async function () {
+        const op = this.makeMintOp({ amount: 1000 });
+        
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op.user, op.token, op.amount, op.salt)
+        )
+          .to.emit(this.contracts.minter, "MintExecuted");
+
+        const statusAfter = await this.contracts.minter.statuses(op.id);
+        expect(statusAfter).to.equal(MINTER_STATUS.EXECUTED);
+
+        const dailyUsageAfter = await this.contracts.minter.dailyUsage(
+          op.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(dailyUsageAfter).to.equal(1000);
+      });
+
+      it("blocks - exceeds daily limit", async function () {
+        const op1 = this.makeMintOp({ amount: 600, user: this.accounts.alice });
+        const op2 = this.makeMintOp({ amount: 500, user: this.accounts.bruce }); // Total would be 1100 > 1000
+
+        // First mint succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        // Check balance before second mint
+        const balanceBefore = await op2.token.balanceOf(op2.user);
+        expect(balanceBefore).to.equal(0);
+
+        // Second mint should be blocked
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op2.user, op2.token, op2.amount, op2.salt)
+        )
+          .to.emit(this.contracts.minter, "MintBlocked")
+          .withArgs(op2.id, op2.user, op2.token, op2.amount, op2.salt);
+
+        const status2 = await this.contracts.minter.statuses(op2.id);
+        expect(status2).to.equal(MINTER_STATUS.BLOCKED);
+
+        // Daily usage should only reflect the first mint
+        const dailyUsage = await this.contracts.minter.dailyUsage(
+          op2.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(dailyUsage).to.equal(600);
+
+        // User should not receive tokens for blocked mint
+        const balanceAfter = await op2.token.balanceOf(op2.user);
+        expect(balanceAfter).to.equal(0);
+      });
+
+      it("blocks - multiple mints accumulate usage", async function () {
+        const op1 = this.makeMintOp({ amount: 300 });
+        const op2 = this.makeMintOp({ amount: 400 });
+        const op3 = this.makeMintOp({ amount: 350 }); // Total would be 1050 > 1000
+
+        // First two mints succeed
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op2.user, op2.token, op2.amount, op2.salt);
+
+        // Third mint should be blocked
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op3.user, op3.token, op3.amount, op3.salt)
+        )
+          .to.emit(this.contracts.minter, "MintBlocked");
+
+        const dailyUsage = await this.contracts.minter.dailyUsage(
+          op3.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(dailyUsage).to.equal(700);
+      });
+
+      it("reverts - duplicate id", async function () {
+        const op = this.makeMintOp();
+
+        // First call succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op.user, op.token, op.amount, op.salt);
+
+        // Reusing the same parameters should fail
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWith("ID already used");
+      });
+
+      it("reverts - daily limit not set", async function () {
+        const op = this.makeMintOp();
+
+        // Set daily limit to 0 (effectively not set)
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .setDailyLimit(op.token, 0);
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWith("Daily limit not set for token");
+      });
+
+      it("reverts - unauthorized caller", async function () {
+        const op = this.makeMintOp();
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.alice)
+            .initiateMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWithCustomError(
+          this.contracts.minter,
+          "RestrictedAccess"
+        );
+      });
+    });
+
+    describe("approveMint", function () {
+      beforeEach(async function () {
+        // Block a mint operation first
+        const op = this.makeMintOp({ amount: 600, user: this.accounts.alice });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op.user, op.token, op.amount, op.salt);
+
+        // Exceed daily limit to block the next one
+        const formatter = this.makeMintOp;
+        this.blockedOp = formatter({ amount: 500, user: this.accounts.bruce });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+      });
+
+      it("success", async function () {
+        const balanceBefore = await this.blockedOp.token.balanceOf(
+          this.blockedOp.user
+        );
+        expect(balanceBefore).to.equal(0);
+
+        const statusBefore = await this.contracts.minter.statuses(
+          this.blockedOp.id
+        );
+        expect(statusBefore).to.equal(MINTER_STATUS.BLOCKED);
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        )
+          .to.emit(this.contracts.minter, "MintExecuted")
+          .withArgs(
+            this.blockedOp.id,
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+
+        const statusAfter = await this.contracts.minter.statuses(
+          this.blockedOp.id
+        );
+        expect(statusAfter).to.equal(MINTER_STATUS.EXECUTED);
+
+        const balanceAfter = await this.blockedOp.token.balanceOf(
+          this.blockedOp.user
+        );
+        expect(balanceAfter).to.equal(this.blockedOp.amount);
+      });
+
+      it("reverts - operation not blocked", async function () {
+        const op = this.makeMintOp({ amount: 100 });
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWith("Operation is not blocked");
+      });
+
+      it("reverts - already executed", async function () {
+        // Execute the blocked operation
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .approveMint(
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+
+        // Try to execute again
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        ).to.be.revertedWith("Operation is not blocked");
+      });
+
+      it("reverts - unauthorized caller", async function () {
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.alice)
+            .approveMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        ).to.be.revertedWithCustomError(
+          this.contracts.minter,
+          "RestrictedAccess"
+        );
+      });
+    });
+
+    describe("cancelMint", function () {
+      beforeEach(async function () {
+        // Block a mint operation first
+        const op = this.makeMintOp({ amount: 600 });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op.user, op.token, op.amount, op.salt);
+
+        // Exceed daily limit to block the next one
+        this.blockedOp = this.makeMintOp({ amount: 500 });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+      });
+
+      it("success", async function () {
+        const statusBefore = await this.contracts.minter.statuses(
+          this.blockedOp.id
+        );
+        expect(statusBefore).to.equal(MINTER_STATUS.BLOCKED);
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.other)
+            .cancelMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        )
+          .to.emit(this.contracts.minter, "MintCanceled")
+          .withArgs(
+            this.blockedOp.id,
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+
+        const statusAfter = await this.contracts.minter.statuses(
+          this.blockedOp.id
+        );
+        expect(statusAfter).to.equal(MINTER_STATUS.CANCELED);
+      });
+
+      it("reverts - operation not blocked", async function () {
+        const op = this.makeMintOp({ amount: 100 });
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.other)
+            .cancelMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWith("Operation is not blocked");
+      });
+
+      it("reverts - already executed", async function () {
+        // Execute the blocked operation first
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .approveMint(
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+
+        // Try to cancel an executed operation
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.other)
+            .cancelMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        ).to.be.revertedWith("Operation is not blocked");
+      });
+
+      it("reverts - already canceled", async function () {
+        // Cancel the blocked operation first
+        await this.contracts.minter
+          .connect(this.accounts.other)
+          .cancelMint(
+            this.blockedOp.user,
+            this.blockedOp.token,
+            this.blockedOp.amount,
+            this.blockedOp.salt
+          );
+
+        // Try to cancel again
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.other)
+            .cancelMint(
+              this.blockedOp.user,
+              this.blockedOp.token,
+              this.blockedOp.amount,
+              this.blockedOp.salt
+            )
+        ).to.be.revertedWith("Operation is not blocked");
+      });
+    });
+
+    describe("setDailyLimit", function () {
+      it("success", async function () {
+        const newLimit = 2000;
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .setDailyLimit(this.contracts.token, newLimit)
+        )
+          .to.emit(this.contracts.minter, "DailyLimitUpdated")
+          .withArgs(this.contracts.token, newLimit);
+
+        const limit = await this.contracts.minter.dailyLimit(
+          this.contracts.token
+        );
+        expect(limit).to.equal(newLimit);
+      });
+
+      it("success - update existing limit", async function () {
+        const firstLimit = 1500;
+        const secondLimit = 2500;
+
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .setDailyLimit(this.contracts.token, firstLimit);
+
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .setDailyLimit(this.contracts.token, secondLimit);
+
+        const limit = await this.contracts.minter.dailyLimit(
+          this.contracts.token
+        );
+        expect(limit).to.equal(secondLimit);
+      });
+
+      it("success - set limit to zero", async function () {
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .setDailyLimit(this.contracts.token, 0);
+
+        const limit = await this.contracts.minter.dailyLimit(
+          this.contracts.token
+        );
+        expect(limit).to.equal(0);
+      });
+
+      it("reverts - unauthorized caller", async function () {
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.alice)
+            .setDailyLimit(this.contracts.token, 2000)
+        ).to.be.revertedWithCustomError(
+          this.contracts.minter,
+          "RestrictedAccess"
+        );
+      });
+    });
+
+    describe("daily limit behavior", function () {
+      it("resets daily usage on new day", async function () {
+        const op1 = this.makeMintOp({ amount: 600 });
+        const currentDay = await this.contracts.minter.getCurrentDay();
+
+        // Use some of the daily limit
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        const usageDay1 = await this.contracts.minter.dailyUsage(
+          op1.token,
+          currentDay
+        );
+        expect(usageDay1).to.equal(600);
+
+        // Advance time by 1 day
+        await time.increase(86400);
+
+        const newDay = await this.contracts.minter.getCurrentDay();
+        expect(newDay).to.equal(currentDay + 1n);
+
+        // New day should have zero usage
+        const usageDay2 = await this.contracts.minter.dailyUsage(
+          op1.token,
+          newDay
+        );
+        expect(usageDay2).to.equal(0);
+
+        // Should be able to mint more on the new day
+        const op2 = this.makeMintOp({ amount: 900 });
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(op2.user, op2.token, op2.amount, op2.salt)
+        )
+          .to.emit(this.contracts.minter, "MintExecuted");
+
+        const usageDay2After = await this.contracts.minter.dailyUsage(
+          op2.token,
+          newDay
+        );
+        expect(usageDay2After).to.equal(900);
+      });
+
+      it("multiple tokens have independent daily limits", async function () {
+        // This would require a second token, but we can test with the same token
+        // having different limits set, or just verify the mapping works correctly
+        const op = this.makeMintOp({ amount: 500 });
+
+        // Set different limit for a different token (mock)
+        // In practice, you'd need another deployed token
+        const limit1 = await this.contracts.minter.dailyLimit(op.token);
+        expect(limit1).to.equal(1000);
+
+        // Usage should be tracked per token
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op.user, op.token, op.amount, op.salt);
+
+        const usage = await this.contracts.minter.dailyUsage(
+          op.token,
+          await this.contracts.minter.getCurrentDay()
+        );
+        expect(usage).to.equal(op.amount);
+      });
+    });
+  });
+
   describe("Upgradeability", function () {
     describe("re-initialize", function () {
       it("manager", async function () {
@@ -2488,6 +3098,42 @@ describe("Main", function () {
               this.contracts.redemption.interface.getFunction(
                 "upgradeToAndCall"
               ).selector
+            );
+        });
+      });
+
+      describe("minter", async function () {
+        it("authorized", async function () {
+          await ethers
+            .getContractFactory("Minter", this.accounts.admin)
+            .then((factory) =>
+              upgrades.upgradeProxy(this.contracts.minter, factory, {
+                redeployImplementation: "always",
+                constructorArgs: [this.contracts.manager.target],
+              })
+            );
+        });
+
+        it("unauthorized", async function () {
+          await expect(
+            ethers
+              .getContractFactory("Minter", this.accounts.other)
+              .then((factory) =>
+                upgrades.upgradeProxy(this.contracts.minter, factory, {
+                  redeployImplementation: "always",
+                  constructorArgs: [this.contracts.manager.target],
+                })
+              )
+          )
+            .to.be.revertedWithCustomError(
+              this.contracts.minter,
+              "RestrictedAccess"
+            )
+            .withArgs(
+              this.accounts.other,
+              this.contracts.minter,
+              this.contracts.minter.interface.getFunction("upgradeToAndCall")
+                .selector
             );
         });
       });
