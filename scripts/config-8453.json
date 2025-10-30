@@ -51,7 +51,10 @@
       "tokens[]-unpause": ["operator-exceptional"],
       "tokens[]-transfer": ["whitelisted"],
       "oracles[]-publishPrice": ["operator-oracle"],
-      "redemption-executeRedemption": ["operator-daily"]
+      "redemption-executeRedemption": ["operator-daily"],
+      "minter-initiateMint": ["mint-initiator"],
+      "minter-approveMint": ["mint-approver"],
+      "minter-cancelMint": ["mint-approver"]
     }
   },
   "roles": {
