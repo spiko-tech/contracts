@@ -89,7 +89,8 @@
     "redemption-executor": {
       "admins": ["admin"],
       "members": []
-    }, "mint-approver": {
+    },
+    "mint-approver": {
       "admins": ["admin"],
       "members": []
     },
