@@ -13,7 +13,7 @@ const STATUS = Enum("NULL", "PENDING", "EXECUTED", "CANCELED");
 const getAddress = (account) => account.address ?? account.target ?? account;
 
 const divUp = (numerator, denominator) =>
-  (numerator / denominator * denominator < numerator)
+  (numerator / denominator) * denominator < numerator
     ? numerator / denominator + 1n
     : numerator / denominator;
 
@@ -35,13 +35,15 @@ async function fixture() {
         "operator-exceptional": {
           members: [accounts.operator].map(getAddress),
         },
-        "operator-daily": { members: [accounts.operator, "minter"].map(getAddress) },
+        "operator-daily": {
+          members: [accounts.operator, "minter"].map(getAddress),
+        },
         "operator-oracle": { members: [accounts.operator].map(getAddress) },
         burner: { members: ["redemption"].map(getAddress) },
         whitelister: { members: [accounts.whitelister].map(getAddress) },
         whitelisted: {
           members: [accounts.alice, accounts.bruce, "redemption"].map(
-            getAddress
+            getAddress,
           ),
         },
         "mint-initiator": {
@@ -52,7 +54,7 @@ async function fixture() {
         },
       },
     },
-    { noCache: true, noConfirm: true }
+    { noCache: true, noConfirm: true },
   );
 
   // get token + oracle
@@ -60,7 +62,7 @@ async function fixture() {
   contracts.oracle = Object.values(contracts.oracles).find(Boolean);
   expect(await contracts.oracle.token()).to.equal(
     contracts.token,
-    "Invalid configuration for testing"
+    "Invalid configuration for testing",
   );
 
   return {
@@ -82,68 +84,70 @@ describe("Main", function () {
     expect(await this.contracts.manager.ADMIN()).to.equal(this.IDS.admin);
     expect(await this.contracts.manager.PUBLIC()).to.equal(this.IDS.public);
     expect(await this.contracts.manager.ADMIN_MASK()).to.equal(
-      this.MASKS.admin
+      this.MASKS.admin,
     );
     expect(await this.contracts.manager.PUBLIC_MASK()).to.equal(
-      this.MASKS.public
+      this.MASKS.public,
     );
 
     expect(await this.contracts.token.authority()).to.equal(
-      this.contracts.manager
+      this.contracts.manager,
     );
     expect(await this.contracts.token.name()).to.equal(this.tokenConfig.name);
     expect(await this.contracts.token.symbol()).to.equal(
-      this.tokenConfig.symbol
+      this.tokenConfig.symbol,
     );
     expect(await this.contracts.token.decimals()).to.equal(
-      this.tokenConfig.decimals
+      this.tokenConfig.decimals,
     );
     expect(await this.contracts.token.totalSupply()).to.equal(0);
 
     expect(await this.contracts.oracle.authority()).to.equal(
-      this.contracts.manager
+      this.contracts.manager,
     );
     expect(await this.contracts.oracle.token()).to.equal(this.contracts.token);
     expect(await this.contracts.oracle.version()).to.equal(0);
     expect(await this.contracts.oracle.decimals()).to.equal(
-      this.oracleConfig.decimals
+      this.oracleConfig.decimals,
     );
     expect(await this.contracts.oracle.description()).to.equal(
-      `${this.tokenConfig.symbol} / ${this.oracleConfig.quote}`
+      `${this.tokenConfig.symbol} / ${this.oracleConfig.quote}`,
     );
   });
 
   it("accounts have permissions", async function () {
     expect(
-      await this.contracts.manager.getGroups(this.contracts.redemption)
+      await this.contracts.manager.getGroups(this.contracts.redemption),
     ).to.equal(
-      combine(this.MASKS.public, this.MASKS.burner, this.MASKS.whitelisted)
+      combine(this.MASKS.public, this.MASKS.burner, this.MASKS.whitelisted),
     );
     expect(
-      await this.contracts.manager.getGroups(this.accounts.admin)
-    ).to.equal(combine(this.MASKS.public, this.MASKS.admin, this.MASKS["mint-approver"]));
+      await this.contracts.manager.getGroups(this.accounts.admin),
+    ).to.equal(
+      combine(this.MASKS.public, this.MASKS.admin, this.MASKS["mint-approver"]),
+    );
     expect(
-      await this.contracts.manager.getGroups(this.accounts.operator)
+      await this.contracts.manager.getGroups(this.accounts.operator),
     ).to.equal(
       combine(
         this.MASKS.public,
         this.MASKS["operator-daily"],
         this.MASKS["operator-exceptional"],
         this.MASKS["operator-oracle"],
-        this.MASKS["mint-initiator"]
-      )
+        this.MASKS["mint-initiator"],
+      ),
     );
     expect(
-      await this.contracts.manager.getGroups(this.accounts.whitelister)
+      await this.contracts.manager.getGroups(this.accounts.whitelister),
     ).to.equal(combine(this.MASKS.public, this.MASKS.whitelister));
     expect(
-      await this.contracts.manager.getGroups(this.accounts.alice)
+      await this.contracts.manager.getGroups(this.accounts.alice),
     ).to.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
     expect(
-      await this.contracts.manager.getGroups(this.accounts.bruce)
+      await this.contracts.manager.getGroups(this.accounts.bruce),
     ).to.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
     expect(
-      await this.contracts.manager.getGroups(this.accounts.chris)
+      await this.contracts.manager.getGroups(this.accounts.chris),
     ).to.equal(combine(this.MASKS.public));
   });
 
@@ -152,110 +156,112 @@ describe("Main", function () {
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("upgradeToAndCall").selector
-      )
+        this.contracts.token.interface.getFunction("upgradeToAndCall").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("mint").selector
-      )
+        this.contracts.token.interface.getFunction("mint").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-daily"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("burn").selector
-      )
+        this.contracts.token.interface.getFunction("burn").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS.burner));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("pause").selector
-      )
+        this.contracts.token.interface.getFunction("pause").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-exceptional"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("unpause").selector
-      )
+        this.contracts.token.interface.getFunction("unpause").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-exceptional"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.token,
-        this.contracts.token.interface.getFunction("transfer").selector
-      )
+        this.contracts.token.interface.getFunction("transfer").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS.whitelisted));
     // oracle
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.oracle,
-        this.contracts.oracle.interface.getFunction("upgradeToAndCall").selector
-      )
+        this.contracts.oracle.interface.getFunction("upgradeToAndCall")
+          .selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.oracle,
-        this.contracts.oracle.interface.getFunction("publishPrice").selector
-      )
+        this.contracts.oracle.interface.getFunction("publishPrice").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-oracle"]));
     // redemption
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.redemption,
         this.contracts.redemption.interface.getFunction("upgradeToAndCall")
-          .selector
-      )
+          .selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.redemption,
         this.contracts.redemption.interface.getFunction("registerOutput")
-          .selector
-      )
+          .selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.redemption,
-        this.contracts.redemption.interface.getFunction("setMinimum").selector
-      )
+        this.contracts.redemption.interface.getFunction("setMinimum").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.redemption,
         this.contracts.redemption.interface.getFunction("executeRedemption")
-          .selector
-      )
+          .selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["operator-daily"]));
     // minter
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.minter,
-        this.contracts.minter.interface.getFunction("upgradeToAndCall").selector
-      )
+        this.contracts.minter.interface.getFunction("upgradeToAndCall")
+          .selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.minter,
-        this.contracts.minter.interface.getFunction("initiateMint").selector
-      )
+        this.contracts.minter.interface.getFunction("initiateMint").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-initiator"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.minter,
-        this.contracts.minter.interface.getFunction("approveMint").selector
-      )
+        this.contracts.minter.interface.getFunction("approveMint").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-approver"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.minter,
-        this.contracts.minter.interface.getFunction("cancelMint").selector
-      )
+        this.contracts.minter.interface.getFunction("cancelMint").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin, this.MASKS["mint-approver"]));
     expect(
       await this.contracts.manager.getRequirements(
         this.contracts.minter,
-        this.contracts.minter.interface.getFunction("setDailyLimit").selector
-      )
+        this.contracts.minter.interface.getFunction("setDailyLimit").selector,
+      ),
     ).to.equal(combine(this.MASKS.admin));
   });
 
@@ -274,13 +280,13 @@ describe("Main", function () {
 
       it("domain is correct", async function () {
         expect(await getDomain(this.contracts.token)).to.deep.equal(
-          this.expectedDomain
+          this.expectedDomain,
         );
       });
 
       it("domain separator is correct", async function () {
         expect(await this.contracts.token.DOMAIN_SEPARATOR()).to.equal(
-          ethers.TypedDataEncoder.hashDomain(this.expectedDomain)
+          ethers.TypedDataEncoder.hashDomain(this.expectedDomain),
         );
       });
     });
@@ -291,7 +297,7 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.operator)
-              .mint(this.accounts.alice, 1000)
+              .mint(this.accounts.alice, 1000),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(ethers.ZeroAddress, this.accounts.alice, 1000);
@@ -301,16 +307,16 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .mint(this.accounts.alice, 1000)
+              .mint(this.accounts.alice, 1000),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.alice,
               this.contracts.token,
-              this.contracts.token.interface.getFunction("mint").selector
+              this.contracts.token.interface.getFunction("mint").selector,
             );
         });
 
@@ -318,11 +324,11 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.operator)
-              .mint(this.accounts.chris, 1000)
+              .mint(this.accounts.chris, 1000),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "UnauthorizedTo"
+              "UnauthorizedTo",
             )
             .withArgs(this.contracts.token, this.accounts.chris);
         });
@@ -339,7 +345,7 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.admin)
-              .burn(this.accounts.alice, 100)
+              .burn(this.accounts.alice, 100),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, ethers.ZeroAddress, 100);
@@ -349,16 +355,16 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .burn(this.accounts.alice, 100)
+              .burn(this.accounts.alice, 100),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.alice,
               this.contracts.token,
-              this.contracts.token.interface.getFunction("burn").selector
+              this.contracts.token.interface.getFunction("burn").selector,
             );
         });
 
@@ -379,7 +385,7 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.admin)
-              .burn(this.accounts.chris, 100)
+              .burn(this.accounts.chris, 100),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.chris, ethers.ZeroAddress, 100);
@@ -426,16 +432,14 @@ describe("Main", function () {
                         .approve(operator, amount));
                     await this.contracts.manager
                       .connect(this.accounts.whitelister)
-                      [fromAuthorized ? "addGroup" : "remGroup"](
-                        from,
-                        this.IDS.whitelisted
-                      );
+                      [
+                        fromAuthorized ? "addGroup" : "remGroup"
+                      ](from, this.IDS.whitelisted);
                     await this.contracts.manager
                       .connect(this.accounts.whitelister)
-                      [toAuthorized ? "addGroup" : "remGroup"](
-                        to,
-                        this.IDS.whitelisted
-                      );
+                      [
+                        toAuthorized ? "addGroup" : "remGroup"
+                      ](to, this.IDS.whitelisted);
 
                     let promise = null;
                     switch (fn) {
@@ -454,14 +458,14 @@ describe("Main", function () {
                           .connect(from)
                           .getFunction("transferAndCall(address,uint256)")(
                           to,
-                          amount
+                          amount,
                         );
                         break;
                       case "transferFromAndCall":
                         promise = this.contracts.token
                           .connect(operator)
                           .getFunction(
-                            "transferFromAndCall(address,address,uint256)"
+                            "transferFromAndCall(address,address,uint256)",
                           )(from, to, amount);
                         break;
                     }
@@ -474,13 +478,13 @@ describe("Main", function () {
                           .to.be.revertedWithCustomError(
                             this.contracts.token,
                             (!fromAuthorized && "UnauthorizedFrom") ||
-                              (!toAuthorized && "UnauthorizedTo")
+                              (!toAuthorized && "UnauthorizedTo"),
                           )
                           .withArgs(
                             this.contracts.token,
-                            (!fromAuthorized && from) || (!toAuthorized && to)
+                            (!fromAuthorized && from) || (!toAuthorized && to),
                           ));
-                  }
+                  },
                 );
               }
           });
@@ -489,7 +493,7 @@ describe("Main", function () {
       describe("pause", function () {
         it("authorized", async function () {
           await expect(
-            this.contracts.token.connect(this.accounts.operator).pause()
+            this.contracts.token.connect(this.accounts.operator).pause(),
           )
             .to.emit(this.contracts.token, "Paused")
             .withArgs(this.accounts.operator);
@@ -497,16 +501,16 @@ describe("Main", function () {
 
         it("unauthorized caller (need operator)", async function () {
           await expect(
-            this.contracts.token.connect(this.accounts.alice).pause()
+            this.contracts.token.connect(this.accounts.alice).pause(),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.alice,
               this.contracts.token,
-              this.contracts.token.interface.getFunction("pause").selector
+              this.contracts.token.interface.getFunction("pause").selector,
             );
         });
 
@@ -516,10 +520,10 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .transfer(this.accounts.bruce, 0)
+              .transfer(this.accounts.bruce, 0),
           ).to.be.revertedWithCustomError(
             this.contracts.token,
-            "EnforcedPause"
+            "EnforcedPause",
           );
         });
       });
@@ -531,7 +535,7 @@ describe("Main", function () {
 
         it("authorized", async function () {
           await expect(
-            this.contracts.token.connect(this.accounts.operator).unpause()
+            this.contracts.token.connect(this.accounts.operator).unpause(),
           )
             .to.emit(this.contracts.token, "Unpaused")
             .withArgs(this.accounts.operator);
@@ -539,16 +543,16 @@ describe("Main", function () {
 
         it("unauthorized caller (need operator)", async function () {
           await expect(
-            this.contracts.token.connect(this.accounts.alice).unpause()
+            this.contracts.token.connect(this.accounts.alice).unpause(),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.alice,
               this.contracts.token,
-              this.contracts.token.interface.getFunction("unpause").selector
+              this.contracts.token.interface.getFunction("unpause").selector,
             );
         });
 
@@ -558,7 +562,7 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .transfer(this.accounts.bruce, 0)
+              .transfer(this.accounts.bruce, 0),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, this.accounts.bruce, 0);
@@ -572,12 +576,12 @@ describe("Main", function () {
       beforeEach(async function () {
         this.mock = await deploy("ERC1363ReceiverMock");
 
-        await this.contracts.manager
+        (await this.contracts.manager
           .connect(this.accounts.whitelister)
           .addGroup(this.mock, this.IDS.whitelisted),
           await this.contracts.token
             .connect(this.accounts.operator)
-            .mint(this.accounts.alice, value);
+            .mint(this.accounts.alice, value));
       });
 
       describe("transferAndCall", function () {
@@ -587,7 +591,10 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .getFunction("transferAndCall(address,uint256)")(this.mock, value)
+              .getFunction("transferAndCall(address,uint256)")(
+              this.mock,
+              value,
+            ),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -604,8 +611,8 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -622,8 +629,8 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith("onTransferReceived revert");
         });
 
@@ -636,10 +643,10 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith(
-            "ERC1363: onTransferReceived reverted without reason"
+            "ERC1363: onTransferReceived reverted without reason",
           );
         });
 
@@ -652,8 +659,8 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith("ERC1363: onTransferReceived invalid result");
         });
       });
@@ -674,8 +681,8 @@ describe("Main", function () {
               .getFunction("transferFromAndCall(address,address,uint256)")(
               this.accounts.alice,
               this.mock,
-              value
-            )
+              value,
+            ),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -690,8 +697,8 @@ describe("Main", function () {
             this.contracts.token
               .connect(this.accounts.bruce)
               .getFunction(
-                "transferFromAndCall(address,address,uint256,bytes)"
-              )(this.accounts.alice, this.mock, value, data)
+                "transferFromAndCall(address,address,uint256,bytes)",
+              )(this.accounts.alice, this.mock, value, data),
           )
             .to.emit(this.contracts.token, "Transfer")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -706,8 +713,8 @@ describe("Main", function () {
             this.contracts.token
               .connect(this.accounts.bruce)
               .getFunction(
-                "transferFromAndCall(address,address,uint256,bytes)"
-              )(this.accounts.alice, this.mock, value, data)
+                "transferFromAndCall(address,address,uint256,bytes)",
+              )(this.accounts.alice, this.mock, value, data),
           ).to.be.revertedWith("onTransferReceived revert");
         });
 
@@ -718,10 +725,10 @@ describe("Main", function () {
             this.contracts.token
               .connect(this.accounts.bruce)
               .getFunction(
-                "transferFromAndCall(address,address,uint256,bytes)"
-              )(this.accounts.alice, this.mock, value, data)
+                "transferFromAndCall(address,address,uint256,bytes)",
+              )(this.accounts.alice, this.mock, value, data),
           ).to.be.revertedWith(
-            "ERC1363: onTransferReceived reverted without reason"
+            "ERC1363: onTransferReceived reverted without reason",
           );
         });
 
@@ -732,8 +739,8 @@ describe("Main", function () {
             this.contracts.token
               .connect(this.accounts.bruce)
               .getFunction(
-                "transferFromAndCall(address,address,uint256,bytes)"
-              )(this.accounts.alice, this.mock, value, data)
+                "transferFromAndCall(address,address,uint256,bytes)",
+              )(this.accounts.alice, this.mock, value, data),
           ).to.be.revertedWith("ERC1363: onTransferReceived invalid result");
         });
       });
@@ -745,7 +752,7 @@ describe("Main", function () {
           await expect(
             this.contracts.token
               .connect(this.accounts.alice)
-              .getFunction("approveAndCall(address,uint256)")(this.mock, value)
+              .getFunction("approveAndCall(address,uint256)")(this.mock, value),
           )
             .to.emit(this.contracts.token, "Approval")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -762,8 +769,8 @@ describe("Main", function () {
               .getFunction("approveAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           )
             .to.emit(this.contracts.token, "Approval")
             .withArgs(this.accounts.alice, this.mock, value)
@@ -780,8 +787,8 @@ describe("Main", function () {
               .getFunction("approveAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith("onApprovalReceived revert");
         });
 
@@ -794,10 +801,10 @@ describe("Main", function () {
               .getFunction("approveAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith(
-            "ERC1363: onApprovalReceived reverted without reason"
+            "ERC1363: onApprovalReceived reverted without reason",
           );
         });
 
@@ -810,8 +817,8 @@ describe("Main", function () {
               .getFunction("approveAndCall(address,uint256,bytes)")(
               this.mock,
               value,
-              data
-            )
+              data,
+            ),
           ).to.be.revertedWith("ERC1363: onApprovalReceived invalid result");
         });
       });
@@ -824,13 +831,13 @@ describe("Main", function () {
         await expect(
           this.contracts.token
             .connect(this.accounts.admin)
-            .setOwnership(this.accounts.alice)
+            .setOwnership(this.accounts.alice),
         )
           .to.emit(this.contracts.token, "OwnershipTransferred")
           .withArgs(ethers.ZeroAddress, this.accounts.alice);
 
         expect(await this.contracts.token.owner()).to.equal(
-          this.accounts.alice
+          this.accounts.alice,
         );
       });
 
@@ -840,19 +847,19 @@ describe("Main", function () {
           .setOwnership(this.accounts.alice);
 
         expect(await this.contracts.token.owner()).to.equal(
-          this.accounts.alice
+          this.accounts.alice,
         );
 
         await expect(
           this.contracts.token
             .connect(this.accounts.admin)
-            .setOwnership(this.accounts.bruce)
+            .setOwnership(this.accounts.bruce),
         )
           .to.emit(this.contracts.token, "OwnershipTransferred")
           .withArgs(this.accounts.alice, this.accounts.bruce);
 
         expect(await this.contracts.token.owner()).to.equal(
-          this.accounts.bruce
+          this.accounts.bruce,
         );
       });
 
@@ -860,16 +867,16 @@ describe("Main", function () {
         await expect(
           this.contracts.token
             .connect(this.accounts.alice)
-            .setOwnership(this.accounts.alice)
+            .setOwnership(this.accounts.alice),
         )
           .to.be.revertedWithCustomError(
             this.contracts.oracle,
-            "RestrictedAccess"
+            "RestrictedAccess",
           )
           .withArgs(
             this.accounts.alice,
             this.contracts.token,
-            this.contracts.token.interface.getFunction("setOwnership").selector
+            this.contracts.token.interface.getFunction("setOwnership").selector,
           );
       });
     });
@@ -888,7 +895,7 @@ describe("Main", function () {
         await expect(
           this.contracts.oracle
             .connect(this.accounts.operator)
-            .publishPrice(timepoint, value)
+            .publishPrice(timepoint, value),
         )
           .to.emit(this.contracts.oracle, "Update")
           .withArgs(timepoint, value, roundId);
@@ -914,16 +921,17 @@ describe("Main", function () {
         await expect(
           this.contracts.oracle
             .connect(this.accounts.other)
-            .publishPrice(42, 17)
+            .publishPrice(42, 17),
         )
           .to.be.revertedWithCustomError(
             this.contracts.oracle,
-            "RestrictedAccess"
+            "RestrictedAccess",
           )
           .withArgs(
             this.accounts.other,
             this.contracts.oracle,
-            this.contracts.oracle.interface.getFunction("publishPrice").selector
+            this.contracts.oracle.interface.getFunction("publishPrice")
+              .selector,
           );
       });
 
@@ -939,7 +947,7 @@ describe("Main", function () {
           await expect(
             this.contracts.oracle
               .connect(this.accounts.operator)
-              .publishPrice(timepoint, value)
+              .publishPrice(timepoint, value),
           )
             .to.emit(this.contracts.oracle, "Update")
             .withArgs(timepoint, value, roundId);
@@ -955,9 +963,8 @@ describe("Main", function () {
         }
 
         for (const [roundId, { timepoint, value }] of Object.entries(rounds)) {
-          const getRoundData = await this.contracts.oracle.getRoundData(
-            roundId
-          );
+          const getRoundData =
+            await this.contracts.oracle.getRoundData(roundId);
           expect(getRoundData.roundId).to.equal(roundId);
           expect(getRoundData.answer).to.equal(value);
           expect(getRoundData.startedAt).to.equal(timepoint);
@@ -985,127 +992,293 @@ describe("Main", function () {
       // Perform lookups
       for (const t of Array.range(rounds.at(-1).timepoint + 2)) {
         expect(await this.contracts.oracle.getHistoricalPrice(t)).to.equal(
-          rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0
+          rounds.findLast(({ timepoint }) => timepoint <= t)?.value ?? 0,
         );
       }
     });
 
     it("get non-existing data", async function () {
       await expect(this.contracts.oracle.getRoundData(42)).to.be.revertedWith(
-        "No checkpoint for roundId"
+        "No checkpoint for roundId",
       );
     });
   });
 
   describe("ATM v1", function () {
-    for (const stableDecimal of [ 6, 18, 36 ]) {
+    for (const stableDecimal of [6, 18, 36]) {
       describe(`stable coin with ${stableDecimal} decimals`, function () {
-        const formatToken = value => ethers.parseUnits(value, 5);
-        const formatStable = value => ethers.parseUnits(value, stableDecimal);
+        const formatToken = (value) => ethers.parseUnits(value, 5);
+        const formatStable = (value) => ethers.parseUnits(value, stableDecimal);
 
         beforeEach(async function () {
           /// deployment
-          this.contracts.stable = await deploy('ERC20DecimalsMock', [ stableDecimal ]);
-          this.contracts.atm = await deploy('ATM', [ this.contracts.oracle.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target ]);
+          this.contracts.stable = await deploy("ERC20DecimalsMock", [
+            stableDecimal,
+          ]);
+          this.contracts.atm = await deploy("ATM", [
+            this.contracts.oracle.target,
+            this.contracts.stable.target,
+            this.contracts.manager.target,
+            this.contracts.forwarder.target,
+          ]);
 
           ///. set atm permissions
-          await this.contracts.manager.setRequirements(this.contracts.atm, [ this.contracts.atm.interface.getFunction('drain').selector ], [ this.IDS['operator-exceptional'] ]);
-          await this.contracts.manager.addGroup(this.contracts.atm, this.IDS['whitelisted']);
+          await this.contracts.manager.setRequirements(
+            this.contracts.atm,
+            [this.contracts.atm.interface.getFunction("drain").selector],
+            [this.IDS["operator-exceptional"]],
+          );
+          await this.contracts.manager.addGroup(
+            this.contracts.atm,
+            this.IDS["whitelisted"],
+          );
 
           /// mint and approve
-          await this.contracts.token.mint(this.contracts.atm, formatToken('100'));
-          await this.contracts.stable.mint(this.contracts.atm, formatStable('100'));
-          await this.contracts.token.mint(this.accounts.alice, formatToken('100'));
-          await this.contracts.stable.mint(this.accounts.bruce, formatStable('100'));
-          await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.atm, ethers.MaxUint256);
-          await this.contracts.stable.connect(this.accounts.bruce).approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.token.mint(
+            this.contracts.atm,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.contracts.atm,
+            formatStable("100"),
+          );
+          await this.contracts.token.mint(
+            this.accounts.alice,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.accounts.bruce,
+            formatStable("100"),
+          );
+          await this.contracts.token
+            .connect(this.accounts.alice)
+            .approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.stable
+            .connect(this.accounts.bruce)
+            .approve(this.contracts.atm, ethers.MaxUint256);
         });
 
-        it('post deployment state', async function () {
-          expect(await this.contracts.atm.token()).to.equal(this.contracts.token.target);
-          expect(await this.contracts.atm.stable()).to.equal(this.contracts.stable.target);
-          expect(await this.contracts.atm.oracle()).to.equal(this.contracts.oracle.target);
+        it("post deployment state", async function () {
+          expect(await this.contracts.atm.token()).to.equal(
+            this.contracts.token.target,
+          );
+          expect(await this.contracts.atm.stable()).to.equal(
+            this.contracts.stable.target,
+          );
+          expect(await this.contracts.atm.oracle()).to.equal(
+            this.contracts.oracle.target,
+          );
         });
 
-        describe('with price set', function () {
+        describe("with price set", function () {
           beforeEach(async function () {
             const timestamp = await time.latest();
-            await this.contracts.oracle.publishPrice(timestamp - 3600, ethers.parseUnits('2', 6));
-            await this.contracts.oracle.publishPrice(timestamp + 3600, ethers.parseUnits('3', 6));
+            await this.contracts.oracle.publishPrice(
+              timestamp - 3600,
+              ethers.parseUnits("2", 6),
+            );
+            await this.contracts.oracle.publishPrice(
+              timestamp + 3600,
+              ethers.parseUnits("3", 6),
+            );
           });
 
-          describe('buy', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ formatToken("0.5"),     formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ formatToken("0.5"),     formatStable("1.000001") ]); // round down
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"),     formatStable("2.0"     ) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), formatStable("2.00002" ) ]);
-              await expect(this.contracts.atm.previewBuy(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
+          describe("buy", function () {
+            it("preview", async function () {
+              expect(
+                await this.contracts.atm.previewBuy(
+                  this.contracts.stable,
+                  formatStable("1.0"),
+                ),
+              ).to.deep.equal([formatToken("0.5"), formatStable("1.0")]);
+              expect(
+                await this.contracts.atm.previewBuy(
+                  this.contracts.stable,
+                  formatStable("1.000001"),
+                ),
+              ).to.deep.equal([formatToken("0.5"), formatStable("1.000001")]); // round down
+              expect(
+                await this.contracts.atm.previewBuy(
+                  this.contracts.token,
+                  formatToken("1.0"),
+                ),
+              ).to.deep.equal([formatToken("1.0"), formatStable("2.0")]);
+              expect(
+                await this.contracts.atm.previewBuy(
+                  this.contracts.token,
+                  formatToken("1.00001"),
+                ),
+              ).to.deep.equal([
+                formatToken("1.00001"),
+                formatStable("2.00002"),
+              ]);
+              await expect(
+                this.contracts.atm.previewBuy(this.contracts.manager, 0),
+              ).to.be.revertedWith("invalid input token");
             });
 
-            it('buy (given amount of stable)', async function () {
+            it("buy (given amount of stable)", async function () {
               const amountStable = formatStable("1.000001");
-              const amountToken  = formatToken("0.5");
+              const amountToken = formatToken("0.5");
 
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.stable, amountStable, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
+              const tx = this.contracts.atm
+                .connect(this.accounts.bruce)
+                .buy(this.contracts.stable, amountStable, this.accounts.alice);
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.stable,
+                [this.accounts.bruce, this.contracts.atm],
+                [-amountStable, amountStable],
+              );
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.token,
+                [this.accounts.alice, this.contracts.atm],
+                [amountToken, -amountToken],
+              );
             });
 
-            it('buy (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
+            it("buy (given amount of token)", async function () {
+              const amountToken = formatToken("1.00001");
               const amountStable = formatStable("2.00002");
 
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.token, amountToken, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
+              const tx = this.contracts.atm
+                .connect(this.accounts.bruce)
+                .buy(this.contracts.token, amountToken, this.accounts.alice);
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.stable,
+                [this.accounts.bruce, this.contracts.atm],
+                [-amountStable, amountStable],
+              );
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.token,
+                [this.accounts.alice, this.contracts.atm],
+                [amountToken, -amountToken],
+              );
             });
           });
 
-          describe('sell', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ formatToken("0.5"),     formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ formatToken("0.50001"), formatStable("1.000001") ]); // round up
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"),     formatStable("2.0"     ) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), formatStable("2.00002" ) ]);
-              await expect(this.contracts.atm.previewSell(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
+          describe("sell", function () {
+            it("preview", async function () {
+              expect(
+                await this.contracts.atm.previewSell(
+                  this.contracts.stable,
+                  formatStable("1.0"),
+                ),
+              ).to.deep.equal([formatToken("0.5"), formatStable("1.0")]);
+              expect(
+                await this.contracts.atm.previewSell(
+                  this.contracts.stable,
+                  formatStable("1.000001"),
+                ),
+              ).to.deep.equal([
+                formatToken("0.50001"),
+                formatStable("1.000001"),
+              ]); // round up
+              expect(
+                await this.contracts.atm.previewSell(
+                  this.contracts.token,
+                  formatToken("1.0"),
+                ),
+              ).to.deep.equal([formatToken("1.0"), formatStable("2.0")]);
+              expect(
+                await this.contracts.atm.previewSell(
+                  this.contracts.token,
+                  formatToken("1.00001"),
+                ),
+              ).to.deep.equal([
+                formatToken("1.00001"),
+                formatStable("2.00002"),
+              ]);
+              await expect(
+                this.contracts.atm.previewSell(this.contracts.manager, 0),
+              ).to.be.revertedWith("invalid input token");
             });
 
-            it('sell (given amount of stable)', async function () {
+            it("sell (given amount of stable)", async function () {
               const amountStable = formatStable("1.000001");
-              const amountToken  = formatToken("0.50001");
+              const amountToken = formatToken("0.50001");
 
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.stable, amountStable, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
+              const tx = this.contracts.atm
+                .connect(this.accounts.alice)
+                .sell(this.contracts.stable, amountStable, this.accounts.bruce);
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.stable,
+                [this.accounts.bruce, this.contracts.atm],
+                [amountStable, -amountStable],
+              );
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.token,
+                [this.accounts.alice, this.contracts.atm],
+                [-amountToken, amountToken],
+              );
             });
 
-            it('sell (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
+            it("sell (given amount of token)", async function () {
+              const amountToken = formatToken("1.00001");
               const amountStable = formatStable("2.00002");
 
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.token, amountToken, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
+              const tx = this.contracts.atm
+                .connect(this.accounts.alice)
+                .sell(this.contracts.token, amountToken, this.accounts.bruce);
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.stable,
+                [this.accounts.bruce, this.contracts.atm],
+                [amountStable, -amountStable],
+              );
+              await expect(tx).to.changeTokenBalances(
+                this.contracts.token,
+                [this.accounts.alice, this.contracts.atm],
+                [-amountToken, amountToken],
+              );
             });
           });
 
-          describe('drain', function () {
-            it('unauthorized', async function () {
-              await expect(this.contracts.atm.connect(this.accounts.other).drain(this.contracts.token, this.accounts.alice, 1))
-                .to.be.revertedWithCustomError(this.contracts.atm, "RestrictedAccess")
-                .withArgs(this.accounts.other, this.contracts.atm, this.contracts.atm.interface.getFunction("drain").selector);
+          describe("drain", function () {
+            it("unauthorized", async function () {
+              await expect(
+                this.contracts.atm
+                  .connect(this.accounts.other)
+                  .drain(this.contracts.token, this.accounts.alice, 1),
+              )
+                .to.be.revertedWithCustomError(
+                  this.contracts.atm,
+                  "RestrictedAccess",
+                )
+                .withArgs(
+                  this.accounts.other,
+                  this.contracts.atm,
+                  this.contracts.atm.interface.getFunction("drain").selector,
+                );
             });
 
-            it('partial', async function () {
-              await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, 42))
-                .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -42, 42 ]);
+            it("partial", async function () {
+              await expect(
+                this.contracts.atm
+                  .connect(this.accounts.admin)
+                  .drain(this.contracts.token, this.accounts.alice, 42),
+              ).to.changeTokenBalances(
+                this.contracts.token,
+                [this.contracts.atm, this.accounts.alice],
+                [-42, 42],
+              );
             });
 
-            it('total', async function () {
-              const balance = await this.contracts.token.balanceOf(this.contracts.atm);
-              await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, ethers.MaxUint256))
-                .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -balance, balance ]);
+            it("total", async function () {
+              const balance = await this.contracts.token.balanceOf(
+                this.contracts.atm,
+              );
+              await expect(
+                this.contracts.atm
+                  .connect(this.accounts.admin)
+                  .drain(
+                    this.contracts.token,
+                    this.accounts.alice,
+                    ethers.MaxUint256,
+                  ),
+              ).to.changeTokenBalances(
+                this.contracts.token,
+                [this.contracts.atm, this.accounts.alice],
+                [-balance, balance],
+              );
             });
           });
         });
@@ -1116,149 +1289,386 @@ describe("Main", function () {
   describe("ATM v2", function () {
     const oraclettl = time.duration.days(7);
 
-    for (const stableDecimal of [ 6, 18, 36 ]) {
+    for (const stableDecimal of [6, 18, 36]) {
       describe(`stable coin with ${stableDecimal} decimals`, function () {
-        const formatToken = value => ethers.parseUnits(value, 5);
-        const formatStable = value => ethers.parseUnits(value, stableDecimal);
+        const formatToken = (value) => ethers.parseUnits(value, 5);
+        const formatStable = (value) => ethers.parseUnits(value, stableDecimal);
 
         beforeEach(async function () {
           /// deployment
-          this.contracts.stable = await deploy('ERC20DecimalsMock', [ stableDecimal ]);
-          this.contracts.atm = await deploy('ATM2', [ this.contracts.oracle.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target, oraclettl ]);
+          this.contracts.stable = await deploy("ERC20DecimalsMock", [
+            stableDecimal,
+          ]);
+          this.contracts.atm = await deploy("ATM2", [
+            this.contracts.oracle.target,
+            this.contracts.stable.target,
+            this.contracts.manager.target,
+            this.contracts.forwarder.target,
+            oraclettl,
+          ]);
 
           ///. set atm permissions
-          await this.contracts.manager.setRequirements(this.contracts.atm, [ this.contracts.atm.interface.getFunction('drain').selector ], [ this.IDS['operator-exceptional'] ]);
-          await this.contracts.manager.addGroup(this.contracts.atm, this.IDS['whitelisted']);
+          await this.contracts.manager.setRequirements(
+            this.contracts.atm,
+            [this.contracts.atm.interface.getFunction("drain").selector],
+            [this.IDS["operator-exceptional"]],
+          );
+          await this.contracts.manager.addGroup(
+            this.contracts.atm,
+            this.IDS["whitelisted"],
+          );
 
           /// mint and approve
-          await this.contracts.token.mint(this.contracts.atm, formatToken('100'));
-          await this.contracts.stable.mint(this.contracts.atm, formatStable('100'));
-          await this.contracts.token.mint(this.accounts.alice, formatToken('100'));
-          await this.contracts.stable.mint(this.accounts.bruce, formatStable('100'));
-          await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.atm, ethers.MaxUint256);
-          await this.contracts.stable.connect(this.accounts.bruce).approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.token.mint(
+            this.contracts.atm,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.contracts.atm,
+            formatStable("100"),
+          );
+          await this.contracts.token.mint(
+            this.accounts.alice,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.accounts.bruce,
+            formatStable("100"),
+          );
+          await this.contracts.token
+            .connect(this.accounts.alice)
+            .approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.stable
+            .connect(this.accounts.bruce)
+            .approve(this.contracts.atm, ethers.MaxUint256);
         });
 
-        it('post deployment state', async function () {
-          expect(await this.contracts.atm.token()).to.equal(this.contracts.token.target);
-          expect(await this.contracts.atm.stable()).to.equal(this.contracts.stable.target);
-          expect(await this.contracts.atm.oracle()).to.equal(this.contracts.oracle.target);
+        it("post deployment state", async function () {
+          expect(await this.contracts.atm.token()).to.equal(
+            this.contracts.token.target,
+          );
+          expect(await this.contracts.atm.stable()).to.equal(
+            this.contracts.stable.target,
+          );
+          expect(await this.contracts.atm.oracle()).to.equal(
+            this.contracts.oracle.target,
+          );
         });
 
         for (const { description, oldPrice, newPrice } of [
-          { description: 'with price increase', oldPrice: ethers.parseUnits('2.15467', 6), newPrice: ethers.parseUnits('2.17832', 6) },
-          { description: 'with price decrease', oldPrice: ethers.parseUnits('2.17832', 6), newPrice: ethers.parseUnits('2.15467', 6) },
+          {
+            description: "with price increase",
+            oldPrice: ethers.parseUnits("2.15467", 6),
+            newPrice: ethers.parseUnits("2.17832", 6),
+          },
+          {
+            description: "with price decrease",
+            oldPrice: ethers.parseUnits("2.17832", 6),
+            newPrice: ethers.parseUnits("2.15467", 6),
+          },
         ])
-        describe(description, function () {
-          const buyPrice = oldPrice > newPrice ? oldPrice : newPrice;
-          const sellPrice = oldPrice < newPrice ? oldPrice : newPrice;
-          const numFactor = stableDecimal < 11 ? 10n ** BigInt(11 - stableDecimal) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
-          const denFactor = stableDecimal > 11 ? 10n ** BigInt(stableDecimal - 11) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+          describe(description, function () {
+            const buyPrice = oldPrice > newPrice ? oldPrice : newPrice;
+            const sellPrice = oldPrice < newPrice ? oldPrice : newPrice;
+            const numFactor =
+              stableDecimal < 11 ? 10n ** BigInt(11 - stableDecimal) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+            const denFactor =
+              stableDecimal > 11 ? 10n ** BigInt(stableDecimal - 11) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
 
-          const stableToToken = (amount, price, up = false) => up
-            ? divUp(amount * numFactor, price * denFactor)
-            : amount * numFactor / price / denFactor;
+            const stableToToken = (amount, price, up = false) =>
+              up
+                ? divUp(amount * numFactor, price * denFactor)
+                : (amount * numFactor) / price / denFactor;
 
-          const tokenToStable = (amount, price, up = false) => up
-            ? divUp(amount * denFactor * price, numFactor)
-            : amount * denFactor * price / numFactor;
+            const tokenToStable = (amount, price, up = false) =>
+              up
+                ? divUp(amount * denFactor * price, numFactor)
+                : (amount * denFactor * price) / numFactor;
 
+            beforeEach(async function () {
+              const timestamp = await time.latest();
+              await this.contracts.oracle.publishPrice(
+                timestamp - 3600,
+                oldPrice,
+              );
+              await this.contracts.oracle.publishPrice(
+                timestamp + 3600,
+                newPrice,
+              );
+            });
 
-          beforeEach(async function () {
-            const timestamp = await time.latest();
-            await this.contracts.oracle.publishPrice(timestamp - 3600, oldPrice);
-            await this.contracts.oracle.publishPrice(timestamp + 3600, newPrice);
+            describe("buy", function () {
+              it("preview", async function () {
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.stable,
+                    formatStable("1.0"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.0"), buyPrice),
+                  formatStable("1.0"),
+                ]);
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.stable,
+                    formatStable("1.000001"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.000001"), buyPrice),
+                  formatStable("1.000001"),
+                ]); // round down
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.token,
+                    formatToken("1.0"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.0"),
+                  tokenToStable(formatToken("1.0"), buyPrice, true),
+                ]);
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.token,
+                    formatToken("1.00001"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.00001"),
+                  tokenToStable(formatToken("1.00001"), buyPrice, true),
+                ]);
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.manager, 0),
+                ).to.be.revertedWith("invalid input token");
+              });
+
+              it("buy (given amount of stable)", async function () {
+                const amountStable = formatStable("1.000001");
+                const amountToken = stableToToken(amountStable, buyPrice);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.bruce)
+                  .buy(
+                    this.contracts.stable,
+                    amountStable,
+                    this.accounts.alice,
+                  );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [-amountStable, amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [amountToken, -amountToken],
+                );
+              });
+
+              it("buy (given amount of token)", async function () {
+                const amountToken = formatToken("1.00001");
+                const amountStable = tokenToStable(amountToken, buyPrice, true);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.bruce)
+                  .buy(this.contracts.token, amountToken, this.accounts.alice);
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [-amountStable, amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [amountToken, -amountToken],
+                );
+              });
+
+              it("oracle not updated recently", async function () {
+                await time.increase(oraclettl);
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.stable, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.token, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.buy(
+                    this.contracts.stable,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.buy(
+                    this.contracts.token,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+              });
+            });
+
+            describe("sell", function () {
+              it("preview", async function () {
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.stable,
+                    formatStable("1.0"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.0"), sellPrice, true),
+                  formatStable("1.0"),
+                ]);
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.stable,
+                    formatStable("1.000001"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.000001"), sellPrice, true),
+                  formatStable("1.000001"),
+                ]); // round down
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.token,
+                    formatToken("1.0"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.0"),
+                  tokenToStable(formatToken("1.0"), sellPrice),
+                ]);
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.token,
+                    formatToken("1.00001"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.00001"),
+                  tokenToStable(formatToken("1.00001"), sellPrice),
+                ]);
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.manager, 0),
+                ).to.be.revertedWith("invalid input token");
+              });
+
+              it("sell (given amount of stable)", async function () {
+                const amountStable = formatStable("1.000001");
+                const amountToken = stableToToken(
+                  amountStable,
+                  sellPrice,
+                  true,
+                );
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.alice)
+                  .sell(
+                    this.contracts.stable,
+                    amountStable,
+                    this.accounts.bruce,
+                  );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [amountStable, -amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [-amountToken, amountToken],
+                );
+              });
+
+              it("sell (given amount of token)", async function () {
+                const amountToken = formatToken("1.00001");
+                const amountStable = tokenToStable(amountToken, sellPrice);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.alice)
+                  .sell(this.contracts.token, amountToken, this.accounts.bruce);
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [amountStable, -amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [-amountToken, amountToken],
+                );
+              });
+
+              it("oracle not updated recently", async function () {
+                await time.increase(oraclettl);
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.stable, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.token, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.sell(
+                    this.contracts.stable,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.sell(
+                    this.contracts.token,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+              });
+            });
           });
 
-          describe('buy', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), buyPrice), formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), buyPrice), formatStable("1.000001") ]); // round down
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), buyPrice, true) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), buyPrice, true) ]);
-              await expect(this.contracts.atm.previewBuy(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
-            });
-
-            it('buy (given amount of stable)', async function () {
-              const amountStable = formatStable("1.000001");
-              const amountToken  = stableToToken(amountStable, buyPrice);
-
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.stable, amountStable, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
-            });
-
-            it('buy (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
-              const amountStable = tokenToStable(amountToken, buyPrice, true);
-
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.token, amountToken, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
-            });
-
-            it('oracle not updated recently', async function () {
-              await time.increase(oraclettl);
-              await expect(this.contracts.atm.previewBuy(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.previewBuy(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.buy(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.buy(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-            });
+        describe("drain", function () {
+          it("unauthorized", async function () {
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.other)
+                .drain(this.contracts.token, this.accounts.alice, 1),
+            )
+              .to.be.revertedWithCustomError(
+                this.contracts.atm,
+                "RestrictedAccess",
+              )
+              .withArgs(
+                this.accounts.other,
+                this.contracts.atm,
+                this.contracts.atm.interface.getFunction("drain").selector,
+              );
           });
 
-          describe('sell', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), sellPrice, true), formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), sellPrice, true), formatStable("1.000001") ]); // round down
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), sellPrice) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), sellPrice) ]);
-              await expect(this.contracts.atm.previewSell(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
-            });
-
-            it('sell (given amount of stable)', async function () {
-              const amountStable = formatStable("1.000001");
-              const amountToken  = stableToToken(amountStable, sellPrice, true);
-
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.stable, amountStable, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
-            });
-
-            it('sell (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
-              const amountStable = tokenToStable(amountToken, sellPrice);
-
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.token, amountToken, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
-            });
-
-            it('oracle not updated recently', async function () {
-              await time.increase(oraclettl);
-              await expect(this.contracts.atm.previewSell(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.previewSell(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.sell(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.sell(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-            });
-          });
-        });
-
-        describe('drain', function () {
-          it('unauthorized', async function () {
-            await expect(this.contracts.atm.connect(this.accounts.other).drain(this.contracts.token, this.accounts.alice, 1))
-              .to.be.revertedWithCustomError(this.contracts.atm, "RestrictedAccess")
-              .withArgs(this.accounts.other, this.contracts.atm, this.contracts.atm.interface.getFunction("drain").selector);
+          it("partial", async function () {
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.admin)
+                .drain(this.contracts.token, this.accounts.alice, 42),
+            ).to.changeTokenBalances(
+              this.contracts.token,
+              [this.contracts.atm, this.accounts.alice],
+              [-42, 42],
+            );
           });
 
-          it('partial', async function () {
-            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, 42))
-              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -42, 42 ]);
-          });
-
-          it('total', async function () {
-            const balance = await this.contracts.token.balanceOf(this.contracts.atm);
-            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, ethers.MaxUint256))
-              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -balance, balance ]);
+          it("total", async function () {
+            const balance = await this.contracts.token.balanceOf(
+              this.contracts.atm,
+            );
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.admin)
+                .drain(
+                  this.contracts.token,
+                  this.accounts.alice,
+                  ethers.MaxUint256,
+                ),
+            ).to.changeTokenBalances(
+              this.contracts.token,
+              [this.contracts.atm, this.accounts.alice],
+              [-balance, balance],
+            );
           });
         });
       });
@@ -1268,149 +1678,387 @@ describe("Main", function () {
   describe("ATM v3", function () {
     const oraclettl = time.duration.days(7);
 
-    for (const stableDecimal of [ 6, 18, 36 ]) {
+    for (const stableDecimal of [6, 18, 36]) {
       describe(`stable coin with ${stableDecimal} decimals`, function () {
-        const formatToken = value => ethers.parseUnits(value, 5);
-        const formatStable = value => ethers.parseUnits(value, stableDecimal);
+        const formatToken = (value) => ethers.parseUnits(value, 5);
+        const formatStable = (value) => ethers.parseUnits(value, stableDecimal);
 
         beforeEach(async function () {
           /// deployment
-          this.contracts.stable = await deploy('ERC20DecimalsMock', [ stableDecimal ]);
-          this.contracts.atm = await deploy('ATM3', [ this.contracts.oracle.target, this.contracts.token.target, this.contracts.stable.target, this.contracts.manager.target, this.contracts.forwarder.target, oraclettl ]);
+          this.contracts.stable = await deploy("ERC20DecimalsMock", [
+            stableDecimal,
+          ]);
+          this.contracts.atm = await deploy("ATM3", [
+            this.contracts.oracle.target,
+            this.contracts.token.target,
+            this.contracts.stable.target,
+            this.contracts.manager.target,
+            this.contracts.forwarder.target,
+            oraclettl,
+          ]);
 
           ///. set atm permissions
-          await this.contracts.manager.setRequirements(this.contracts.atm, [ this.contracts.atm.interface.getFunction('drain').selector ], [ this.IDS['operator-exceptional'] ]);
-          await this.contracts.manager.addGroup(this.contracts.atm, this.IDS['whitelisted']);
+          await this.contracts.manager.setRequirements(
+            this.contracts.atm,
+            [this.contracts.atm.interface.getFunction("drain").selector],
+            [this.IDS["operator-exceptional"]],
+          );
+          await this.contracts.manager.addGroup(
+            this.contracts.atm,
+            this.IDS["whitelisted"],
+          );
 
           /// mint and approve
-          await this.contracts.token.mint(this.contracts.atm, formatToken('100'));
-          await this.contracts.stable.mint(this.contracts.atm, formatStable('100'));
-          await this.contracts.token.mint(this.accounts.alice, formatToken('100'));
-          await this.contracts.stable.mint(this.accounts.bruce, formatStable('100'));
-          await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.atm, ethers.MaxUint256);
-          await this.contracts.stable.connect(this.accounts.bruce).approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.token.mint(
+            this.contracts.atm,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.contracts.atm,
+            formatStable("100"),
+          );
+          await this.contracts.token.mint(
+            this.accounts.alice,
+            formatToken("100"),
+          );
+          await this.contracts.stable.mint(
+            this.accounts.bruce,
+            formatStable("100"),
+          );
+          await this.contracts.token
+            .connect(this.accounts.alice)
+            .approve(this.contracts.atm, ethers.MaxUint256);
+          await this.contracts.stable
+            .connect(this.accounts.bruce)
+            .approve(this.contracts.atm, ethers.MaxUint256);
         });
 
-        it('post deployment state', async function () {
-          expect(await this.contracts.atm.token()).to.equal(this.contracts.token.target);
-          expect(await this.contracts.atm.stable()).to.equal(this.contracts.stable.target);
-          expect(await this.contracts.atm.oracle()).to.equal(this.contracts.oracle.target);
+        it("post deployment state", async function () {
+          expect(await this.contracts.atm.token()).to.equal(
+            this.contracts.token.target,
+          );
+          expect(await this.contracts.atm.stable()).to.equal(
+            this.contracts.stable.target,
+          );
+          expect(await this.contracts.atm.oracle()).to.equal(
+            this.contracts.oracle.target,
+          );
         });
 
         for (const { description, oldPrice, newPrice } of [
-          { description: 'with price increase', oldPrice: ethers.parseUnits('2.15467', 6), newPrice: ethers.parseUnits('2.17832', 6) },
-          { description: 'with price decrease', oldPrice: ethers.parseUnits('2.17832', 6), newPrice: ethers.parseUnits('2.15467', 6) },
+          {
+            description: "with price increase",
+            oldPrice: ethers.parseUnits("2.15467", 6),
+            newPrice: ethers.parseUnits("2.17832", 6),
+          },
+          {
+            description: "with price decrease",
+            oldPrice: ethers.parseUnits("2.17832", 6),
+            newPrice: ethers.parseUnits("2.15467", 6),
+          },
         ])
-        describe(description, function () {
-          const buyPrice = oldPrice > newPrice ? oldPrice : newPrice;
-          const sellPrice = oldPrice < newPrice ? oldPrice : newPrice;
-          const numFactor = stableDecimal < 11 ? 10n ** BigInt(11 - stableDecimal) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
-          const denFactor = stableDecimal > 11 ? 10n ** BigInt(stableDecimal - 11) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+          describe(description, function () {
+            const buyPrice = oldPrice > newPrice ? oldPrice : newPrice;
+            const sellPrice = oldPrice < newPrice ? oldPrice : newPrice;
+            const numFactor =
+              stableDecimal < 11 ? 10n ** BigInt(11 - stableDecimal) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
+            const denFactor =
+              stableDecimal > 11 ? 10n ** BigInt(stableDecimal - 11) : 1n; // 11 = 5 (decimal of the token) + 6 (price scale)
 
-          const stableToToken = (amount, price, up = false) => up
-            ? divUp(amount * numFactor, price * denFactor)
-            : amount * numFactor / price / denFactor;
+            const stableToToken = (amount, price, up = false) =>
+              up
+                ? divUp(amount * numFactor, price * denFactor)
+                : (amount * numFactor) / price / denFactor;
 
-          const tokenToStable = (amount, price, up = false) => up
-            ? divUp(amount * denFactor * price, numFactor)
-            : amount * denFactor * price / numFactor;
+            const tokenToStable = (amount, price, up = false) =>
+              up
+                ? divUp(amount * denFactor * price, numFactor)
+                : (amount * denFactor * price) / numFactor;
 
+            beforeEach(async function () {
+              const timestamp = await time.latest();
+              await this.contracts.oracle.publishPrice(
+                timestamp - 3600,
+                oldPrice,
+              );
+              await this.contracts.oracle.publishPrice(
+                timestamp + 3600,
+                newPrice,
+              );
+            });
 
-          beforeEach(async function () {
-            const timestamp = await time.latest();
-            await this.contracts.oracle.publishPrice(timestamp - 3600, oldPrice);
-            await this.contracts.oracle.publishPrice(timestamp + 3600, newPrice);
+            describe("buy", function () {
+              it("preview", async function () {
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.stable,
+                    formatStable("1.0"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.0"), buyPrice),
+                  formatStable("1.0"),
+                ]);
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.stable,
+                    formatStable("1.000001"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.000001"), buyPrice),
+                  formatStable("1.000001"),
+                ]); // round down
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.token,
+                    formatToken("1.0"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.0"),
+                  tokenToStable(formatToken("1.0"), buyPrice, true),
+                ]);
+                expect(
+                  await this.contracts.atm.previewBuy(
+                    this.contracts.token,
+                    formatToken("1.00001"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.00001"),
+                  tokenToStable(formatToken("1.00001"), buyPrice, true),
+                ]);
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.manager, 0),
+                ).to.be.revertedWith("invalid input token");
+              });
+
+              it("buy (given amount of stable)", async function () {
+                const amountStable = formatStable("1.000001");
+                const amountToken = stableToToken(amountStable, buyPrice);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.bruce)
+                  .buy(
+                    this.contracts.stable,
+                    amountStable,
+                    this.accounts.alice,
+                  );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [-amountStable, amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [amountToken, -amountToken],
+                );
+              });
+
+              it("buy (given amount of token)", async function () {
+                const amountToken = formatToken("1.00001");
+                const amountStable = tokenToStable(amountToken, buyPrice, true);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.bruce)
+                  .buy(this.contracts.token, amountToken, this.accounts.alice);
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [-amountStable, amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [amountToken, -amountToken],
+                );
+              });
+
+              it("oracle not updated recently", async function () {
+                await time.increase(oraclettl);
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.stable, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.previewBuy(this.contracts.token, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.buy(
+                    this.contracts.stable,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.buy(
+                    this.contracts.token,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+              });
+            });
+
+            describe("sell", function () {
+              it("preview", async function () {
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.stable,
+                    formatStable("1.0"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.0"), sellPrice, true),
+                  formatStable("1.0"),
+                ]);
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.stable,
+                    formatStable("1.000001"),
+                  ),
+                ).to.deep.equal([
+                  stableToToken(formatStable("1.000001"), sellPrice, true),
+                  formatStable("1.000001"),
+                ]); // round down
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.token,
+                    formatToken("1.0"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.0"),
+                  tokenToStable(formatToken("1.0"), sellPrice),
+                ]);
+                expect(
+                  await this.contracts.atm.previewSell(
+                    this.contracts.token,
+                    formatToken("1.00001"),
+                  ),
+                ).to.deep.equal([
+                  formatToken("1.00001"),
+                  tokenToStable(formatToken("1.00001"), sellPrice),
+                ]);
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.manager, 0),
+                ).to.be.revertedWith("invalid input token");
+              });
+
+              it("sell (given amount of stable)", async function () {
+                const amountStable = formatStable("1.000001");
+                const amountToken = stableToToken(
+                  amountStable,
+                  sellPrice,
+                  true,
+                );
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.alice)
+                  .sell(
+                    this.contracts.stable,
+                    amountStable,
+                    this.accounts.bruce,
+                  );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [amountStable, -amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [-amountToken, amountToken],
+                );
+              });
+
+              it("sell (given amount of token)", async function () {
+                const amountToken = formatToken("1.00001");
+                const amountStable = tokenToStable(amountToken, sellPrice);
+
+                const tx = this.contracts.atm
+                  .connect(this.accounts.alice)
+                  .sell(this.contracts.token, amountToken, this.accounts.bruce);
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.stable,
+                  [this.accounts.bruce, this.contracts.atm],
+                  [amountStable, -amountStable],
+                );
+                await expect(tx).to.changeTokenBalances(
+                  this.contracts.token,
+                  [this.accounts.alice, this.contracts.atm],
+                  [-amountToken, amountToken],
+                );
+              });
+
+              it("oracle not updated recently", async function () {
+                await time.increase(oraclettl);
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.stable, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.previewSell(this.contracts.token, 0),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.sell(
+                    this.contracts.stable,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+                await expect(
+                  this.contracts.atm.sell(
+                    this.contracts.token,
+                    0,
+                    this.accounts.alice,
+                  ),
+                ).to.be.revertedWith("oracle value too old");
+              });
+            });
           });
 
-          describe('buy', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), buyPrice), formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), buyPrice), formatStable("1.000001") ]); // round down
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), buyPrice, true) ]);
-              expect(await this.contracts.atm.previewBuy(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), buyPrice, true) ]);
-              await expect(this.contracts.atm.previewBuy(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
-            });
-
-            it('buy (given amount of stable)', async function () {
-              const amountStable = formatStable("1.000001");
-              const amountToken  = stableToToken(amountStable, buyPrice);
-
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.stable, amountStable, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
-            });
-
-            it('buy (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
-              const amountStable = tokenToStable(amountToken, buyPrice, true);
-
-              const tx = this.contracts.atm.connect(this.accounts.bruce).buy(this.contracts.token, amountToken, this.accounts.alice);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
-            });
-
-            it('oracle not updated recently', async function () {
-              await time.increase(oraclettl);
-              await expect(this.contracts.atm.previewBuy(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.previewBuy(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.buy(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.buy(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-            });
+        describe("drain", function () {
+          it("unauthorized", async function () {
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.other)
+                .drain(this.contracts.token, this.accounts.alice, 1),
+            )
+              .to.be.revertedWithCustomError(
+                this.contracts.atm,
+                "RestrictedAccess",
+              )
+              .withArgs(
+                this.accounts.other,
+                this.contracts.atm,
+                this.contracts.atm.interface.getFunction("drain").selector,
+              );
           });
 
-          describe('sell', function () {
-            it('preview', async function () {
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.0"     ))).to.deep.equal([ stableToToken(formatStable("1.0"     ), sellPrice, true), formatStable("1.0"     ) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.stable, formatStable("1.000001"))).to.deep.equal([ stableToToken(formatStable("1.000001"), sellPrice, true), formatStable("1.000001") ]); // round down
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.0"     ))).to.deep.equal([ formatToken("1.0"    ), tokenToStable(formatToken("1.0"    ), sellPrice) ]);
-              expect(await this.contracts.atm.previewSell(this.contracts.token,  formatToken ("1.00001" ))).to.deep.equal([ formatToken("1.00001"), tokenToStable(formatToken("1.00001"), sellPrice) ]);
-              await expect(this.contracts.atm.previewSell(this.contracts.manager, 0)).to.be.revertedWith('invalid input token');
-            });
-
-            it('sell (given amount of stable)', async function () {
-              const amountStable = formatStable("1.000001");
-              const amountToken  = stableToToken(amountStable, sellPrice, true);
-
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.stable, amountStable, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
-            });
-
-            it('sell (given amount of token)', async function () {
-              const amountToken  = formatToken("1.00001");
-              const amountStable = tokenToStable(amountToken, sellPrice);
-
-              const tx = this.contracts.atm.connect(this.accounts.alice).sell(this.contracts.token, amountToken, this.accounts.bruce);
-              await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable ]);
-              await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken ]);
-            });
-
-            it('oracle not updated recently', async function () {
-              await time.increase(oraclettl);
-              await expect(this.contracts.atm.previewSell(this.contracts.stable, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.previewSell(this.contracts.token, 0)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.sell(this.contracts.stable, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-              await expect(this.contracts.atm.sell(this.contracts.token, 0, this.accounts.alice)).to.be.revertedWith('oracle value too old');
-            });
-          });
-        });
-
-        describe('drain', function () {
-          it('unauthorized', async function () {
-            await expect(this.contracts.atm.connect(this.accounts.other).drain(this.contracts.token, this.accounts.alice, 1))
-              .to.be.revertedWithCustomError(this.contracts.atm, "RestrictedAccess")
-              .withArgs(this.accounts.other, this.contracts.atm, this.contracts.atm.interface.getFunction("drain").selector);
+          it("partial", async function () {
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.admin)
+                .drain(this.contracts.token, this.accounts.alice, 42),
+            ).to.changeTokenBalances(
+              this.contracts.token,
+              [this.contracts.atm, this.accounts.alice],
+              [-42, 42],
+            );
           });
 
-          it('partial', async function () {
-            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, 42))
-              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -42, 42 ]);
-          });
-
-          it('total', async function () {
-            const balance = await this.contracts.token.balanceOf(this.contracts.atm);
-            await expect(this.contracts.atm.connect(this.accounts.admin).drain(this.contracts.token, this.accounts.alice, ethers.MaxUint256))
-              .to.changeTokenBalances(this.contracts.token, [ this.contracts.atm, this.accounts.alice ], [ -balance, balance ]);
+          it("total", async function () {
+            const balance = await this.contracts.token.balanceOf(
+              this.contracts.atm,
+            );
+            await expect(
+              this.contracts.atm
+                .connect(this.accounts.admin)
+                .drain(
+                  this.contracts.token,
+                  this.accounts.alice,
+                  ethers.MaxUint256,
+                ),
+            ).to.changeTokenBalances(
+              this.contracts.token,
+              [this.contracts.atm, this.accounts.alice],
+              [-balance, balance],
+            );
           });
         });
       });
@@ -1442,16 +2090,20 @@ describe("Main", function () {
                   (await this.contracts.manager.setRequirements(
                     target,
                     [selector],
-                    [group]
+                    [group],
                   ));
                 withPermission &&
                   (await this.contracts.manager.addGroup(caller, group));
 
                 // check can call
                 expect(
-                  await this.contracts.manager.canCall(caller, target, selector)
+                  await this.contracts.manager.canCall(
+                    caller,
+                    target,
+                    selector,
+                  ),
                 ).to.equal(withRequirements && withPermission);
-              }
+              },
             );
           }
       });
@@ -1473,18 +2125,18 @@ describe("Main", function () {
             this.contracts.manager.setRequirements(
               target,
               [selector],
-              this.targetGroups
+              this.targetGroups,
             ),
             ...this.userGroups.map((group) =>
-              this.contracts.manager.addGroup(caller, group)
+              this.contracts.manager.addGroup(caller, group),
             ),
           ]);
 
           // check can call
           expect(
-            await this.contracts.manager.canCall(caller, target, selector)
+            await this.contracts.manager.canCall(caller, target, selector),
           ).to.equal(
-            this.userGroups.some((g) => this.targetGroups.includes(g))
+            this.userGroups.some((g) => this.targetGroups.includes(g)),
           );
         });
       });
@@ -1495,7 +2147,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .addGroup(this.accounts.alice, group)
+            .addGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupAdded")
           .withArgs(this.accounts.alice, group);
@@ -1505,11 +2157,11 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.other)
-            .addGroup(this.accounts.alice, group)
+            .addGroup(this.accounts.alice, group),
         )
           .to.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(this.accounts.other, this.MASKS.public, this.MASKS.admin);
       });
@@ -1518,16 +2170,16 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.whitelister)
-            .addGroup(this.accounts.alice, group)
+            .addGroup(this.accounts.alice, group),
         )
           .to.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(
             this.accounts.whitelister,
             combine(this.MASKS.whitelister, this.MASKS.public),
-            this.MASKS.admin
+            this.MASKS.admin,
           );
 
         await this.contracts.manager.setGroupAdmins(group, [
@@ -1537,7 +2189,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.whitelister)
-            .addGroup(this.accounts.alice, group)
+            .addGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupAdded")
           .withArgs(this.accounts.alice, group);
@@ -1545,21 +2197,21 @@ describe("Main", function () {
 
       it("effect", async function () {
         expect(
-          await this.contracts.manager.getGroups(this.accounts.alice)
+          await this.contracts.manager.getGroups(this.accounts.alice),
         ).to.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
 
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .addGroup(this.accounts.alice, group)
+            .addGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupAdded")
           .withArgs(this.accounts.alice, group);
 
         expect(
-          await this.contracts.manager.getGroups(this.accounts.alice)
+          await this.contracts.manager.getGroups(this.accounts.alice),
         ).to.equal(
-          combine(this.MASKS.public, this.MASKS.whitelisted, toMask(group))
+          combine(this.MASKS.public, this.MASKS.whitelisted, toMask(group)),
         );
       });
     });
@@ -1575,7 +2227,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .remGroup(this.accounts.alice, group)
+            .remGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupRemoved")
           .withArgs(this.accounts.alice, group);
@@ -1585,11 +2237,11 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.other)
-            .remGroup(this.accounts.alice, group)
+            .remGroup(this.accounts.alice, group),
         )
           .be.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(this.accounts.other, this.MASKS.public, this.MASKS.admin);
       });
@@ -1598,16 +2250,16 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.whitelister)
-            .remGroup(this.accounts.alice, group)
+            .remGroup(this.accounts.alice, group),
         )
           .be.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(
             this.accounts.whitelister,
             combine(this.MASKS.whitelister, this.MASKS.public),
-            this.MASKS.admin
+            this.MASKS.admin,
           );
 
         await this.contracts.manager.setGroupAdmins(group, [
@@ -1617,7 +2269,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.whitelister)
-            .remGroup(this.accounts.alice, group)
+            .remGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupRemoved")
           .withArgs(this.accounts.alice, group);
@@ -1625,21 +2277,21 @@ describe("Main", function () {
 
       it("effect", async function () {
         expect(
-          await this.contracts.manager.getGroups(this.accounts.alice)
+          await this.contracts.manager.getGroups(this.accounts.alice),
         ).to.equal(
-          combine(this.MASKS.public, this.MASKS.whitelisted, toMask(group))
+          combine(this.MASKS.public, this.MASKS.whitelisted, toMask(group)),
         );
 
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .remGroup(this.accounts.alice, group)
+            .remGroup(this.accounts.alice, group),
         )
           .to.emit(this.contracts.manager, "GroupRemoved")
           .withArgs(this.accounts.alice, group);
 
         expect(
-          await this.contracts.manager.getGroups(this.accounts.alice)
+          await this.contracts.manager.getGroups(this.accounts.alice),
         ).to.equal(combine(this.MASKS.public, this.MASKS.whitelisted));
       });
     });
@@ -1649,7 +2301,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .setGroupAdmins(group, groups)
+            .setGroupAdmins(group, groups),
         )
           .to.emit(this.contracts.manager, "GroupAdmins")
           .withArgs(group, combine(...groups.map(toMask)));
@@ -1659,11 +2311,11 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.other)
-            .setGroupAdmins(group, groups)
+            .setGroupAdmins(group, groups),
         )
           .to.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(this.accounts.other, this.MASKS.public, this.MASKS.admin);
       });
@@ -1676,21 +2328,21 @@ describe("Main", function () {
 
         // Check previous value is set
         expect(await this.contracts.manager.getGroupAdmins(group)).to.equal(
-          combine(this.MASKS.admin, toMask(group))
+          combine(this.MASKS.admin, toMask(group)),
         );
 
         // Set some new values
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .setGroupAdmins(group, groups)
+            .setGroupAdmins(group, groups),
         )
           .to.emit(this.contracts.manager, "GroupAdmins")
           .withArgs(group, combine(...groups.map(toMask)));
 
         // Check the new values are set, and the previous is removed
         expect(await this.contracts.manager.getGroupAdmins(group)).to.equal(
-          combine(this.MASKS.admin, ...groups.map(toMask))
+          combine(this.MASKS.admin, ...groups.map(toMask)),
         );
       });
     });
@@ -1700,7 +2352,7 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .setRequirements(target, [selector], groups)
+            .setRequirements(target, [selector], groups),
         )
           .to.emit(this.contracts.manager, "Requirements")
           .withArgs(target, selector, combine(...groups.map(toMask)));
@@ -1710,11 +2362,11 @@ describe("Main", function () {
         await expect(
           this.contracts.manager
             .connect(this.accounts.other)
-            .setRequirements(target, [selector], groups)
+            .setRequirements(target, [selector], groups),
         )
           .to.revertedWithCustomError(
             this.contracts.manager,
-            "MissingPermissions"
+            "MissingPermissions",
           )
           .withArgs(this.accounts.other, this.MASKS.public, this.MASKS.admin);
       });
@@ -1727,21 +2379,21 @@ describe("Main", function () {
 
         // Check previous value is set
         expect(
-          await this.contracts.manager.getRequirements(target, selector)
+          await this.contracts.manager.getRequirements(target, selector),
         ).to.equal(combine(this.MASKS.admin, toMask(group)));
 
         // Set some new values
         await expect(
           this.contracts.manager
             .connect(this.accounts.admin)
-            .setRequirements(target, [selector], groups)
+            .setRequirements(target, [selector], groups),
         )
           .to.emit(this.contracts.manager, "Requirements")
           .withArgs(target, selector, combine(...groups.map(toMask)));
 
         // Check the new values are set, and the previous is removed
         expect(
-          await this.contracts.manager.getRequirements(target, selector)
+          await this.contracts.manager.getRequirements(target, selector),
         ).to.equal(combine(this.MASKS.admin, ...groups.map(toMask)));
       });
     });
@@ -1760,7 +2412,7 @@ describe("Main", function () {
       await this.contracts.redemption.registerOutput(
         this.contracts.token,
         output,
-        true
+        true,
       );
 
       // make operation
@@ -1779,11 +2431,11 @@ describe("Main", function () {
             getAddress(result.output),
             result.value,
             result.salt,
-          ]
+          ],
         );
         result.data = ethers.AbiCoder.defaultAbiCoder().encode(
           ["address", "bytes32"],
-          [getAddress(result.output), result.salt]
+          [getAddress(result.output), result.salt],
         );
         return result;
       };
@@ -1793,7 +2445,7 @@ describe("Main", function () {
       it("success", async function () {
         const op = this.makeOp();
         expect(await this.contracts.redemption.outputsFor(op.input)).to.include(
-          await op.output.getAddress()
+          await op.output.getAddress(),
         );
 
         const { status: statusBefore, deadline: deadlineBefore } =
@@ -1807,8 +2459,8 @@ describe("Main", function () {
             .getFunction("transferAndCall(address,uint256,bytes)")(
             this.contracts.redemption,
             op.value,
-            op.data
-          )
+            op.data,
+          ),
         )
           .to.emit(op.input, "Transfer")
           .withArgs(op.user, this.contracts.redemption, op.value)
@@ -1826,7 +2478,7 @@ describe("Main", function () {
       it("using ERC-2771", async function () {
         const op = this.makeOp();
         expect(await this.contracts.redemption.outputsFor(op.input)).to.include(
-          await op.output.getAddress()
+          await op.output.getAddress(),
         );
 
         const { status: statusBefore, deadline: deadlineBefore } =
@@ -1842,7 +2494,7 @@ describe("Main", function () {
           deadline: 2n ** 48n - 1n, // Never
           data: op.input.interface.encodeFunctionData(
             "transferAndCall(address,uint256,bytes)",
-            [this.contracts.redemption.target, op.value, op.data]
+            [this.contracts.redemption.target, op.value, op.data],
           ),
           nonce: await this.contracts.forwarder.nonces(op.user),
         };
@@ -1861,12 +2513,14 @@ describe("Main", function () {
                   data: "bytes",
                 }).map(([name, type]) => ({ name, type })),
               },
-              request
-            )
+              request,
+            ),
         );
 
         await expect(
-          this.contracts.forwarder.connect(this.accounts.other).execute(request)
+          this.contracts.forwarder
+            .connect(this.accounts.other)
+            .execute(request),
         )
           .to.emit(this.contracts.forwarder, "ExecutedForwardRequest")
           .withArgs(op.user, request.nonce, true)
@@ -1892,7 +2546,7 @@ describe("Main", function () {
           .getFunction("transferAndCall(address,uint256,bytes)")(
           this.contracts.redemption,
           op.value,
-          op.data
+          op.data,
         );
 
         // reusing the same operation details with the same salt is not ok
@@ -1902,8 +2556,8 @@ describe("Main", function () {
             .getFunction("transferAndCall(address,uint256,bytes)")(
             this.contracts.redemption,
             op.value,
-            op.data
-          )
+            op.data,
+          ),
         ).to.be.revertedWith("ID already used");
       });
 
@@ -1916,8 +2570,8 @@ describe("Main", function () {
             .getFunction("transferAndCall(address,uint256,bytes)")(
             this.contracts.redemption,
             op.value,
-            op.data
-          )
+            op.data,
+          ),
         ).to.be.revertedWith("Input/Output pair is not authorized");
       });
 
@@ -1927,7 +2581,7 @@ describe("Main", function () {
         await expect(
           this.contracts.redemption
             .connect(op.user)
-            .onTransferReceived(op.user, op.user, op.value, op.data)
+            .onTransferReceived(op.user, op.user, op.value, op.data),
         ).to.be.revertedWith("Input/Output pair is not authorized");
       });
 
@@ -1945,8 +2599,8 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.contracts.redemption,
               op.value,
-              op.data
-            )
+              op.data,
+            ),
           )
             .to.emit(op.input, "Transfer")
             .withArgs(op.user, this.contracts.redemption, op.value)
@@ -1967,8 +2621,8 @@ describe("Main", function () {
               .getFunction("transferAndCall(address,uint256,bytes)")(
               this.contracts.redemption,
               op.value,
-              op.data
-            )
+              op.data,
+            ),
           ).to.be.rejectedWith("Minimum redemption amount  not reached");
         });
       });
@@ -1983,7 +2637,7 @@ describe("Main", function () {
           .getFunction("transferAndCall(address,uint256,bytes)")(
           this.contracts.redemption,
           this.operation.value,
-          this.operation.data
+          this.operation.data,
         );
 
         this.operation.deadline =
@@ -2006,20 +2660,20 @@ describe("Main", function () {
               this.operation.output,
               this.operation.value,
               this.operation.salt,
-              data
-            )
+              data,
+            ),
         )
           .to.emit(this.operation.input, "Transfer")
           .withArgs(
             this.contracts.redemption,
             ethers.ZeroAddress,
-            this.operation.value
+            this.operation.value,
           )
           .to.emit(this.contracts.redemption, "RedemptionExecuted")
           .withArgs(this.operation.id, data);
 
         const { status: statusAfter } = await this.contracts.redemption.details(
-          this.operation.id
+          this.operation.id,
         );
         expect(statusAfter).to.equal(STATUS.EXECUTED);
       });
@@ -2036,18 +2690,18 @@ describe("Main", function () {
               this.operation.output,
               this.operation.value,
               this.operation.salt,
-              data
-            )
+              data,
+            ),
         )
           .to.be.revertedWithCustomError(
             this.contracts.redemption,
-            "RestrictedAccess"
+            "RestrictedAccess",
           )
           .withArgs(
             this.accounts.other,
             this.contracts.redemption,
             this.contracts.redemption.interface.getFunction("executeRedemption")
-              .selector
+              .selector,
           );
       });
 
@@ -2063,8 +2717,8 @@ describe("Main", function () {
               this.operation.output,
               this.operation.value,
               this.operation.salt,
-              data
-            )
+              data,
+            ),
         ).to.be.revertedWith("Operation is not pending");
       });
 
@@ -2082,8 +2736,8 @@ describe("Main", function () {
               this.operation.output,
               this.operation.value,
               this.operation.salt,
-              data
-            )
+              data,
+            ),
         ).to.be.revertedWith("Deadline passed");
       });
     });
@@ -2097,7 +2751,7 @@ describe("Main", function () {
           .getFunction("transferAndCall(address,uint256,bytes)")(
           this.contracts.redemption,
           this.operation.value,
-          this.operation.data
+          this.operation.data,
         );
 
         this.operation.deadline = (await time.latest()) + time.duration.days(7);
@@ -2118,20 +2772,20 @@ describe("Main", function () {
               this.operation.input,
               this.operation.output,
               this.operation.value,
-              this.operation.salt
-            )
+              this.operation.salt,
+            ),
         )
           .to.emit(this.operation.input, "Transfer")
           .withArgs(
             this.contracts.redemption,
             this.operation.user,
-            this.operation.value
+            this.operation.value,
           )
           .to.emit(this.contracts.redemption, "RedemptionCanceled")
           .withArgs(this.operation.id);
 
         const { status: statusAfter } = await this.contracts.redemption.details(
-          this.operation.id
+          this.operation.id,
         );
         expect(statusAfter).to.equal(STATUS.CANCELED);
       });
@@ -2147,8 +2801,8 @@ describe("Main", function () {
               this.operation.input,
               this.operation.output,
               this.operation.value,
-              this.operation.salt
-            )
+              this.operation.salt,
+            ),
         ).to.be.revertedWith("Operation is not pending");
       });
 
@@ -2161,8 +2815,8 @@ describe("Main", function () {
               this.operation.input,
               this.operation.output,
               this.operation.value,
-              this.operation.salt
-            )
+              this.operation.salt,
+            ),
         ).to.be.revertedWith("Deadline not passed");
       });
     });
@@ -2173,63 +2827,63 @@ describe("Main", function () {
       describe("enable output", function () {
         it("authorized", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.admin)
-              .registerOutput(this.contracts.token, other, true)
+              .registerOutput(this.contracts.token, other, true),
           )
             .to.emit(this.contracts.redemption, "EnableOutput")
             .withArgs(this.contracts.token, other, true);
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output, other].map(getAddress));
         });
 
         it("unauthorized", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.other)
-              .registerOutput(this.contracts.token, other, true)
+              .registerOutput(this.contracts.token, other, true),
           )
             .to.be.revertedWithCustomError(
               this.contracts.redemption,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.redemption,
               this.contracts.redemption.interface.getFunction("registerOutput")
-                .selector
+                .selector,
             );
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
         });
 
         it("no-effect", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.admin)
-              .registerOutput(this.contracts.token, output, true)
+              .registerOutput(this.contracts.token, output, true),
           )
             .to.emit(this.contracts.redemption, "EnableOutput")
             .withArgs(this.contracts.token, output, true);
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
         });
       });
@@ -2237,63 +2891,63 @@ describe("Main", function () {
       describe("disable output", function () {
         it("authorized", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.admin)
-              .registerOutput(this.contracts.token, output, false)
+              .registerOutput(this.contracts.token, output, false),
           )
             .to.emit(this.contracts.redemption, "EnableOutput")
             .withArgs(this.contracts.token, output, false);
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([].map(getAddress));
         });
 
         it("unauthorized", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.other)
-              .registerOutput(this.contracts.token, output, false)
+              .registerOutput(this.contracts.token, output, false),
           )
             .to.be.revertedWithCustomError(
               this.contracts.redemption,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.redemption,
               this.contracts.redemption.interface.getFunction("registerOutput")
-                .selector
+                .selector,
             );
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
         });
 
         it("no-effect", async function () {
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.admin)
-              .registerOutput(this.contracts.token, other, false)
+              .registerOutput(this.contracts.token, other, false),
           )
             .to.emit(this.contracts.redemption, "EnableOutput")
             .withArgs(this.contracts.token, other, false);
 
           expect(
-            await this.contracts.redemption.outputsFor(this.contracts.token)
+            await this.contracts.redemption.outputsFor(this.contracts.token),
           ).to.deep.equal([output].map(getAddress));
         });
       });
@@ -2303,45 +2957,45 @@ describe("Main", function () {
 
         it("authorized", async function () {
           expect(
-            await this.contracts.redemption.minimum(this.contracts.token)
+            await this.contracts.redemption.minimum(this.contracts.token),
           ).to.deep.equal(0n);
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.admin)
-              .setMinimum(this.contracts.token, amount)
+              .setMinimum(this.contracts.token, amount),
           )
             .to.emit(this.contracts.redemption, "MinimumUpdated")
             .withArgs(this.contracts.token, amount);
 
           expect(
-            await this.contracts.redemption.minimum(this.contracts.token)
+            await this.contracts.redemption.minimum(this.contracts.token),
           ).to.deep.equal(amount);
         });
 
         it("unauthorized", async function () {
           expect(
-            await this.contracts.redemption.minimum(this.contracts.token)
+            await this.contracts.redemption.minimum(this.contracts.token),
           ).to.deep.equal(0n);
 
           await expect(
             this.contracts.redemption
               .connect(this.accounts.other)
-              .setMinimum(this.contracts.token, amount)
+              .setMinimum(this.contracts.token, amount),
           )
             .to.be.revertedWithCustomError(
               this.contracts.redemption,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.redemption,
               this.contracts.redemption.interface.getFunction("setMinimum")
-                .selector
+                .selector,
             );
 
           expect(
-            await this.contracts.redemption.minimum(this.contracts.token)
+            await this.contracts.redemption.minimum(this.contracts.token),
           ).to.deep.equal(0n);
         });
       });
@@ -2371,7 +3025,7 @@ describe("Main", function () {
             getAddress(result.token),
             result.amount,
             result.salt,
-          ]
+          ],
         );
         return result;
       };
@@ -2382,7 +3036,9 @@ describe("Main", function () {
         const currentTime = await time.latest();
         const expectedDay = BigInt(currentTime) / 86400n;
 
-        await expect(this.contracts.minter.getCurrentDay()).to.eventually.equal(expectedDay);
+        await expect(this.contracts.minter.getCurrentDay()).to.eventually.equal(
+          expectedDay,
+        );
       });
 
       it("hashMintId", async function () {
@@ -2393,18 +3049,13 @@ describe("Main", function () {
             op.user,
             op.token,
             op.amount,
-            op.salt
-          )
+            op.salt,
+          ),
         ).to.eventually.equal(
           ethers.solidityPackedKeccak256(
             ["address", "address", "uint256", "bytes32"],
-            [
-              getAddress(op.user),
-              getAddress(op.token),
-              op.amount,
-              op.salt,
-            ]
-          )
+            [getAddress(op.user), getAddress(op.token), op.amount, op.salt],
+          ),
         );
       });
     });
@@ -2413,21 +3064,31 @@ describe("Main", function () {
       it("success - within daily limit", async function () {
         const op = this.makeMintOp({ amount: 500 });
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(MINTER_STATUS.NULL);
-        await expect(this.contracts.minter.getMintedToday(op.token)).to.eventually.equal(0);
+        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+          MINTER_STATUS.NULL,
+        );
+        await expect(
+          this.contracts.minter.getMintedToday(op.token),
+        ).to.eventually.equal(0);
         await expect(op.token.balanceOf(op.user)).to.eventually.equal(0);
 
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op.user, op.token, op.amount, op.salt)
+            .initiateMint(op.user, op.token, op.amount, op.salt),
         )
           .to.emit(this.contracts.minter, "MintExecuted")
-          .withArgs(op.id, op.user, op.token, op.amount, op.salt);
+          .withArgs(op.id);
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(MINTER_STATUS.EXECUTED);
-        await expect(this.contracts.minter.getMintedToday(op.token)).to.eventually.equal(op.amount);
-        await expect(op.token.balanceOf(op.user)).to.eventually.equal(op.amount);
+        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+          MINTER_STATUS.EXECUTED,
+        );
+        await expect(
+          this.contracts.minter.getMintedToday(op.token),
+        ).to.eventually.equal(op.amount);
+        await expect(op.token.balanceOf(op.user)).to.eventually.equal(
+          op.amount,
+        );
       });
 
       it("success - exact daily limit", async function () {
@@ -2436,12 +3097,15 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op.user, op.token, op.amount, op.salt)
-        )
-          .to.emit(this.contracts.minter, "MintExecuted");
+            .initiateMint(op.user, op.token, op.amount, op.salt),
+        ).to.emit(this.contracts.minter, "MintExecuted");
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(MINTER_STATUS.EXECUTED);
-        await expect(this.contracts.minter.getMintedToday(op.token)).to.eventually.equal(1000);
+        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+          MINTER_STATUS.EXECUTED,
+        );
+        await expect(
+          this.contracts.minter.getMintedToday(op.token),
+        ).to.eventually.equal(1000);
       });
 
       it("blocks - exceeds daily limit", async function () {
@@ -2460,15 +3124,19 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op2.user, op2.token, op2.amount, op2.salt)
+            .initiateMint(op2.user, op2.token, op2.amount, op2.salt),
         )
           .to.emit(this.contracts.minter, "MintBlocked")
           .withArgs(op2.id, op2.user, op2.token, op2.amount, op2.salt);
 
-        await expect(this.contracts.minter.statuses(op2.id)).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        await expect(
+          this.contracts.minter.statuses(op2.id),
+        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         // Daily usage should only reflect the first mint
-        await expect(this.contracts.minter.getMintedToday(op2.token)).to.eventually.equal(600);
+        await expect(
+          this.contracts.minter.getMintedToday(op2.token),
+        ).to.eventually.equal(600);
 
         // User should not receive tokens for blocked mint
         await expect(op2.token.balanceOf(op2.user)).to.eventually.equal(0);
@@ -2491,11 +3159,12 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op3.user, op3.token, op3.amount, op3.salt)
-        )
-          .to.emit(this.contracts.minter, "MintBlocked");
+            .initiateMint(op3.user, op3.token, op3.amount, op3.salt),
+        ).to.emit(this.contracts.minter, "MintBlocked");
 
-        await expect(this.contracts.minter.getMintedToday(op3.token)).to.eventually.equal(700);
+        await expect(
+          this.contracts.minter.getMintedToday(op3.token),
+        ).to.eventually.equal(700);
       });
 
       it("reverts - duplicate id", async function () {
@@ -2510,7 +3179,7 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op.user, op.token, op.amount, op.salt)
+            .initiateMint(op.user, op.token, op.amount, op.salt),
         ).to.be.revertedWith("ID already used");
       });
 
@@ -2525,9 +3194,8 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op.user, op.token, op.amount, op.salt)
-        )
-          .to.emit(this.contracts.minter, "MintBlocked");
+            .initiateMint(op.user, op.token, op.amount, op.salt),
+        ).to.emit(this.contracts.minter, "MintBlocked");
       });
 
       it("reverts - unauthorized caller", async function () {
@@ -2536,10 +3204,10 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.alice)
-            .initiateMint(op.user, op.token, op.amount, op.salt)
+            .initiateMint(op.user, op.token, op.amount, op.salt),
         ).to.be.revertedWithCustomError(
           this.contracts.minter,
-          "RestrictedAccess"
+          "RestrictedAccess",
         );
       });
     });
@@ -2561,13 +3229,17 @@ describe("Main", function () {
             this.blockedOp.user,
             this.blockedOp.token,
             this.blockedOp.amount,
-            this.blockedOp.salt
+            this.blockedOp.salt,
           );
       });
 
       it("success", async function () {
-        await expect(this.blockedOp.token.balanceOf(this.blockedOp.user)).to.eventually.equal(0);
-        await expect(this.contracts.minter.statuses(this.blockedOp.id)).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        await expect(
+          this.blockedOp.token.balanceOf(this.blockedOp.user),
+        ).to.eventually.equal(0);
+        await expect(
+          this.contracts.minter.statuses(this.blockedOp.id),
+        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         await expect(
           this.contracts.minter
@@ -2576,20 +3248,18 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         )
           .to.emit(this.contracts.minter, "MintExecuted")
-          .withArgs(
-            this.blockedOp.id,
-            this.blockedOp.user,
-            this.blockedOp.token,
-            this.blockedOp.amount,
-            this.blockedOp.salt
-          );
+          .withArgs(this.blockedOp.id);
 
-        await expect(this.contracts.minter.statuses(this.blockedOp.id)).to.eventually.equal(MINTER_STATUS.EXECUTED);
-        await expect(this.blockedOp.token.balanceOf(this.blockedOp.user)).to.eventually.equal(this.blockedOp.amount);
+        await expect(
+          this.contracts.minter.statuses(this.blockedOp.id),
+        ).to.eventually.equal(MINTER_STATUS.EXECUTED);
+        await expect(
+          this.blockedOp.token.balanceOf(this.blockedOp.user),
+        ).to.eventually.equal(this.blockedOp.amount);
       });
 
       it("reverts - operation not blocked", async function () {
@@ -2598,7 +3268,7 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.admin)
-            .approveMint(op.user, op.token, op.amount, op.salt)
+            .approveMint(op.user, op.token, op.amount, op.salt),
         ).to.be.revertedWith("Operation is not blocked");
       });
 
@@ -2610,7 +3280,7 @@ describe("Main", function () {
             this.blockedOp.user,
             this.blockedOp.token,
             this.blockedOp.amount,
-            this.blockedOp.salt
+            this.blockedOp.salt,
           );
 
         // Try to execute again
@@ -2621,8 +3291,8 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         ).to.be.revertedWith("Operation is not blocked");
       });
 
@@ -2634,11 +3304,11 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         ).to.be.revertedWithCustomError(
           this.contracts.minter,
-          "RestrictedAccess"
+          "RestrictedAccess",
         );
       });
     });
@@ -2659,12 +3329,14 @@ describe("Main", function () {
             this.blockedOp.user,
             this.blockedOp.token,
             this.blockedOp.amount,
-            this.blockedOp.salt
+            this.blockedOp.salt,
           );
       });
 
       it("success", async function () {
-        await expect(this.contracts.minter.statuses(this.blockedOp.id)).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        await expect(
+          this.contracts.minter.statuses(this.blockedOp.id),
+        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         await expect(
           this.contracts.minter
@@ -2673,19 +3345,15 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         )
           .to.emit(this.contracts.minter, "MintCanceled")
-          .withArgs(
-            this.blockedOp.id,
-            this.blockedOp.user,
-            this.blockedOp.token,
-            this.blockedOp.amount,
-            this.blockedOp.salt
-          );
+          .withArgs(this.blockedOp.id);
 
-        await expect(this.contracts.minter.statuses(this.blockedOp.id)).to.eventually.equal(MINTER_STATUS.CANCELED);
+        await expect(
+          this.contracts.minter.statuses(this.blockedOp.id),
+        ).to.eventually.equal(MINTER_STATUS.CANCELED);
       });
 
       it("reverts - operation not blocked", async function () {
@@ -2694,7 +3362,7 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.admin)
-            .cancelMint(op.user, op.token, op.amount, op.salt)
+            .cancelMint(op.user, op.token, op.amount, op.salt),
         ).to.be.revertedWith("Operation is not blocked");
       });
 
@@ -2706,7 +3374,7 @@ describe("Main", function () {
             this.blockedOp.user,
             this.blockedOp.token,
             this.blockedOp.amount,
-            this.blockedOp.salt
+            this.blockedOp.salt,
           );
 
         // Try to cancel an executed operation
@@ -2717,8 +3385,8 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         ).to.be.revertedWith("Operation is not blocked");
       });
 
@@ -2730,7 +3398,7 @@ describe("Main", function () {
             this.blockedOp.user,
             this.blockedOp.token,
             this.blockedOp.amount,
-            this.blockedOp.salt
+            this.blockedOp.salt,
           );
 
         // Try to cancel again
@@ -2741,8 +3409,8 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         ).to.be.revertedWith("Operation is not blocked");
       });
 
@@ -2754,11 +3422,11 @@ describe("Main", function () {
               this.blockedOp.user,
               this.blockedOp.token,
               this.blockedOp.amount,
-              this.blockedOp.salt
-            )
+              this.blockedOp.salt,
+            ),
         ).to.be.revertedWithCustomError(
           this.contracts.minter,
-          "RestrictedAccess"
+          "RestrictedAccess",
         );
       });
     });
@@ -2770,12 +3438,14 @@ describe("Main", function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.admin)
-            .setDailyLimit(this.contracts.token, newLimit)
+            .setDailyLimit(this.contracts.token, newLimit),
         )
           .to.emit(this.contracts.minter, "DailyLimitUpdated")
           .withArgs(this.contracts.token, newLimit);
 
-        await expect(this.contracts.minter.dailyLimit(this.contracts.token)).to.eventually.equal(newLimit);
+        await expect(
+          this.contracts.minter.dailyLimit(this.contracts.token),
+        ).to.eventually.equal(newLimit);
       });
 
       it("success - update existing limit", async function () {
@@ -2790,7 +3460,9 @@ describe("Main", function () {
           .connect(this.accounts.admin)
           .setDailyLimit(this.contracts.token, secondLimit);
 
-        await expect(this.contracts.minter.dailyLimit(this.contracts.token)).to.eventually.equal(secondLimit);
+        await expect(
+          this.contracts.minter.dailyLimit(this.contracts.token),
+        ).to.eventually.equal(secondLimit);
       });
 
       it("success - set limit to zero", async function () {
@@ -2798,17 +3470,19 @@ describe("Main", function () {
           .connect(this.accounts.admin)
           .setDailyLimit(this.contracts.token, 0);
 
-        await expect(this.contracts.minter.dailyLimit(this.contracts.token)).to.eventually.equal(0);
+        await expect(
+          this.contracts.minter.dailyLimit(this.contracts.token),
+        ).to.eventually.equal(0);
       });
 
       it("reverts - unauthorized caller", async function () {
         await expect(
           this.contracts.minter
             .connect(this.accounts.alice)
-            .setDailyLimit(this.contracts.token, 2000)
+            .setDailyLimit(this.contracts.token, 2000),
         ).to.be.revertedWithCustomError(
           this.contracts.minter,
-          "RestrictedAccess"
+          "RestrictedAccess",
         );
       });
     });
@@ -2826,25 +3500,32 @@ describe("Main", function () {
           .connect(this.accounts.operator)
           .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
 
-        await expect(this.contracts.minter.getMintedToday(op1.token)).to.eventually.equal(600);
+        await expect(
+          this.contracts.minter.getMintedToday(op1.token),
+        ).to.eventually.equal(600);
 
         // Advance time by 1 day
         await time.increase(86400);
 
-        await expect(this.contracts.minter.getCurrentDay()).to.eventually.equal(firstDay + 1n);
+        await expect(this.contracts.minter.getCurrentDay()).to.eventually.equal(
+          firstDay + 1n,
+        );
 
         // New day should have zero usage
-        await expect(this.contracts.minter.getMintedToday(op1.token)).to.eventually.equal(0);
+        await expect(
+          this.contracts.minter.getMintedToday(op1.token),
+        ).to.eventually.equal(0);
 
         // Should be able to mint more on the new day
         await expect(
           this.contracts.minter
             .connect(this.accounts.operator)
-            .initiateMint(op2.user, op2.token, op2.amount, op2.salt)
-        )
-          .to.emit(this.contracts.minter, "MintExecuted");
+            .initiateMint(op2.user, op2.token, op2.amount, op2.salt),
+        ).to.emit(this.contracts.minter, "MintExecuted");
 
-        await expect(this.contracts.minter.getMintedToday(op1.token)).to.eventually.equal(900);
+        await expect(
+          this.contracts.minter.getMintedToday(op1.token),
+        ).to.eventually.equal(900);
       });
 
       it("multiple tokens have independent daily limits", async function () {
@@ -2854,14 +3535,18 @@ describe("Main", function () {
 
         // Set different limit for a different token (mock)
         // In practice, you'd need another deployed token
-        await expect(this.contracts.minter.dailyLimit(op.token)).to.eventually.equal(1000);
+        await expect(
+          this.contracts.minter.dailyLimit(op.token),
+        ).to.eventually.equal(1000);
 
         // Usage should be tracked per token
         await this.contracts.minter
           .connect(this.accounts.operator)
           .initiateMint(op.user, op.token, op.amount, op.salt);
 
-        await expect(this.contracts.minter.getMintedToday(op.token)).to.eventually.equal(op.amount);
+        await expect(
+          this.contracts.minter.getMintedToday(op.token),
+        ).to.eventually.equal(op.amount);
       });
     });
   });
@@ -2870,28 +3555,28 @@ describe("Main", function () {
     describe("re-initialize", function () {
       it("manager", async function () {
         await expect(
-          this.contracts.manager.initialize(this.accounts.admin)
+          this.contracts.manager.initialize(this.accounts.admin),
         ).to.be.revertedWithCustomError(
           this.contracts.manager,
-          "InvalidInitialization"
+          "InvalidInitialization",
         );
       });
 
       it("token", async function () {
         await expect(
-          this.contracts.token.initialize("Other Name", "Other Symbol", 18)
+          this.contracts.token.initialize("Other Name", "Other Symbol", 18),
         ).to.be.revertedWithCustomError(
           this.contracts.token,
-          "InvalidInitialization"
+          "InvalidInitialization",
         );
       });
 
       it("oracle", async function () {
         await expect(
-          this.contracts.oracle.initialize(this.contracts.token, 18, "EUR")
+          this.contracts.oracle.initialize(this.contracts.token, 18, "EUR"),
         ).to.be.revertedWithCustomError(
           this.contracts.oracle,
-          "InvalidInitialization"
+          "InvalidInitialization",
         );
       });
 
@@ -2911,7 +3596,7 @@ describe("Main", function () {
             .then((factory) =>
               upgrades.upgradeProxy(this.contracts.manager, factory, {
                 redeployImplementation: "always",
-              })
+              }),
             );
         });
 
@@ -2922,12 +3607,12 @@ describe("Main", function () {
               .then((factory) =>
                 upgrades.upgradeProxy(this.contracts.manager, factory, {
                   redeployImplementation: "always",
-                })
-              )
+                }),
+              ),
           )
             .to.be.revertedWithCustomError(
               this.contracts.manager,
-              "MissingPermissions"
+              "MissingPermissions",
             )
             .withArgs(this.accounts.other, this.MASKS.public, this.MASKS.admin);
         });
@@ -2944,7 +3629,7 @@ describe("Main", function () {
                   this.contracts.manager.target,
                   this.contracts.forwarder.target,
                 ],
-              })
+              }),
             );
         });
 
@@ -2959,18 +3644,18 @@ describe("Main", function () {
                     this.contracts.manager.target,
                     this.contracts.forwarder.target,
                   ],
-                })
-              )
+                }),
+              ),
           )
             .to.be.revertedWithCustomError(
               this.contracts.token,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.token,
               this.contracts.token.interface.getFunction("upgradeToAndCall")
-                .selector
+                .selector,
             );
         });
       });
@@ -2983,7 +3668,7 @@ describe("Main", function () {
               upgrades.upgradeProxy(this.contracts.oracle, factory, {
                 redeployImplementation: "always",
                 constructorArgs: [this.contracts.manager.target],
-              })
+              }),
             );
         });
 
@@ -2995,18 +3680,18 @@ describe("Main", function () {
                 upgrades.upgradeProxy(this.contracts.oracle, factory, {
                   redeployImplementation: "always",
                   constructorArgs: [this.contracts.manager.target],
-                })
-              )
+                }),
+              ),
           )
             .to.be.revertedWithCustomError(
               this.contracts.oracle,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.oracle,
               this.contracts.oracle.interface.getFunction("upgradeToAndCall")
-                .selector
+                .selector,
             );
         });
       });
@@ -3019,7 +3704,7 @@ describe("Main", function () {
               upgrades.upgradeProxy(this.contracts.redemption, factory, {
                 redeployImplementation: "always",
                 constructorArgs: [this.contracts.manager.target],
-              })
+              }),
             );
         });
 
@@ -3031,19 +3716,19 @@ describe("Main", function () {
                 upgrades.upgradeProxy(this.contracts.redemption, factory, {
                   redeployImplementation: "always",
                   constructorArgs: [this.contracts.manager.target],
-                })
-              )
+                }),
+              ),
           )
             .to.be.revertedWithCustomError(
               this.contracts.redemption,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.redemption,
               this.contracts.redemption.interface.getFunction(
-                "upgradeToAndCall"
-              ).selector
+                "upgradeToAndCall",
+              ).selector,
             );
         });
       });
@@ -3056,7 +3741,7 @@ describe("Main", function () {
               upgrades.upgradeProxy(this.contracts.minter, factory, {
                 redeployImplementation: "always",
                 constructorArgs: [this.contracts.manager.target],
-              })
+              }),
             );
         });
 
@@ -3068,18 +3753,18 @@ describe("Main", function () {
                 upgrades.upgradeProxy(this.contracts.minter, factory, {
                   redeployImplementation: "always",
                   constructorArgs: [this.contracts.manager.target],
-                })
-              )
+                }),
+              ),
           )
             .to.be.revertedWithCustomError(
               this.contracts.minter,
-              "RestrictedAccess"
+              "RestrictedAccess",
             )
             .withArgs(
               this.accounts.other,
               this.contracts.minter,
               this.contracts.minter.interface.getFunction("upgradeToAndCall")
-                .selector
+                .selector,
             );
         });
       });
