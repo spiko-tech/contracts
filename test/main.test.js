@@ -3002,7 +3002,7 @@ describe("Main", function () {
     });
   });
 
-  describe.only("Minter", function () {
+  describe("Minter", function () {
     const MINTER_STATUS = Enum("NULL", "PENDING", "EXPIRED", "DONE");
 
     beforeEach(async function () {
@@ -3083,7 +3083,7 @@ describe("Main", function () {
             .initiateMint(op.user, op.token, op.amount, op.salt),
         )
           .to.emit(this.contracts.minter, "MintExecuted")
-          .withArgs(op.id);
+          .withArgs(op.id, op.user, op.token, op.amount, op.salt);
 
         await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
           MINTER_STATUS.DONE,
@@ -3257,7 +3257,7 @@ describe("Main", function () {
             ),
         )
           .to.emit(this.contracts.minter, "MintExecuted")
-          .withArgs(this.blockedOp.id);
+          .withArgs(this.blockedOp.id, this.blockedOp.user, this.blockedOp.token, this.blockedOp.amount, this.blockedOp.salt);
 
         await expect(
           this.contracts.minter.mintStateStatus(this.blockedOp.id),
@@ -3368,7 +3368,7 @@ describe("Main", function () {
           this.contracts.minter
             .connect(this.accounts.admin)
             .cancelMint(op.user, op.token, op.amount, op.salt),
-        ).to.be.revertedWith("Operation is not expired");
+        ).to.be.revertedWith("Operation is not active");
       });
 
       it("reverts - already executed", async function () {
@@ -3392,7 +3392,7 @@ describe("Main", function () {
               this.blockedOp.amount,
               this.blockedOp.salt,
             ),
-        ).to.be.revertedWith("Operation is not expired");
+        ).to.be.revertedWith("Operation is not active");
       });
 
       it("reverts - already canceled", async function () {
@@ -3416,7 +3416,7 @@ describe("Main", function () {
               this.blockedOp.amount,
               this.blockedOp.salt,
             ),
-        ).to.be.revertedWith("Operation is not expired");
+        ).to.be.revertedWith("Operation is not active");
       });
 
       it("reverts - unauthorized caller", async function () {
@@ -3614,7 +3614,7 @@ describe("Main", function () {
             .approveMint(op2.user, op2.token, op2.amount, op2.salt),
         )
           .to.emit(this.contracts.minter, "MintExecuted")
-          .withArgs(op2.id);
+          .withArgs(op2.id, op2.user, op2.token, op2.amount, op2.salt);
 
         await expect(
           this.contracts.minter.mintStateStatus(op2.id),
