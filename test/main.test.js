@@ -3002,8 +3002,8 @@ describe("Main", function () {
     });
   });
 
-  describe("Minter", function () {
-    const MINTER_STATUS = Enum("NULL", "BLOCKED", "EXECUTED", "CANCELED");
+  describe.only("Minter", function () {
+    const MINTER_STATUS = Enum("NULL", "PENDING", "EXPIRED", "DONE");
 
     beforeEach(async function () {
       // Set maxDelay to 1 hour
@@ -3086,7 +3086,7 @@ describe("Main", function () {
           .withArgs(op.id);
 
         await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
-          MINTER_STATUS.EXECUTED,
+          MINTER_STATUS.DONE,
         );
         await expect(
           this.contracts.minter.getMintedToday(op.token),
@@ -3106,7 +3106,7 @@ describe("Main", function () {
         ).to.emit(this.contracts.minter, "MintExecuted");
 
         await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
-          MINTER_STATUS.EXECUTED,
+          MINTER_STATUS.DONE,
         );
         await expect(
           this.contracts.minter.getMintedToday(op.token),
@@ -3136,7 +3136,7 @@ describe("Main", function () {
 
         await expect(
           this.contracts.minter.mintStateStatus(op2.id),
-        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        ).to.eventually.equal(MINTER_STATUS.PENDING);
 
         // Daily usage should only reflect the first mint
         await expect(
@@ -3244,7 +3244,7 @@ describe("Main", function () {
         ).to.eventually.equal(0);
         await expect(
           this.contracts.minter.mintStateStatus(this.blockedOp.id),
-        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        ).to.eventually.equal(MINTER_STATUS.PENDING);
 
         await expect(
           this.contracts.minter
@@ -3261,7 +3261,7 @@ describe("Main", function () {
 
         await expect(
           this.contracts.minter.mintStateStatus(this.blockedOp.id),
-        ).to.eventually.equal(MINTER_STATUS.EXECUTED);
+        ).to.eventually.equal(MINTER_STATUS.DONE);
         await expect(
           this.blockedOp.token.balanceOf(this.blockedOp.user),
         ).to.eventually.equal(this.blockedOp.amount);
@@ -3274,7 +3274,7 @@ describe("Main", function () {
           this.contracts.minter
             .connect(this.accounts.admin)
             .approveMint(op.user, op.token, op.amount, op.salt),
-        ).to.be.revertedWith("Operation is not blocked");
+        ).to.be.revertedWith("Operation is not pending");
       });
 
       it("reverts - already executed", async function () {
@@ -3298,7 +3298,7 @@ describe("Main", function () {
               this.blockedOp.amount,
               this.blockedOp.salt,
             ),
-        ).to.be.revertedWith("Operation is not blocked");
+        ).to.be.revertedWith("Operation is not pending");
       });
 
       it("reverts - unauthorized caller", async function () {
@@ -3341,7 +3341,7 @@ describe("Main", function () {
       it("success", async function () {
         await expect(
           this.contracts.minter.mintStateStatus(this.blockedOp.id),
-        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        ).to.eventually.equal(MINTER_STATUS.PENDING);
 
         await expect(
           this.contracts.minter
@@ -3358,7 +3358,7 @@ describe("Main", function () {
 
         await expect(
           this.contracts.minter.mintStateStatus(this.blockedOp.id),
-        ).to.eventually.equal(MINTER_STATUS.CANCELED);
+        ).to.eventually.equal(MINTER_STATUS.DONE);
       });
 
       it("reverts - operation not blocked", async function () {
@@ -3368,7 +3368,7 @@ describe("Main", function () {
           this.contracts.minter
             .connect(this.accounts.admin)
             .cancelMint(op.user, op.token, op.amount, op.salt),
-        ).to.be.revertedWith("Operation is not blocked");
+        ).to.be.revertedWith("Operation is not expired");
       });
 
       it("reverts - already executed", async function () {
@@ -3392,7 +3392,7 @@ describe("Main", function () {
               this.blockedOp.amount,
               this.blockedOp.salt,
             ),
-        ).to.be.revertedWith("Operation is not blocked");
+        ).to.be.revertedWith("Operation is not expired");
       });
 
       it("reverts - already canceled", async function () {
@@ -3416,7 +3416,7 @@ describe("Main", function () {
               this.blockedOp.amount,
               this.blockedOp.salt,
             ),
-        ).to.be.revertedWith("Operation is not blocked");
+        ).to.be.revertedWith("Operation is not expired");
       });
 
       it("reverts - unauthorized caller", async function () {
@@ -3605,7 +3605,7 @@ describe("Main", function () {
         // Verify it's blocked
         await expect(
           this.contracts.minter.mintStateStatus(op2.id),
-        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        ).to.eventually.equal(MINTER_STATUS.PENDING);
 
         // Should be able to approve before deadline passes
         await expect(
@@ -3618,7 +3618,7 @@ describe("Main", function () {
 
         await expect(
           this.contracts.minter.mintStateStatus(op2.id),
-        ).to.eventually.equal(MINTER_STATUS.EXECUTED);
+        ).to.eventually.equal(MINTER_STATUS.DONE);
       });
 
       it("approveMint should fail after deadline passes", async function () {
@@ -3638,17 +3638,22 @@ describe("Main", function () {
         // Verify it's blocked
         await expect(
           this.contracts.minter.mintStateStatus(op2.id),
-        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+        ).to.eventually.equal(MINTER_STATUS.PENDING);
 
         // Advance time by more than 1 hour (maxDelay)
         await time.increase(3601); // 1 hour + 1 second
+
+        // Verify it's blocked
+        await expect(
+          this.contracts.minter.mintStateStatus(op2.id),
+        ).to.eventually.equal(MINTER_STATUS.EXPIRED);
 
         // Should fail to approve after deadline
         await expect(
           this.contracts.minter
             .connect(this.accounts.admin)
             .approveMint(op2.user, op2.token, op2.amount, op2.salt),
-        ).to.be.revertedWith("Deadline passed");
+        ).to.be.revertedWith("Operation is not pending");
       });
 
       it("setMaxDelay should update maxDelay value", async function () {

@@ -11,14 +11,9 @@ import { IERC20, Token } from "./Token.sol";
 contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     enum Status {
         NULL,
-        BLOCKED,
-        EXECUTED,
-        CANCELED
-    }
-
-    struct MintState {
-        Status status;
-        uint256 deadline;
+        PENDING,
+        EXPIRED,
+        DONE
     }
 
     struct DailyUsage {
@@ -29,7 +24,7 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
 
     uint256 private _maxDelay;
     mapping(IERC20 => DailyUsage) private _dailyUsage;
-    mapping(bytes32 => MintState) private _mintStates;
+    mapping(bytes32 => uint256) private _mintDeadline;
 
     event MaxDelayUpdated(uint256 maxDelay);
     event DailyLimitUpdated(IERC20 indexed token, uint256 amount);
@@ -52,11 +47,20 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     }
 
     function mintStateStatus(bytes32 id) public view returns (Status) {
-        return _mintStates[id].status;
+        uint256 deadline = mintStateDeadline(id);
+        if (deadline == 0) {
+            return Status.NULL;
+        } else if (deadline == type(uint256).max) {
+            return Status.DONE;
+        } else if (deadline > block.timestamp) {
+            return Status.PENDING;
+        } else {
+            return Status.EXPIRED;
+        }
     }
 
     function mintStateDeadline(bytes32 id) public view returns (uint256) {
-        return _mintStates[id].deadline;
+        return _mintDeadline[id];
     }
     /**
      * @dev HELPER: get the current day index (days since epoch)
@@ -92,19 +96,19 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
 
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_mintStates[id].status == Status.NULL, "ID already used");
+        require(mintStateStatus(id) == Status.NULL, "ID already used");
 
         uint256 currentDay = getCurrentDay();
         uint256 currentUsage = getMintedToday(token);
 
         if (currentUsage + amount > tokenDailyUsage.dailyLimit) {
-            _mintStates[id] = MintState({ status: Status.BLOCKED, deadline: block.timestamp + _maxDelay });
+            _mintDeadline[id] = block.timestamp + _maxDelay;
             emit MintBlocked(id, user, token, amount, salt);
         } else {
             tokenDailyUsage.lastUsageDay = currentDay;
             tokenDailyUsage.dailyUsed = currentUsage + amount;
+            _mintDeadline[id] = type(uint256).max;
             token.mint(user, amount);
-            _mintStates[id] = MintState({ status: Status.EXECUTED, deadline: 0 });
             emit MintExecuted(id);
         }
     }
@@ -115,10 +119,8 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     function approveMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_mintStates[id].status == Status.BLOCKED, "Operation is not blocked");
-        require(_mintStates[id].deadline > block.timestamp, "Deadline passed");
-
-        _mintStates[id].status = Status.EXECUTED;
+        require(mintStateStatus(id) == Status.PENDING, "Operation is not pending");
+        _mintDeadline[id] = type(uint256).max; // Mark as executed
 
         token.mint(user, amount);
 
@@ -131,8 +133,9 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     function cancelMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_mintStates[id].status == Status.BLOCKED, "Operation is not blocked");
-        _mintStates[id].status = Status.CANCELED;
+        Status status = mintStateStatus(id);
+        require(status == Status.PENDING || status == Status.EXPIRED, "Operation is not active");
+        _mintDeadline[id] = type(uint256).max; // Mark as executed
 
         emit MintCanceled(id);
     }
@@ -143,9 +146,9 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     /**
      * @dev ADMIN: configure the max delay for a mint operation.
      */
-    function setMaxDelay(uint256 maxDelay) external restricted {
-        _maxDelay = maxDelay;
-        emit MaxDelayUpdated(maxDelay);
+    function setMaxDelay(uint256 maxDelay_) external restricted {
+        _maxDelay = maxDelay_;
+        emit MaxDelayUpdated(maxDelay_);
     }
 
     /**
