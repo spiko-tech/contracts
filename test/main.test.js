@@ -3006,6 +3006,11 @@ describe("Main", function () {
     const MINTER_STATUS = Enum("NULL", "BLOCKED", "EXECUTED", "CANCELED");
 
     beforeEach(async function () {
+      // Set maxDelay to 1 hour
+      await this.contracts.minter
+        .connect(this.accounts.admin)
+        .setMaxDelay(3600); // 1 hour in seconds
+
       // Set daily limit for token
       await this.contracts.minter
         .connect(this.accounts.admin)
@@ -3064,7 +3069,7 @@ describe("Main", function () {
       it("success - within daily limit", async function () {
         const op = this.makeMintOp({ amount: 500 });
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+        await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
           MINTER_STATUS.NULL,
         );
         await expect(
@@ -3080,7 +3085,7 @@ describe("Main", function () {
           .to.emit(this.contracts.minter, "MintExecuted")
           .withArgs(op.id);
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+        await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
           MINTER_STATUS.EXECUTED,
         );
         await expect(
@@ -3100,7 +3105,7 @@ describe("Main", function () {
             .initiateMint(op.user, op.token, op.amount, op.salt),
         ).to.emit(this.contracts.minter, "MintExecuted");
 
-        await expect(this.contracts.minter.statuses(op.id)).to.eventually.equal(
+        await expect(this.contracts.minter.mintStateStatus(op.id)).to.eventually.equal(
           MINTER_STATUS.EXECUTED,
         );
         await expect(
@@ -3130,7 +3135,7 @@ describe("Main", function () {
           .withArgs(op2.id, op2.user, op2.token, op2.amount, op2.salt);
 
         await expect(
-          this.contracts.minter.statuses(op2.id),
+          this.contracts.minter.mintStateStatus(op2.id),
         ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         // Daily usage should only reflect the first mint
@@ -3238,7 +3243,7 @@ describe("Main", function () {
           this.blockedOp.token.balanceOf(this.blockedOp.user),
         ).to.eventually.equal(0);
         await expect(
-          this.contracts.minter.statuses(this.blockedOp.id),
+          this.contracts.minter.mintStateStatus(this.blockedOp.id),
         ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         await expect(
@@ -3255,7 +3260,7 @@ describe("Main", function () {
           .withArgs(this.blockedOp.id);
 
         await expect(
-          this.contracts.minter.statuses(this.blockedOp.id),
+          this.contracts.minter.mintStateStatus(this.blockedOp.id),
         ).to.eventually.equal(MINTER_STATUS.EXECUTED);
         await expect(
           this.blockedOp.token.balanceOf(this.blockedOp.user),
@@ -3335,7 +3340,7 @@ describe("Main", function () {
 
       it("success", async function () {
         await expect(
-          this.contracts.minter.statuses(this.blockedOp.id),
+          this.contracts.minter.mintStateStatus(this.blockedOp.id),
         ).to.eventually.equal(MINTER_STATUS.BLOCKED);
 
         await expect(
@@ -3352,7 +3357,7 @@ describe("Main", function () {
           .withArgs(this.blockedOp.id);
 
         await expect(
-          this.contracts.minter.statuses(this.blockedOp.id),
+          this.contracts.minter.mintStateStatus(this.blockedOp.id),
         ).to.eventually.equal(MINTER_STATUS.CANCELED);
       });
 
@@ -3547,6 +3552,159 @@ describe("Main", function () {
         await expect(
           this.contracts.minter.getMintedToday(op.token),
         ).to.eventually.equal(op.amount);
+      });
+    });
+
+    describe("maxDelay", function () {
+      it("should return maxDelay value", async function () {
+        await expect(this.contracts.minter.maxDelay()).to.eventually.equal(
+          3600,
+        );
+      });
+
+      it("should set deadline correctly when mint is blocked", async function () {
+        const op1 = this.makeMintOp({ amount: 600 });
+        const op2 = this.makeMintOp({ amount: 500 }); // Total would be 1100 > 1000
+
+        // First mint succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        // Second mint should be blocked
+        const tx = await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op2.user, op2.token, op2.amount, op2.salt);
+
+        // Get the block timestamp from the transaction receipt
+        const receipt = await tx.wait();
+        const block = await ethers.provider.getBlock(receipt.blockNumber);
+        const blockTimestamp = block.timestamp;
+
+        // Check deadline is set to block.timestamp + maxDelay (1 hour)
+        const deadline = await this.contracts.minter.mintStateDeadline(op2.id);
+        const expectedDeadline = BigInt(blockTimestamp) + 3600n;
+
+        await expect(deadline).to.equal(expectedDeadline);
+      });
+
+      it("approveMint should succeed before deadline", async function () {
+        const op1 = this.makeMintOp({ amount: 600 });
+        const op2 = this.makeMintOp({ amount: 500 });
+
+        // First mint succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        // Second mint gets blocked
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op2.user, op2.token, op2.amount, op2.salt);
+
+        // Verify it's blocked
+        await expect(
+          this.contracts.minter.mintStateStatus(op2.id),
+        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+
+        // Should be able to approve before deadline passes
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(op2.user, op2.token, op2.amount, op2.salt),
+        )
+          .to.emit(this.contracts.minter, "MintExecuted")
+          .withArgs(op2.id);
+
+        await expect(
+          this.contracts.minter.mintStateStatus(op2.id),
+        ).to.eventually.equal(MINTER_STATUS.EXECUTED);
+      });
+
+      it("approveMint should fail after deadline passes", async function () {
+        const op1 = this.makeMintOp({ amount: 600 });
+        const op2 = this.makeMintOp({ amount: 500 });
+
+        // First mint succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        // Second mint gets blocked
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op2.user, op2.token, op2.amount, op2.salt);
+
+        // Verify it's blocked
+        await expect(
+          this.contracts.minter.mintStateStatus(op2.id),
+        ).to.eventually.equal(MINTER_STATUS.BLOCKED);
+
+        // Advance time by more than 1 hour (maxDelay)
+        await time.increase(3601); // 1 hour + 1 second
+
+        // Should fail to approve after deadline
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(op2.user, op2.token, op2.amount, op2.salt),
+        ).to.be.revertedWith("Deadline passed");
+      });
+
+      it("setMaxDelay should update maxDelay value", async function () {
+        const newMaxDelay = 7200; // 2 hours
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .setMaxDelay(newMaxDelay),
+        )
+          .to.emit(this.contracts.minter, "MaxDelayUpdated")
+          .withArgs(newMaxDelay);
+
+        await expect(this.contracts.minter.maxDelay()).to.eventually.equal(
+          newMaxDelay,
+        );
+      });
+
+      it("setMaxDelay should use new value for blocked mints", async function () {
+        // Set maxDelay to 30 minutes
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .setMaxDelay(1800); // 30 minutes
+
+        const op1 = this.makeMintOp({ amount: 600 });
+        const op2 = this.makeMintOp({ amount: 500 });
+
+        // First mint succeeds
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op1.user, op1.token, op1.amount, op1.salt);
+
+        // Second mint gets blocked with new maxDelay
+        const tx = await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(op2.user, op2.token, op2.amount, op2.salt);
+
+        // Get the block timestamp from the transaction receipt
+        const receipt = await tx.wait();
+        const block = await ethers.provider.getBlock(receipt.blockNumber);
+        const blockTimestamp = block.timestamp;
+
+        // Check deadline is set to block.timestamp + new maxDelay (30 minutes)
+        const deadline = await this.contracts.minter.mintStateDeadline(op2.id);
+        const expectedDeadline = BigInt(blockTimestamp) + 1800n;
+
+        await expect(deadline).to.equal(expectedDeadline);
+      });
+
+      it("setMaxDelay should revert for unauthorized caller", async function () {
+        await expect(
+          this.contracts.minter.connect(this.accounts.alice).setMaxDelay(7200),
+        ).to.be.revertedWithCustomError(
+          this.contracts.minter,
+          "RestrictedAccess",
+        );
       });
     });
   });
