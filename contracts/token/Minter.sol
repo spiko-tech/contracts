@@ -34,7 +34,7 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     event MaxDelayUpdated(uint256 maxDelay);
     event DailyLimitUpdated(IERC20 indexed token, uint256 amount);
     event MintBlocked(bytes32 indexed id, address indexed user, IERC20 indexed token, uint256 amount, bytes32 salt);
-    event MintExecuted(bytes32 indexed id);
+    event MintExecuted(bytes32 indexed id, address indexed user, IERC20 indexed token, uint256 amount, bytes32 salt);
     event MintCanceled(bytes32 indexed id);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -105,7 +105,7 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
             tokenDailyUsage.dailyUsed = currentUsage + amount;
             token.mint(user, amount);
             _mintStates[id] = MintState({ status: Status.EXECUTED, deadline: 0 });
-            emit MintExecuted(id);
+            emit MintExecuted(id, user, token, amount, salt);
         }
     }
 
@@ -122,7 +122,7 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
 
         token.mint(user, amount);
 
-        emit MintExecuted(id);
+        emit MintExecuted(id, user, token, amount, salt);
     }
 
     /**
