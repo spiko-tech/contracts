@@ -16,15 +16,22 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
         CANCELED
     }
 
-    struct Details {
+    struct MintState {
+        Status status;
+        uint256 deadline;
+    }
+
+    struct DailyUsage {
         uint256 dailyLimit;
         uint256 dailyUsed;
         uint256 lastUsageDay;
     }
 
-    mapping(IERC20 => Details) private _details;
-    mapping(bytes32 => Status) private _statuses;
+    uint256 private _maxDelay;
+    mapping(IERC20 => DailyUsage) private _dailyUsage;
+    mapping(bytes32 => MintState) private _mintStates;
 
+    event MaxDelayUpdated(uint256 maxDelay);
     event DailyLimitUpdated(IERC20 indexed token, uint256 amount);
     event MintBlocked(bytes32 indexed id, address indexed user, IERC20 indexed token, uint256 amount, bytes32 salt);
     event MintExecuted(bytes32 indexed id);
@@ -36,14 +43,21 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     /****************************************************************************************************************
      *                                                   Getters                                                    *
      ****************************************************************************************************************/
+    function maxDelay() public view returns (uint256) {
+        return _maxDelay;
+    }
+
     function dailyLimit(IERC20 token) public view returns (uint256) {
-        return _details[token].dailyLimit;
+        return _dailyUsage[token].dailyLimit;
     }
 
-    function statuses(bytes32 id) public view returns (Status) {
-        return _statuses[id];
+    function mintStateStatus(bytes32 id) public view returns (Status) {
+        return _mintStates[id].status;
     }
 
+    function mintStateDeadline(bytes32 id) public view returns (uint256) {
+        return _mintStates[id].deadline;
+    }
     /**
      * @dev HELPER: get the current day index (days since epoch)
      */
@@ -55,8 +69,8 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      * @dev HELPER: get the amount minted today for a given token
      */
     function getMintedToday(IERC20 token) public view returns (uint256) {
-        Details storage details = _details[token];
-        return details.lastUsageDay == getCurrentDay() ? details.dailyUsed : 0;
+        DailyUsage storage tokenDailyUsage = _dailyUsage[token];
+        return tokenDailyUsage.lastUsageDay == getCurrentDay() ? tokenDailyUsage.dailyUsed : 0;
     }
 
     /**
@@ -74,23 +88,23 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      * If daily limit would be exceeded, creates a pending operation instead of failing.
      */
     function initiateMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
-        Details storage details = _details[token];
+        DailyUsage storage tokenDailyUsage = _dailyUsage[token];
 
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_statuses[id] == Status.NULL, "ID already used");
+        require(_mintStates[id].status == Status.NULL, "ID already used");
 
         uint256 currentDay = getCurrentDay();
         uint256 currentUsage = getMintedToday(token);
 
-        if (currentUsage + amount > details.dailyLimit) {
-            _statuses[id] = Status.BLOCKED;
+        if (currentUsage + amount > tokenDailyUsage.dailyLimit) {
+            _mintStates[id] = MintState({ status: Status.BLOCKED, deadline: block.timestamp + _maxDelay });
             emit MintBlocked(id, user, token, amount, salt);
         } else {
-            details.lastUsageDay = currentDay;
-            details.dailyUsed = currentUsage + amount;
+            tokenDailyUsage.lastUsageDay = currentDay;
+            tokenDailyUsage.dailyUsed = currentUsage + amount;
             token.mint(user, amount);
-            _statuses[id] = Status.EXECUTED;
+            _mintStates[id] = MintState({ status: Status.EXECUTED, deadline: 0 });
             emit MintExecuted(id);
         }
     }
@@ -101,8 +115,10 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     function approveMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_statuses[id] == Status.BLOCKED, "Operation is not blocked");
-        _statuses[id] = Status.EXECUTED;
+        require(_mintStates[id].status == Status.BLOCKED, "Operation is not blocked");
+        require(_mintStates[id].deadline > block.timestamp, "Deadline passed");
+
+        _mintStates[id].status = Status.EXECUTED;
 
         token.mint(user, amount);
 
@@ -115,8 +131,8 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     function cancelMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
         bytes32 id = hashMintId(user, token, amount, salt);
 
-        require(_statuses[id] == Status.BLOCKED, "Operation is not blocked");
-        _statuses[id] = Status.CANCELED;
+        require(_mintStates[id].status == Status.BLOCKED, "Operation is not blocked");
+        _mintStates[id].status = Status.CANCELED;
 
         emit MintCanceled(id);
     }
@@ -125,13 +141,20 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      *                                               Admin operations                                               *
      ****************************************************************************************************************/
     /**
+     * @dev ADMIN: configure the max delay for a mint operation.
+     */
+    function setMaxDelay(uint256 maxDelay) external restricted {
+        _maxDelay = maxDelay;
+        emit MaxDelayUpdated(maxDelay);
+    }
+
+    /**
      * @dev ADMIN: configure the daily limit for a given token.
      */
     function setDailyLimit(IERC20 token, uint256 amount) external restricted {
-        _details[token].dailyLimit = amount;
+        _dailyUsage[token].dailyLimit = amount;
         emit DailyLimitUpdated(token, amount);
     }
-
     /****************************************************************************************************************
      *                                                 UUPS upgrade                                                 *
      ****************************************************************************************************************/
