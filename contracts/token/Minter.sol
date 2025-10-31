@@ -2,24 +2,13 @@
 
 pragma solidity ^0.8.20;
 
-import { IAuthority } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
-import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
-import { PermissionManaged } from "../permissions/PermissionManaged.sol";
-import { Token } from "./Token.sol";
+import { IAuthority, PermissionManaged } from "../permissions/PermissionManaged.sol";
+import { IERC20, Token } from "./Token.sol";
 
 /// @custom:security-contact security@spiko.tech
-contract Minter is Initializable, PermissionManaged, UUPSUpgradeable, Multicall {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    using SafeCast for *;
-    using SafeERC20 for Token;
-
+contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
     enum Status {
         NULL,
         BLOCKED,
@@ -42,9 +31,7 @@ contract Minter is Initializable, PermissionManaged, UUPSUpgradeable, Multicall 
     event MintCanceled(bytes32 indexed id, address indexed user, IERC20 indexed token, uint256 amount, bytes32 salt);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAuthority _authority) PermissionManaged(_authority) {
-        _disableInitializers();
-    }
+    constructor(IAuthority _authority) PermissionManaged(_authority) {}
 
     /****************************************************************************************************************
      *                                                   Getters                                                    *
