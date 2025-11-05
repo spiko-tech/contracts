@@ -1,0 +1,105 @@
+{
+  "contracts": {
+    "tokens": [
+      {
+        "name": "Spiko EU T-Bills Money Market Fund",
+        "symbol": "EUTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
+        "name": "Spiko US T-Bills Money Market Fund",
+        "symbol": "USTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Spiko US T-Bills Money Market Fund (EUR)",
+        "symbol": "eurUSTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
+        "name": "Spiko UK T-Bills Money Market Fund",
+        "symbol": "UKTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "GBP" }
+      },
+      {
+        "name": "Spiko UK T-Bills Money Market Fund (EUR)",
+        "symbol": "eurUKTBL",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      },
+      {
+        "name": "Spiko Digital Assets Cash and Carry Fund",
+        "symbol": "SPKCC",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "USD" }
+      },
+      {
+        "name": "Spiko Digital Assets Cash and Carry Fund (EUR hedged)",
+        "symbol": "eurSPKCC",
+        "decimals": 5,
+        "oracle": { "decimals": 6, "quote": "EUR" }
+      }
+    ],
+    "fns": {
+      "tokens[]-mint": ["operator-daily"],
+      "tokens[]-burn": ["burner"],
+      "tokens[]-pause": ["operator-exceptional"],
+      "tokens[]-unpause": ["operator-exceptional"],
+      "tokens[]-transfer": ["whitelisted"],
+      "oracles[]-publishPrice": ["operator-oracle"],
+      "redemption-executeRedemption": ["operator-daily"],
+      "minter-initiateMint": ["mint-initiator"],
+      "minter-approveMint": ["mint-approver"],
+      "minter-cancelMint": ["mint-approver"]
+    }
+  },
+  "roles": {
+    "admin": {
+      "members": ["0x09991fbF6b16741F6FdE3B1c16e8e4d95a5e5538"]
+    },
+    "operator-exceptional": {
+      "admins": ["admin"],
+      "members": ["0xeE49CD9C221217aF6e7146e56ef3652b65863948"]
+    },
+    "operator-daily": {
+      "admins": ["admin"],
+      "members": ["0x2b3755c065df5c2805be8e69c1496dc7d67f6155"]
+    },
+    "operator-oracle": {
+      "admins": ["admin"],
+      "members": ["0x2b3755c065df5c2805be8e69c1496dc7d67f6155"]
+    },
+    "burner": {
+      "admins": ["admin"],
+      "members": ["redemption"]
+    },
+    "whitelister": {
+      "admins": ["admin"],
+      "members": ["0x2b3755c065df5c2805be8e69c1496dc7d67f6155"]
+    },
+    "whitelisted": {
+      "admins": ["whitelister"],
+      "members": ["redemption"]
+    },
+    "treasury-manager": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "redemption-executor": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "mint-approver": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "mint-initiator": {
+      "admins": ["admin"],
+      "members": []
+    }
+  }
+}
