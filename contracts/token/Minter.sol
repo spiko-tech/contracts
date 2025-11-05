@@ -92,6 +92,9 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      * If daily limit would be exceeded, creates a pending operation instead of failing.
      */
     function initiateMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
+        require(address(token) != address(0), "token address must be valid");
+        require(amount > 0, "The mint amount can't be 0");
+
         DailyUsage storage tokenDailyUsage = _dailyUsage[token];
 
         bytes32 id = hashMintId(user, token, amount, salt);
@@ -117,6 +120,9 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      * @dev Execute a pending mint operation
      */
     function approveMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
+        require(address(token) != address(0), "token address must be valid");
+        require(amount > 0, "The mint amount can't be 0");
+
         bytes32 id = hashMintId(user, token, amount, salt);
 
         require(mintStateStatus(id) == Status.PENDING, "Operation is not pending");
@@ -131,6 +137,9 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
      * @dev Cancel a pending mint operation
      */
     function cancelMint(address user, Token token, uint256 amount, bytes32 salt) external restricted {
+        require(address(token) != address(0), "token address must be valid");
+        require(amount > 0, "The mint amount can't be 0");
+
         bytes32 id = hashMintId(user, token, amount, salt);
 
         Status status = mintStateStatus(id);

@@ -2392,6 +2392,23 @@ describe('Main', function () {
           this.contracts.minter.connect(this.accounts.alice).initiateMint(op.user, op.token, op.amount, op.salt)
         ).to.be.revertedWithCustomError(this.contracts.minter, 'RestrictedAccess');
       });
+
+      it('reverts - zero token address', async function () {
+        const op = this.makeMintOp();
+        const zeroAddress = ethers.ZeroAddress;
+
+        await expect(
+          this.contracts.minter.connect(this.accounts.operator).initiateMint(op.user, zeroAddress, op.amount, op.salt)
+        ).to.be.revertedWith('token address must be valid');
+      });
+
+      it('reverts - zero amount', async function () {
+        const op = this.makeMintOp({ amount: 0 });
+
+        await expect(
+          this.contracts.minter.connect(this.accounts.operator).initiateMint(op.user, op.token, op.amount, op.salt)
+        ).to.be.revertedWith("The mint amount can't be 0");
+      });
     });
 
     describe('approveMint', function () {
@@ -2460,6 +2477,24 @@ describe('Main', function () {
             .connect(this.accounts.alice)
             .approveMint(this.blockedOp.user, this.blockedOp.token, this.blockedOp.amount, this.blockedOp.salt)
         ).to.be.revertedWithCustomError(this.contracts.minter, 'RestrictedAccess');
+      });
+
+      it('reverts - zero token address', async function () {
+        const zeroAddress = ethers.ZeroAddress;
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(this.blockedOp.user, zeroAddress, this.blockedOp.amount, this.blockedOp.salt)
+        ).to.be.revertedWith('token address must be valid');
+      });
+
+      it('reverts - zero amount', async function () {
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(this.blockedOp.user, this.blockedOp.token, 0, this.blockedOp.salt)
+        ).to.be.revertedWith("The mint amount can't be 0");
       });
     });
 
@@ -2534,6 +2569,24 @@ describe('Main', function () {
             .connect(this.accounts.other)
             .cancelMint(this.blockedOp.user, this.blockedOp.token, this.blockedOp.amount, this.blockedOp.salt)
         ).to.be.revertedWithCustomError(this.contracts.minter, 'RestrictedAccess');
+      });
+
+      it('reverts - zero token address', async function () {
+        const zeroAddress = ethers.ZeroAddress;
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .cancelMint(this.blockedOp.user, zeroAddress, this.blockedOp.amount, this.blockedOp.salt)
+        ).to.be.revertedWith('token address must be valid');
+      });
+
+      it('reverts - zero amount', async function () {
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .cancelMint(this.blockedOp.user, this.blockedOp.token, 0, this.blockedOp.salt)
+        ).to.be.revertedWith("The mint amount can't be 0");
       });
     });
 
