@@ -68,8 +68,10 @@ const networkNames = [
   'sokol',
   // base
   'base',
+  'baseSepolia',
   // etherlink
   'etherlinkMainnet',
+  'etherlinkTestnet',
 ];
 
 module.exports = {
@@ -105,6 +107,14 @@ module.exports = {
   etherscan: {
     apiKey: Object.fromEntries(networkNames.map((name) => [name, argv.etherscan])),
     customChains: [
+      {
+        network: 'sepolia',
+        chainId: 11155111,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=11155111',
+          browserURL: 'https://sepolia.etherscan.io/api',
+        },
+      },
       {
         network: 'baseSepolia',
         chainId: 84532,
