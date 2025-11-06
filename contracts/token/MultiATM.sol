@@ -16,14 +16,6 @@ import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { Oracle            } from "../oracle/Oracle.sol";
 import { PermissionManaged } from "../permissions/PermissionManaged.sol";
 
-function tryFetchDecimals(IERC20 token) view returns (uint8) {
-    try IERC20Metadata(address(token)).decimals() returns (uint8 result) {
-        return result;
-    } catch {
-        return 18;
-    }
-}
-
 contract MultiATM is ERC2771Context, PermissionManaged, Multicall
 {
     using Math     for *;
@@ -66,6 +58,8 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     event PairUpdated(bytes32 indexed id, IERC20 indexed token1, IERC20 indexed token2, Oracle oracle, uint256 oracleTTL);
     event PairRemoved(bytes32 indexed id);
     event FeeUpdated(uint256 newFeeBasisPoints);
+    error OutputAmountTooLow(uint256 outputAmount, uint256 minOutputAmount);
+    error InputAmountTooHigh(uint256 inputAmount, uint256 maxInputAmount);
     error OracleValueTooOld(Oracle oracle);
     error UnknownPair(IERC20 input, IERC20 output);
     error InvalidFee(uint256 feeBasisPoints);
@@ -181,26 +175,30 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     /****************************************************************************************************************
      *                                             Core - execute swaps                                             *
      ****************************************************************************************************************/
-    function swapExactInput(IERC20[] memory path, uint256 inputAmount, address recipient) public virtual restricted() returns (uint256 /*outputAmount*/) {
+    function swapExactInput(IERC20[] memory path, uint256 inputAmount, address recipient, uint256 minOutputAmount) public virtual restricted() returns (uint256 /*outputAmount*/) {
         uint256 outputAmount = previewExactInput(path, inputAmount);
+        require(outputAmount >= minOutputAmount, OutputAmountTooLow(outputAmount, minOutputAmount));
         _swapExact(path[0], path[path.length - 1], inputAmount, outputAmount, _msgSender(), recipient);
         return outputAmount;
     }
 
-    function swapExactInputSingle(IERC20 input, IERC20 output, uint256 inputAmount, address recipient) public virtual restricted() returns (uint256 /*outputAmount*/) {
+    function swapExactInputSingle(IERC20 input, IERC20 output, uint256 inputAmount, address recipient, uint256 minOutputAmount) public virtual restricted() returns (uint256 /*outputAmount*/) {
         uint256 outputAmount = previewExactInputSingle(input, output, inputAmount);
+        require(outputAmount >= minOutputAmount, OutputAmountTooLow(outputAmount, minOutputAmount));
         _swapExact(input, output, inputAmount, outputAmount, _msgSender(), recipient);
         return outputAmount;
     }
 
-    function swapExactOutput(IERC20[] memory path, uint256 outputAmount, address recipient) public virtual restricted() returns (uint256 /*inputAmount*/) {
+    function swapExactOutput(IERC20[] memory path, uint256 outputAmount, address recipient, uint256 maxInputAmount) public virtual restricted() returns (uint256 /*inputAmount*/) {
         uint256 inputAmount = previewExactOutput(path, outputAmount);
+        require(inputAmount <= maxInputAmount, InputAmountTooHigh(inputAmount, maxInputAmount));
         _swapExact(path[0], path[path.length - 1], inputAmount, outputAmount, _msgSender(), recipient);
         return inputAmount;
     }
 
-    function swapExactOutputSingle(IERC20 input, IERC20 output, uint256 outputAmount, address recipient) public virtual restricted() returns (uint256 /*inputAmount*/) {
+    function swapExactOutputSingle(IERC20 input, IERC20 output, uint256 outputAmount, address recipient, uint256 maxInputAmount) public virtual restricted() returns (uint256 /*inputAmount*/) {
         uint256 inputAmount = previewExactOutputSingle(input, output, outputAmount);
+        require(inputAmount <= maxInputAmount, InputAmountTooHigh(inputAmount, maxInputAmount));
         _swapExact(input, output, inputAmount, outputAmount, _msgSender(), recipient);
         return inputAmount;
     }
@@ -222,15 +220,15 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall
     /****************************************************************************************************************
      *                                                 Admin actions                                                  *
      ****************************************************************************************************************/
-    function setPair(IERC20 token1, IERC20 token2, Oracle oracle, uint256 oracleTTL) public virtual restricted() {
+    function setPair(IERC20Metadata token1, IERC20Metadata token2, Oracle oracle, uint256 oracleTTL) public virtual restricted() {
         bytes32 id = hashPair(token1, token2);
         _pairs[id] = Pair({
             token1: token1,
             token2: token2,
             oracle: oracle,
             oracleTTL: oracleTTL,
-            numerator: 10 ** tryFetchDecimals(token2),
-            denominator: 10 ** (tryFetchDecimals(token1) + oracle.decimals())
+            numerator: 10 ** token2.decimals(),
+            denominator: 10 ** (token1.decimals() + oracle.decimals())
         });
 
         emit PairUpdated(id, token1, token2, oracle, oracleTTL);

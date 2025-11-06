@@ -1502,7 +1502,13 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, buyPrice);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, amountStable, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(
+                  this.contracts.stable,
+                  this.contracts.token,
+                  amountStable,
+                  this.accounts.alice,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1511,7 +1517,12 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, buyPrice);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], amountStable, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInput(
+                  [ this.contracts.stable, this.contracts.token ],
+                  amountStable,
+                  this.accounts.alice,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1520,7 +1531,13 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, sellPrice);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, amountToken, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(
+                  this.contracts.token,
+                  this.contracts.stable,
+                  amountToken,
+                  this.accounts.bruce,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1529,7 +1546,12 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, sellPrice);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], amountToken, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInput(
+                  [ this.contracts.token, this.contracts.stable ],
+                  amountToken,
+                  this.accounts.bruce,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1540,10 +1562,32 @@ describe("Main", function () {
                 await expect(this.contracts.atm.previewExactInputSingle(this.contracts.token, this.contracts.stable, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactInput([ this.contracts.stable, this.contracts.token ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactInput([ this.contracts.token, this.contracts.stable ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+              });
+
+              it('slippage protection', async function () {
+                const inputToken = formatToken("1.00001");
+                const inputStable = formatStable("1.00001");
+                const outputStable = tokenToStable(inputToken, sellPrice);
+                const outputToken = stableToToken(inputStable, buyPrice);
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken - 1n)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputStable, outputStable + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputToken, outputToken + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputStable, outputStable + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputToken, outputToken + 1n);
               });
             });
 
@@ -1573,7 +1617,13 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, buyPrice) * 9980n / 10000n;
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, amountStable, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(
+                  this.contracts.stable,
+                  this.contracts.token,
+                  amountStable,
+                  this.accounts.alice,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1582,7 +1632,12 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, buyPrice) * 9980n / 10000n;
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], amountStable, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactInput(
+                  [ this.contracts.stable, this.contracts.token ],
+                  amountStable,
+                  this.accounts.alice,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1591,7 +1646,13 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, sellPrice) * 9980n / 10000n;
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, amountToken, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(
+                  this.contracts.token,
+                  this.contracts.stable,
+                  amountToken,
+                  this.accounts.bruce,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1600,7 +1661,12 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, sellPrice) * 9980n / 10000n;
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], amountToken, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactInput(
+                  [ this.contracts.token, this.contracts.stable ],
+                  amountToken,
+                  this.accounts.bruce,
+                  0, // no minimum output amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1611,10 +1677,32 @@ describe("Main", function () {
                 await expect(this.contracts.atm.previewExactInputSingle(this.contracts.token, this.contracts.stable, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactInput([ this.contracts.stable, this.contracts.token ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactInput([ this.contracts.token, this.contracts.stable ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactInput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactInput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+              });
+
+              it('slippage protection', async function () {
+                const inputToken = formatToken("1.00001");
+                const inputStable = formatStable("1.00001");
+                const outputStable = tokenToStable(inputToken, sellPrice) * 9980n / 10000n;
+                const outputToken = stableToToken(inputStable, buyPrice) * 9980n / 10000n;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable - 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken - 1n)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInputSingle(this.contracts.token, this.contracts.stable, inputToken, this.accounts.bruce, outputStable + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputStable, outputStable + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInputSingle(this.contracts.stable, this.contracts.token, inputStable, this.accounts.alice, outputToken + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputToken, outputToken + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactInput([ this.contracts.token, this.contracts.stable ], inputToken, this.accounts.bruce, outputStable + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputStable, outputStable + 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactInput([ this.contracts.stable, this.contracts.token ], inputStable, this.accounts.alice, outputToken + 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'OutputAmountTooLow').withArgs(outputToken, outputToken + 1n);
               });
             });
           });
@@ -1641,7 +1729,13 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, buyPrice, true);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, amountToken, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(
+                  this.contracts.stable,
+                  this.contracts.token,
+                  amountToken,
+                  this.accounts.alice,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1650,7 +1744,12 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = tokenToStable(amountToken, buyPrice, true);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], amountToken, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutput(
+                  [ this.contracts.stable, this.contracts.token ],
+                  amountToken,
+                  this.accounts.alice,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1659,7 +1758,13 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, sellPrice, true);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, amountStable, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(
+                  this.contracts.token,
+                  this.contracts.stable,
+                  amountStable,
+                  this.accounts.bruce,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1668,7 +1773,12 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = stableToToken(amountStable, sellPrice, true);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], amountStable, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutput(
+                  [ this.contracts.token, this.contracts.stable ],
+                  amountStable,
+                  this.accounts.bruce,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1679,10 +1789,32 @@ describe("Main", function () {
                 await expect(this.contracts.atm.previewExactOutputSingle(this.contracts.token, this.contracts.stable, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactOutput([ this.contracts.stable, this.contracts.token ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactOutput([ this.contracts.token, this.contracts.stable ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+              });
+
+              it('slippage protection', async function () {
+                const outputToken  = formatToken("1.00001");
+                const outputStable = formatStable("1.000001");
+                const inputStable = tokenToStable(outputToken, buyPrice, true);
+                const inputToken  = stableToToken(outputStable, sellPrice, true);
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputToken, inputToken - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputStable, inputStable - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputToken, inputToken - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputStable, inputStable - 1n);
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable + 1n)).to.not.be.reverted;
               });
             });
 
@@ -1712,7 +1844,13 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = divUp(tokenToStable(amountToken, buyPrice, true) * 10000n, 9980n);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, amountToken, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(
+                  this.contracts.stable,
+                  this.contracts.token,
+                  amountToken,
+                  this.accounts.alice,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1721,7 +1859,12 @@ describe("Main", function () {
                 const amountToken  = formatToken("1.00001");
                 const amountStable = divUp(tokenToStable(amountToken, buyPrice, true) * 10000n, 9980n);
 
-                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], amountToken, this.accounts.alice);
+                const tx = this.contracts.atm.connect(this.accounts.bruce).swapExactOutput(
+                  [ this.contracts.stable, this.contracts.token ],
+                  amountToken,
+                  this.accounts.alice,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ -amountStable, amountStable]);
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ amountToken, -amountToken]);
               });
@@ -1730,7 +1873,13 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = divUp(stableToToken(amountStable, sellPrice, true) * 10000n, 9980n);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, amountStable, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(
+                  this.contracts.token,
+                  this.contracts.stable,
+                  amountStable,
+                  this.accounts.bruce,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1739,7 +1888,12 @@ describe("Main", function () {
                 const amountStable = formatStable("1.000001");
                 const amountToken  = divUp(stableToToken(amountStable, sellPrice, true) * 10000n, 9980n);
 
-                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], amountStable, this.accounts.bruce);
+                const tx = this.contracts.atm.connect(this.accounts.alice).swapExactOutput(
+                  [ this.contracts.token, this.contracts.stable ],
+                  amountStable,
+                  this.accounts.bruce,
+                  ethers.MaxUint256, // no maximum input amount
+                );
                 await expect(tx).to.changeTokenBalances(this.contracts.token,  [ this.accounts.alice, this.contracts.atm ], [ -amountToken, amountToken]);
                 await expect(tx).to.changeTokenBalances(this.contracts.stable, [ this.accounts.bruce, this.contracts.atm ], [ amountStable, -amountStable]);
               });
@@ -1750,10 +1904,32 @@ describe("Main", function () {
                 await expect(this.contracts.atm.previewExactOutputSingle(this.contracts.token, this.contracts.stable, 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactOutput([ this.contracts.stable, this.contracts.token ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
                 await expect(this.contracts.atm.previewExactOutput([ this.contracts.token, this.contracts.stable ], 0)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
-                await expect(this.contracts.atm.swapExactOutput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.stable, this.contracts.token, 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutputSingle(this.contracts.token, this.contracts.stable, 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutput([ this.contracts.stable, this.contracts.token ], 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+                await expect(this.contracts.atm.swapExactOutput([ this.contracts.token, this.contracts.stable ], 0, ethers.ZeroAddress, ethers.MaxUint256)).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+              });
+
+              it('slippage protection', async function () {
+                const outputToken  = formatToken("1.00001");
+                const outputStable = formatStable("1.000001");
+                const inputStable = divUp(tokenToStable(outputToken, buyPrice, true) * 10000n, 9980n);
+                const inputToken  = divUp(stableToToken(outputStable, sellPrice, true) * 10000n, 9980n);
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputToken, inputToken - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputStable, inputStable - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputToken, inputToken - 1n);
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable - 1n)).to.be.revertedWithCustomError(this.contracts.atm, 'InputAmountTooHigh').withArgs(inputStable, inputStable - 1n);
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable)).to.not.be.reverted;
+
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutputSingle(this.contracts.token, this.contracts.stable, outputStable, this.accounts.bruce, inputToken + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutputSingle(this.contracts.stable, this.contracts.token, outputToken, this.accounts.alice, inputStable + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.alice).swapExactOutput([ this.contracts.token, this.contracts.stable ], outputStable, this.accounts.bruce, inputToken + 1n)).to.not.be.reverted;
+                await expect(this.contracts.atm.connect(this.accounts.bruce).swapExactOutput([ this.contracts.stable, this.contracts.token ], outputToken, this.accounts.alice, inputStable + 1n)).to.not.be.reverted;
               });
             });
           });
