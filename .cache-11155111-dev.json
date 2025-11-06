@@ -78,5 +78,9 @@
 	"token-eurUKTBL": {
 		"txHash": "0x6728e51f52585ff8d4fee74470c356f3ae0b4cef92c005951bf6bc135a049f3d",
 		"address": "0x096B4c1AD8523fdcC7D47d7AfDa33ff1BcBeC64a"
+	},
+	"oracle-eurUKTBL": {
+		"txHash": "0x563e89e6b6418c62316b6895760f9f42169f877321db4579872b2624e50d8103",
+		"address": "0xe5978860DE0DE029CEaa6c49E0506e1e8645B641"
 	}
 }
