@@ -122,7 +122,7 @@ module.exports = {
         },
       },
       {
-        network: 'amoy',
+        network: 'polygonAmoy',
         chainId: 80002,
         urls: {
           apiURL: 'https://api.etherscan.io/v2/api?chainid=80002',
