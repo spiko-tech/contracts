@@ -80,6 +80,11 @@
       "address": "0x77926AF72CaDBC6D6a308C6a6b6AaA5FBdF43218",
       "txHash": "0xe6a38f69e65bf026162c87761ed6d10cbc2eb6bd485ee09dc41f234d14a20702",
       "kind": "uups"
+    },
+    {
+      "address": "0x5ED5a75EEEd1934Ea060186e35187eaA73331366",
+      "txHash": "0x1f2ddbb4d1389b673091055c586e3eeee5729ea66ef02405b75a1d6da8ba4ab3",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -817,6 +822,86 @@
             }
           ]
         }
+      }
+    },
+    "e7fbef0ed2e67db7c1c87c61d066e1fbf7368ff655564cb00912ac70a55f328e": {
+      "address": "0xD4F4fb505b8c3c3cF3C39947246B2CaFa10fE043",
+      "txHash": "0x28d59e0153e5fef7d4efdcb95d2b967414a03ed1b9c80116d3ed8e137e2549da",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_maxDelay",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256",
+            "contract": "Minter",
+            "src": "contracts/token/Minter.sol:25"
+          },
+          {
+            "label": "_dailyUsage",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_contract(IERC20)3265,t_struct(DailyUsage)5777_storage)",
+            "contract": "Minter",
+            "src": "contracts/token/Minter.sol:26"
+          },
+          {
+            "label": "_mintDeadline",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_bytes32,t_uint256)",
+            "contract": "Minter",
+            "src": "contracts/token/Minter.sol:27"
+          }
+        ],
+        "types": {
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)3265": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_contract(IERC20)3265,t_struct(DailyUsage)5777_storage)": {
+            "label": "mapping(contract IERC20 => struct Minter.DailyUsage)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(DailyUsage)5777_storage": {
+            "label": "struct Minter.DailyUsage",
+            "members": [
+              {
+                "label": "dailyLimit",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "dailyUsed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "lastUsageDay",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {}
       }
     }
   }

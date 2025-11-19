@@ -108,6 +108,14 @@ module.exports = {
     apiKey: Object.fromEntries(networkNames.map((name) => [name, argv.etherscan])),
     customChains: [
       {
+        network: 'mainnet',
+        chainId: 1,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=1',
+          browserURL: 'https://etherscan.io/api',
+        },
+      },
+      {
         network: 'arbitrumOne',
         chainId: 42161,
         urls: {
