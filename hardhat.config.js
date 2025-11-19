@@ -132,6 +132,14 @@ module.exports = {
         },
       },
       {
+        network: 'polygon',
+        chainId: 137,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=137',
+          browserURL: 'https://polygonscan.com/api',
+        },
+      },
+      {
         network: 'sepolia',
         chainId: 11155111,
         urls: {
@@ -166,6 +174,7 @@ module.exports = {
       {
         network: 'etherlinkMainnet',
         chainId: 42793,
+        timeout: 120000, // 2 minutes
         urls: {
           apiURL: 'https://explorer.etherlink.com/api',
           browserURL: 'https://explorer.etherlink.com',
