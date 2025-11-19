@@ -66,5 +66,9 @@
 	"oracle-eurUKTBL": {
 		"txHash": "0xfb1abe60ee62991a0892cf91d444e17c37f7a65158fc3fe1d655b6bb5f4d993f",
 		"address": "0x4C3bA0eAE5AB65C9510769a2877Cf4d93330Bc87"
+	},
+	"minter": {
+		"txHash": "0x8f9f40305fb8dab2da28a14824dcc3b093dcfbf3c8ac94e00b213a811240ac79",
+		"address": "0x4640A8bF08d5917dCaEf42eDB14D3E06e1B23F39"
 	}
 }
