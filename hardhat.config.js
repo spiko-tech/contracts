@@ -116,6 +116,14 @@ module.exports = {
         },
       },
       {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=8453',
+          browserURL: 'https://basescan.org/api',
+        },
+      },
+      {
         network: 'arbitrumOne',
         chainId: 42161,
         urls: {
