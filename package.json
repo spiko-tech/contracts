@@ -4,10 +4,6 @@
   "author": "Hadrien Croubois (@Amxx)",
   "version": "0.0.1",
   "license": "MIT",
-  "engines": {
-    "node": "22.x",
-    "pnpm": "10.x"
-  },
   "files": [
     "/contracts/**/*.sol",
     "/build/contracts/*.json"
