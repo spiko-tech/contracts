@@ -13,6 +13,7 @@ const divUp = (numerator, denominator) =>
   (numerator / denominator) * denominator < numerator ? numerator / denominator + 1n : numerator / denominator;
 
 async function fixture() {
+  
   const accounts = await ethers.getSigners();
   accounts.admin = accounts.shift();
   accounts.operator = accounts.shift();
