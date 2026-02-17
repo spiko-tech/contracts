@@ -1816,7 +1816,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl + 3601); // TTL is 3600
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactInputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2174,7 +2174,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl + 3601); // TTL is 3600
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactInputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2530,7 +2530,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl + 3601); // TTL is 3600
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactOutputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2894,7 +2894,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl + 3601); // TTL is 3600
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactOutputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -3251,44 +3251,13 @@ describe('Main', function () {
         });
       });
 
-      // Linear yield uses exactly 2 oracle data points (latest and previous round).
-      // slope = (latestPrice - previousPrice) * 1e18 / (latestTimestamp - previousTimestamp) (rounded to nearest)
-      // intercept = previousPrice
-      // extrapolated price = slope * (currentTime - previousTimestamp) / 1e18 + intercept
-      //
-      // With 2 points and perfectly linear data, extrapolation is exact.
-
       describe('price calculation with linear extrapolation', function () {
-        // Hardcoded expected values computed independently:
-        // - Token: 5 decimals, Stable: 6 decimals, Oracle: 6 decimals
-        // - numFactor = 10^6, denFactor = 10^11
-        // - tokenInput = 100000 (1.0 token), stableInput = 10000000 (10.0 stable)
-        //
-        // For positive slope:
-        //   prices: [2.00, 2.05] at timestamps [baseTs, baseTs+3600]
-        //   slope = (2050000 - 2000000) * 1e18 / 3600 = 13888888888888888889
-        //   intercept = 2000000, baseTimestamp = baseTs
-        //   at swapTime = baseTs + 5400 (1.5h after first point, 0.5h after last):
-        //   price = 13888888888888888889 * 5400 / 1e18 + 2000000 = 75000 + 2000000 = 2075000
-        //
-        // For negative slope:
-        //   prices: [2.05, 2.00] at timestamps [baseTs, baseTs+3600]
-        //   slope = -13888888888888888889 (round-half-up of abs)
-        //   intercept = 2050000, baseTimestamp = baseTs
-        //   at swapTime = baseTs + 5400:
-        //   price = -13888888888888888889 * 5400 / 1e18 + 2050000 = -75000 + 2050000 = 1975000
-        //
-        // For flat slope:
-        //   prices: [2.10, 2.10] -> slope = 0, intercept = 2100000
-        //   at any time: price = 2100000
         const REGRESSION_EXPECTED = {
           positive: {
-            // extrapolated price at baseTs + 5400 = 2075000
-            sellOutput: 2074999n, // sell 1 token: 100000 * 1e6 * 2074999 / 1e11 = 2074999
-            buyOutput: 481927n, // buy with 10 stable: 10000000 * 1e11 / (2075000 * 1e6) = 481927
+            sellOutput: 2074999n,
+            buyOutput: 481927n,
           },
           negative: {
-            // extrapolated price at baseTs + 5400 = 1975000
             sellOutput: 1975001n,
             buyOutput: 506328n,
           },
