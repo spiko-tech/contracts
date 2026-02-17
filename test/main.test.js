@@ -1581,10 +1581,16 @@ describe('Main', function () {
             this.id
           );
           await expect(
-            this.contracts.atm.setPair(this.contracts.token, this.contracts.stable, this.contracts.oracle, oraclettl)
+            this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              false
+            )
           )
             .to.emit(this.contracts.atm, 'PairUpdated')
-            .withArgs(this.id, this.contracts.token, this.contracts.stable, this.contracts.oracle, oraclettl);
+            .withArgs(this.id, this.contracts.token, this.contracts.stable, this.contracts.oracle, oraclettl, false);
 
           /// mint and approve
           await this.contracts.token.mint(this.contracts.atm, formatToken('100'));
@@ -1604,6 +1610,7 @@ describe('Main', function () {
             oraclettl,
             numFactor,
             denFactor,
+            false,
           ]);
           expect(await this.contracts.atm.viewPairDetails(this.contracts.stable, this.contracts.token)).to.deep.equal([
             this.id,
@@ -1613,6 +1620,7 @@ describe('Main', function () {
             oraclettl,
             numFactor,
             denFactor,
+            false,
           ]);
         });
 
@@ -1808,7 +1816,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl);
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactInputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2166,7 +2174,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl);
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactInputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2522,7 +2530,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl);
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactOutputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -2886,7 +2894,7 @@ describe('Main', function () {
                 });
 
                 it('oracle not updated recently', async function () {
-                  await time.increase(oraclettl);
+                  await time.increase(oraclettl + 3601); // oracle publish is block + 3600
                   await expect(
                     this.contracts.atm.previewExactOutputSingle(this.contracts.stable, this.contracts.token, 0)
                   ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
@@ -3150,6 +3158,650 @@ describe('Main', function () {
             .withArgs(51n);
         });
       });
+    }
+
+    describe('with linear yield pricing', function () {
+      const oraclettl = time.duration.days(7);
+      const stableDecimal = 6n;
+      const numFactor = 10n ** stableDecimal;
+      const denFactor = 10n ** 11n;
+      const formatToken = (value) => ethers.parseUnits(value, 5);
+      const formatStable = (value) => ethers.parseUnits(value, stableDecimal);
+
+      beforeEach(async function () {
+        this.contracts.stable = await deploy('ERC20DecimalsMock', [stableDecimal]);
+        this.contracts.atm = await deploy('MultiATM', [this.contracts.manager.target, this.contracts.forwarder.target]);
+
+        await this.contracts.manager.setRequirements(
+          this.contracts.atm,
+          [
+            this.contracts.atm.interface.getFunction('swapExactInput').selector,
+            this.contracts.atm.interface.getFunction('swapExactInputSingle').selector,
+            this.contracts.atm.interface.getFunction('swapExactOutput').selector,
+            this.contracts.atm.interface.getFunction('swapExactOutputSingle').selector,
+          ],
+          [this.IDS['whitelisted']]
+        );
+
+        await this.contracts.manager.setRequirements(
+          this.contracts.atm,
+          [
+            this.contracts.atm.interface.getFunction('setPair').selector,
+            this.contracts.atm.interface.getFunction('removePair').selector,
+            this.contracts.atm.interface.getFunction('withdraw').selector,
+          ],
+          [this.IDS['operator-exceptional']]
+        );
+        await this.contracts.manager.addGroup(this.contracts.atm, this.IDS['whitelisted']);
+
+        this.id = ethers.keccak256(
+          ethers.AbiCoder.defaultAbiCoder().encode(
+            ['address', 'address'],
+            [this.contracts.token, this.contracts.stable]
+              .map(getAddress)
+              .sort((a, b) => (ethers.toBigInt(a) > ethers.toBigInt(b) ? 1 : -1))
+          )
+        );
+
+        await this.contracts.token.mint(this.contracts.atm, formatToken('1000'));
+        await this.contracts.stable.mint(this.contracts.atm, formatStable('1000'));
+        await this.contracts.token.mint(this.accounts.alice, formatToken('100'));
+        await this.contracts.stable.mint(this.accounts.bruce, formatStable('100'));
+        await this.contracts.token.connect(this.accounts.alice).approve(this.contracts.atm, ethers.MaxUint256);
+        await this.contracts.stable.connect(this.accounts.bruce).approve(this.contracts.atm, ethers.MaxUint256);
+      });
+
+      describe('setPair with linearYield flag', function () {
+        it('accepts linearYield = false (disabled)', async function () {
+          const timestamp = await time.latest();
+          await this.contracts.oracle.publishPrice(timestamp - 3600, ethers.parseUnits('2.0', 6));
+          await this.contracts.oracle.publishPrice(timestamp, ethers.parseUnits('2.1', 6));
+
+          await expect(
+            this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              false
+            )
+          ).to.emit(this.contracts.atm, 'PairUpdated');
+
+          const details = await this.contracts.atm.viewPairDetails(this.contracts.token, this.contracts.stable);
+          expect(details.linearYield).to.equal(false);
+        });
+
+        it('accepts linearYield = true (enabled)', async function () {
+          const timestamp = await time.latest();
+          await this.contracts.oracle.publishPrice(timestamp - 3600, ethers.parseUnits('2.0', 6));
+          await this.contracts.oracle.publishPrice(timestamp, ethers.parseUnits('2.1', 6));
+
+          await expect(
+            this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              true
+            )
+          ).to.emit(this.contracts.atm, 'PairUpdated');
+
+          const details = await this.contracts.atm.viewPairDetails(this.contracts.token, this.contracts.stable);
+          expect(details.linearYield).to.equal(true);
+        });
+      });
+
+      describe('price calculation with linear extrapolation', function () {
+        const REGRESSION_EXPECTED = {
+          positive: {
+            sellOutput: 2074999n,
+            buyOutput: 481927n,
+          },
+          negative: {
+            sellOutput: 1975001n,
+            buyOutput: 506328n,
+          },
+          flat: {
+            sellOutput: 2100000n,
+            buyOutput: 476190n,
+          },
+        };
+
+        describe('with positive slope (increasing prices)', function () {
+          beforeEach(async function () {
+            const timestamp = await time.latest();
+            this.baseTimestamp = BigInt(timestamp - 3600);
+            // Two oracle data points
+            await this.contracts.oracle.publishPrice(this.baseTimestamp, ethers.parseUnits('2.00', 6));
+            await this.contracts.oracle.publishPrice(this.baseTimestamp + 3600n, ethers.parseUnits('2.05', 6));
+
+            await this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              true
+            );
+
+            // swapTime: 1800s after the last price point (= baseTs + 5400)
+            this.swapTimestamp = this.baseTimestamp + 5400n;
+          });
+
+          it('computes extrapolated price for token sale', async function () {
+            await time.increaseTo(this.swapTimestamp);
+
+            const inputAmount = formatToken('1.0');
+            const actualOutput = await this.contracts.atm.previewExactInputSingle(
+              this.contracts.token,
+              this.contracts.stable,
+              inputAmount
+            );
+
+            expect(actualOutput).to.equal(REGRESSION_EXPECTED.positive.sellOutput);
+          });
+
+          it('computes extrapolated price for token purchase', async function () {
+            await time.increaseTo(this.swapTimestamp);
+
+            const inputAmount = formatStable('10.0');
+            const actualOutput = await this.contracts.atm.previewExactInputSingle(
+              this.contracts.stable,
+              this.contracts.token,
+              inputAmount
+            );
+
+            expect(actualOutput).to.equal(REGRESSION_EXPECTED.positive.buyOutput);
+          });
+        });
+
+        describe('with negative slope (decreasing prices)', function () {
+          beforeEach(async function () {
+            const timestamp = await time.latest();
+            this.baseTimestamp = BigInt(timestamp - 3600);
+            await this.contracts.oracle.publishPrice(this.baseTimestamp, ethers.parseUnits('2.05', 6));
+            await this.contracts.oracle.publishPrice(this.baseTimestamp + 3600n, ethers.parseUnits('2.00', 6));
+
+            await this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              true
+            );
+
+            this.swapTimestamp = this.baseTimestamp + 5400n;
+          });
+
+          it('computes extrapolated price for token sale', async function () {
+            await time.increaseTo(this.swapTimestamp);
+
+            const inputAmount = formatToken('1.0');
+            const actualOutput = await this.contracts.atm.previewExactInputSingle(
+              this.contracts.token,
+              this.contracts.stable,
+              inputAmount
+            );
+
+            expect(actualOutput).to.equal(REGRESSION_EXPECTED.negative.sellOutput);
+          });
+
+          it('computes extrapolated price for token purchase', async function () {
+            await time.increaseTo(this.swapTimestamp);
+
+            const inputAmount = formatStable('10.0');
+            const actualOutput = await this.contracts.atm.previewExactInputSingle(
+              this.contracts.stable,
+              this.contracts.token,
+              inputAmount
+            );
+
+            expect(actualOutput).to.equal(REGRESSION_EXPECTED.negative.buyOutput);
+          });
+        });
+
+        describe('with flat slope (constant prices)', function () {
+          beforeEach(async function () {
+            const timestamp = await time.latest();
+            this.baseTimestamp = BigInt(timestamp - 3600);
+            await this.contracts.oracle.publishPrice(this.baseTimestamp, ethers.parseUnits('2.10', 6));
+            await this.contracts.oracle.publishPrice(this.baseTimestamp + 3600n, ethers.parseUnits('2.10', 6));
+
+            await this.contracts.atm.setPair(
+              this.contracts.token,
+              this.contracts.stable,
+              this.contracts.oracle,
+              oraclettl,
+              true
+            );
+
+            this.swapTimestamp = this.baseTimestamp + 5400n;
+          });
+
+          it('returns the constant price', async function () {
+            await time.increaseTo(this.swapTimestamp);
+
+            const inputAmount = formatToken('1.0');
+            const actualOutput = await this.contracts.atm.previewExactInputSingle(
+              this.contracts.token,
+              this.contracts.stable,
+              inputAmount
+            );
+
+            expect(actualOutput).to.equal(REGRESSION_EXPECTED.flat.sellOutput);
+          });
+        });
+      });
+
+      describe('swap operations with linear yield pricing', function () {
+        beforeEach(async function () {
+          const timestamp = await time.latest();
+          this.baseTimestamp = BigInt(timestamp - 3600);
+          // Two increasing price points
+          await this.contracts.oracle.publishPrice(this.baseTimestamp, ethers.parseUnits('2.00', 6));
+          await this.contracts.oracle.publishPrice(this.baseTimestamp + 3600n, ethers.parseUnits('2.08', 6));
+
+          await this.contracts.atm.setPair(
+            this.contracts.token,
+            this.contracts.stable,
+            this.contracts.oracle,
+            oraclettl,
+            true
+          );
+        });
+
+        it('swapExactInputSingle: sell token for stable', async function () {
+          const inputAmount = formatToken('1.0');
+
+          const aliceTokenBefore = await this.contracts.token.balanceOf(this.accounts.alice);
+          const bruceStableBefore = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const atmTokenBefore = await this.contracts.token.balanceOf(this.contracts.atm);
+          const atmStableBefore = await this.contracts.stable.balanceOf(this.contracts.atm);
+
+          const tx = await this.contracts.atm
+            .connect(this.accounts.alice)
+            .swapExactInputSingle(this.contracts.token, this.contracts.stable, inputAmount, this.accounts.bruce, 0);
+
+          const aliceTokenAfter = await this.contracts.token.balanceOf(this.accounts.alice);
+          const bruceStableAfter = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const atmTokenAfter = await this.contracts.token.balanceOf(this.contracts.atm);
+          const atmStableAfter = await this.contracts.stable.balanceOf(this.contracts.atm);
+
+          expect(aliceTokenBefore - aliceTokenAfter).to.equal(inputAmount);
+          expect(atmTokenAfter - atmTokenBefore).to.equal(inputAmount);
+
+          const stableReceived = bruceStableAfter - bruceStableBefore;
+          expect(stableReceived).to.be.gt(0);
+          expect(atmStableBefore - atmStableAfter).to.equal(stableReceived);
+
+          await expect(tx).to.emit(this.contracts.atm, 'SwapExact');
+        });
+
+        it('swapExactInputSingle: buy token with stable', async function () {
+          const inputAmount = formatStable('10.0');
+
+          const bruceStableBefore = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const aliceTokenBefore = await this.contracts.token.balanceOf(this.accounts.alice);
+          const atmStableBefore = await this.contracts.stable.balanceOf(this.contracts.atm);
+          const atmTokenBefore = await this.contracts.token.balanceOf(this.contracts.atm);
+
+          const tx = await this.contracts.atm
+            .connect(this.accounts.bruce)
+            .swapExactInputSingle(this.contracts.stable, this.contracts.token, inputAmount, this.accounts.alice, 0);
+
+          const bruceStableAfter = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const aliceTokenAfter = await this.contracts.token.balanceOf(this.accounts.alice);
+          const atmStableAfter = await this.contracts.stable.balanceOf(this.contracts.atm);
+          const atmTokenAfter = await this.contracts.token.balanceOf(this.contracts.atm);
+
+          expect(bruceStableBefore - bruceStableAfter).to.equal(inputAmount);
+          expect(atmStableAfter - atmStableBefore).to.equal(inputAmount);
+
+          const tokenReceived = aliceTokenAfter - aliceTokenBefore;
+          expect(tokenReceived).to.be.gt(0);
+          expect(atmTokenBefore - atmTokenAfter).to.equal(tokenReceived);
+
+          await expect(tx).to.emit(this.contracts.atm, 'SwapExact');
+        });
+
+        it('swapExactOutputSingle: sell token for exact stable', async function () {
+          const outputAmount = formatStable('5.0');
+
+          const aliceTokenBefore = await this.contracts.token.balanceOf(this.accounts.alice);
+          const bruceStableBefore = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const atmTokenBefore = await this.contracts.token.balanceOf(this.contracts.atm);
+          const atmStableBefore = await this.contracts.stable.balanceOf(this.contracts.atm);
+
+          const tx = await this.contracts.atm
+            .connect(this.accounts.alice)
+            .swapExactOutputSingle(
+              this.contracts.token,
+              this.contracts.stable,
+              outputAmount,
+              this.accounts.bruce,
+              ethers.MaxUint256
+            );
+
+          const aliceTokenAfter = await this.contracts.token.balanceOf(this.accounts.alice);
+          const bruceStableAfter = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const atmTokenAfter = await this.contracts.token.balanceOf(this.contracts.atm);
+          const atmStableAfter = await this.contracts.stable.balanceOf(this.contracts.atm);
+
+          expect(bruceStableAfter - bruceStableBefore).to.equal(outputAmount);
+          expect(atmStableBefore - atmStableAfter).to.equal(outputAmount);
+
+          const tokenSpent = aliceTokenBefore - aliceTokenAfter;
+          expect(tokenSpent).to.be.gt(0);
+          expect(atmTokenAfter - atmTokenBefore).to.equal(tokenSpent);
+
+          await expect(tx).to.emit(this.contracts.atm, 'SwapExact');
+        });
+
+        it('swapExactOutputSingle: buy exact token with stable', async function () {
+          const outputAmount = formatToken('1.0');
+
+          const bruceStableBefore = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const aliceTokenBefore = await this.contracts.token.balanceOf(this.accounts.alice);
+          const atmStableBefore = await this.contracts.stable.balanceOf(this.contracts.atm);
+          const atmTokenBefore = await this.contracts.token.balanceOf(this.contracts.atm);
+
+          const tx = await this.contracts.atm
+            .connect(this.accounts.bruce)
+            .swapExactOutputSingle(
+              this.contracts.stable,
+              this.contracts.token,
+              outputAmount,
+              this.accounts.alice,
+              ethers.MaxUint256
+            );
+
+          const bruceStableAfter = await this.contracts.stable.balanceOf(this.accounts.bruce);
+          const aliceTokenAfter = await this.contracts.token.balanceOf(this.accounts.alice);
+          const atmStableAfter = await this.contracts.stable.balanceOf(this.contracts.atm);
+          const atmTokenAfter = await this.contracts.token.balanceOf(this.contracts.atm);
+
+          expect(aliceTokenAfter - aliceTokenBefore).to.equal(outputAmount);
+          expect(atmTokenBefore - atmTokenAfter).to.equal(outputAmount);
+
+          const stableSpent = bruceStableBefore - bruceStableAfter;
+          expect(stableSpent).to.be.gt(0);
+          expect(atmStableAfter - atmStableBefore).to.equal(stableSpent);
+
+          await expect(tx).to.emit(this.contracts.atm, 'SwapExact');
+        });
+
+        it('oracle not updated recently reverts', async function () {
+          await time.increase(oraclettl);
+
+          await expect(
+            this.contracts.atm.previewExactInputSingle(this.contracts.token, this.contracts.stable, formatToken('1.0'))
+          ).to.be.revertedWithCustomError(this.contracts.atm, 'OracleValueTooOld');
+        });
+      });
+
+      describe('comparison: linear yield vs non-linear yield pricing', function () {
+        beforeEach(async function () {
+          const timestamp = await time.latest();
+
+          await this.contracts.oracle.publishPrice(timestamp - 3600, ethers.parseUnits('2.00', 6));
+          await this.contracts.oracle.publishPrice(timestamp, ethers.parseUnits('2.10', 6));
+        });
+
+        it('non-linear yield uses min/max of last 2 prices', async function () {
+          await this.contracts.atm.setPair(
+            this.contracts.token,
+            this.contracts.stable,
+            this.contracts.oracle,
+            oraclettl,
+            false // non-linear yield
+          );
+
+          // When selling token, use min price (2.00)
+          const sellOutput = await this.contracts.atm.previewExactInputSingle(
+            this.contracts.token,
+            this.contracts.stable,
+            formatToken('1.0')
+          );
+
+          const minPrice = ethers.parseUnits('2.00', 6);
+          const expectedSellOutput = (formatToken('1.0') * numFactor * minPrice) / denFactor;
+          expect(sellOutput).to.equal(expectedSellOutput);
+
+          // When buying token, use max price (2.10)
+          const buyOutput = await this.contracts.atm.previewExactInputSingle(
+            this.contracts.stable,
+            this.contracts.token,
+            formatStable('10.0')
+          );
+
+          const maxPrice = ethers.parseUnits('2.10', 6);
+          const expectedBuyOutput = (formatStable('10.0') * denFactor) / (maxPrice * numFactor);
+          expect(buyOutput).to.equal(expectedBuyOutput);
+        });
+
+        it('linear yield uses extrapolated price (same for buy and sell)', async function () {
+          await this.contracts.atm.setPair(
+            this.contracts.token,
+            this.contracts.stable,
+            this.contracts.oracle,
+            oraclettl,
+            true // linear yield
+          );
+
+          const sellOutput = await this.contracts.atm.previewExactInputSingle(
+            this.contracts.token,
+            this.contracts.stable,
+            formatToken('1.0')
+          );
+
+          const buyOutput = await this.contracts.atm.previewExactInputSingle(
+            this.contracts.stable,
+            this.contracts.token,
+            formatStable('10.0')
+          );
+
+          const minPrice = ethers.parseUnits('2.00', 6);
+          const maxPrice = ethers.parseUnits('2.10', 6);
+
+          const minSellOutput = (formatToken('1.0') * numFactor * minPrice) / denFactor;
+          expect(sellOutput).to.be.gte(minSellOutput);
+
+          const minBuyOutput = (formatStable('10.0') * denFactor) / (maxPrice * numFactor);
+          expect(buyOutput).to.be.lte(minBuyOutput);
+        });
+      });
+    });
+
+    // Only the last 2 oracle rounds are used:
+    //   previousPrice = 2.12 at previousTimestamp, latestPrice = 2.10 at latestTimestamp (delta = 3600s)
+    //   intercept = 2120000 (previousPrice), baseTimestamp = previousTimestamp
+    //   At swapTime = previousTimestamp + 5400 (1800s after latest):
+    //   slope = mulDiv(20000, 1e18, 3600) = 5555555555555555555 (truncated)
+    //   absDeltaPrice = mulDiv(5555555555555555555, 5400, 1e18) = 29999 (truncated)
+    //   price = 2120000 - 29999 = 2090001
+    //
+    // Non-linear-yield would use min/max of last 2 prices: min=2100000, max=2120000
+    // Linear yield price (2090001) differs from both, proving linear extrapolation works
+    const HARDCODED_EXPECTED = {
+      '6_6': {
+        // tokenDec=6, stableDec=6, oracleDec=6: numFactor=1e6, denFactor=1e12
+        // sell 1 token (1e6): mulDiv(1e6 * 1e6, 2090001, 1e12) = 2090001
+        sellOutput: 2090001n,
+        // buy with 10 stable (10e6): mulDiv(10e6 * 1e12, 1, 2090001 * 1e6) = floor(4784686.71...) = 4784686
+        buyOutput: 4784686n,
+        // exact output 5 stable (5e6): mulDivUp(1, 5e6 * 1e12, 2090001 * 1e6) = ceil(2392343.35...) = 2392344
+        exactInput: 2392344n,
+        nonAccrualSellOutput: 2100000n,
+      },
+      '6_18': {
+        // tokenDec=6, stableDec=18, oracleDec=6: numFactor=1e18, denFactor=1e12
+        // sell 1 token (1e6): mulDiv(1e6 * 1e18, 2090001, 1e12) = 2090001000000000000
+        sellOutput: 2090001000000000000n,
+        // buy with 10 stable (10e18): mulDiv(10e18 * 1e12, 1, 2090001 * 1e18) = floor(4784686.71...) = 4784686
+        buyOutput: 4784686n,
+        // exact output 5 stable (5e18): mulDivUp(1, 5e18 * 1e12, 2090001 * 1e18) = ceil(2392343.35...) = 2392344
+        exactInput: 2392344n,
+        nonAccrualSellOutput: 2100000000000000000n,
+      },
+      '18_6': {
+        // tokenDec=18, stableDec=6, oracleDec=6: numFactor=1e6, denFactor=1e24
+        // sell 1 token (1e18): mulDiv(1e18 * 1e6, 2090001, 1e24) = 2090001
+        sellOutput: 2090001n,
+        // buy with 10 stable (10e6): mulDiv(10e6 * 1e24, 1, 2090001 * 1e6) = 4784686705891528281
+        buyOutput: 4784686705891528281n,
+        // exact output 5 stable (5e6): mulDivUp(1, 5e6 * 1e24, 2090001 * 1e6) = 2392343352945764141
+        exactInput: 2392343352945764141n,
+        nonAccrualSellOutput: 2100000n,
+      },
+      '18_18': {
+        // tokenDec=18, stableDec=18, oracleDec=6: numFactor=1e18, denFactor=1e24
+        // sell 1 token (1e18): mulDiv(1e18 * 1e18, 2090001, 1e24) = 2090001000000000000
+        sellOutput: 2090001000000000000n,
+        // buy with 10 stable (10e18): mulDiv(10e18 * 1e24, 1, 2090001 * 1e18) = 4784686705891528281
+        buyOutput: 4784686705891528281n,
+        // exact output 5 stable (5e18): mulDivUp(1, 5e18 * 1e24, 2090001 * 1e18) = 2392343352945764141
+        exactInput: 2392343352945764141n,
+        nonAccrualSellOutput: 2100000000000000000n,
+      },
+    };
+
+    // Test linear yield with different token decimal combinations using exact timing and hardcoded values
+    for (const tokenDecimals of [6n, 18n]) {
+      for (const stableDecimals of [6n, 18n]) {
+        describe(`with linear yield - token ${tokenDecimals} decimals, stable ${stableDecimals} decimals (rigorous)`, function () {
+          const oraclettl = time.duration.days(7);
+          const numFactor = 10n ** stableDecimals;
+          const denFactor = 10n ** (tokenDecimals + 6n);
+          const formatToken = (value) => ethers.parseUnits(value, tokenDecimals);
+          const formatStable = (value) => ethers.parseUnits(value, stableDecimals);
+          const expectedKey = `${tokenDecimals}_${stableDecimals}`;
+          const expected = HARDCODED_EXPECTED[expectedKey];
+
+          beforeEach(async function () {
+            this.testToken = await deploy('ERC20DecimalsMock', [tokenDecimals]);
+            this.testStable = await deploy('ERC20DecimalsMock', [stableDecimals]);
+            this.testAtm = await deploy('MultiATM', [this.contracts.manager.target, this.contracts.forwarder.target]);
+
+            await this.contracts.manager.setRequirements(
+              this.testAtm,
+              [
+                this.testAtm.interface.getFunction('swapExactInputSingle').selector,
+                this.testAtm.interface.getFunction('swapExactOutputSingle').selector,
+              ],
+              [this.IDS['whitelisted']]
+            );
+
+            await this.contracts.manager.setRequirements(
+              this.testAtm,
+              [this.testAtm.interface.getFunction('setPair').selector],
+              [this.IDS['operator-exceptional']]
+            );
+            await this.contracts.manager.addGroup(this.testAtm, this.IDS['whitelisted']);
+
+            await this.testToken.mint(this.testAtm, formatToken('1000'));
+            await this.testStable.mint(this.testAtm, formatStable('10000'));
+            await this.testToken.mint(this.accounts.alice, formatToken('100'));
+            await this.testStable.mint(this.accounts.bruce, formatStable('1000'));
+            await this.testToken.connect(this.accounts.alice).approve(this.testAtm, ethers.MaxUint256);
+            await this.testStable.connect(this.accounts.bruce).approve(this.testAtm, ethers.MaxUint256);
+
+            const timestamp = await time.latest();
+            this.baseTimestamp = BigInt(timestamp - 3600);
+            // Two oracle data points: previous (2.12) and latest (2.10)
+            await this.contracts.oracle.publishPrice(this.baseTimestamp, ethers.parseUnits('2.12', 6));
+            await this.contracts.oracle.publishPrice(this.baseTimestamp + 3600n, ethers.parseUnits('2.10', 6));
+
+            // Store swap timestamp for tests: 1800s after the latest price point
+            this.swapTimestamp = this.baseTimestamp + 5400n;
+          });
+
+          it('setPair correctly sets numerator/denominator for decimal scaling', async function () {
+            await this.testAtm.setPair(this.testToken, this.testStable, this.contracts.oracle, oraclettl, true);
+
+            const details = await this.testAtm.viewPairDetails(this.testToken, this.testStable);
+            expect(details.numerator).to.equal(numFactor);
+            expect(details.denominator).to.equal(denFactor);
+            expect(details.linearYield).to.equal(true);
+          });
+
+          it('swap token for stable with hardcoded expected output', async function () {
+            await this.testAtm.setPair(this.testToken, this.testStable, this.contracts.oracle, oraclettl, true);
+
+            const tokenAmount = formatToken('1.0');
+
+            await time.setNextBlockTimestamp(this.swapTimestamp);
+
+            const aliceTokenBefore = await this.testToken.balanceOf(this.accounts.alice);
+            const aliceStableBefore = await this.testStable.balanceOf(this.accounts.alice);
+
+            await this.testAtm
+              .connect(this.accounts.alice)
+              .swapExactInputSingle(this.testToken, this.testStable, tokenAmount, this.accounts.alice, 0);
+
+            const aliceTokenAfter = await this.testToken.balanceOf(this.accounts.alice);
+            const aliceStableAfter = await this.testStable.balanceOf(this.accounts.alice);
+
+            expect(aliceTokenBefore - aliceTokenAfter).to.equal(tokenAmount);
+
+            const actualStableReceived = aliceStableAfter - aliceStableBefore;
+            expect(actualStableReceived).to.equal(expected.sellOutput);
+
+            // Verify linear yield price differs from non-linear-yield min/max pricing
+            expect(actualStableReceived).to.not.equal(expected.nonAccrualSellOutput);
+          });
+
+          it('swap stable for token with hardcoded expected output', async function () {
+            await this.testAtm.setPair(this.testToken, this.testStable, this.contracts.oracle, oraclettl, true);
+
+            const stableAmount = formatStable('10.0');
+
+            await time.setNextBlockTimestamp(this.swapTimestamp);
+
+            const bruceTokenBefore = await this.testToken.balanceOf(this.accounts.bruce);
+            const bruceStableBefore = await this.testStable.balanceOf(this.accounts.bruce);
+
+            await this.testAtm
+              .connect(this.accounts.bruce)
+              .swapExactInputSingle(this.testStable, this.testToken, stableAmount, this.accounts.bruce, 0);
+
+            const bruceTokenAfter = await this.testToken.balanceOf(this.accounts.bruce);
+            const bruceStableAfter = await this.testStable.balanceOf(this.accounts.bruce);
+
+            expect(bruceStableBefore - bruceStableAfter).to.equal(stableAmount);
+
+            const actualTokenReceived = bruceTokenAfter - bruceTokenBefore;
+            expect(actualTokenReceived).to.equal(expected.buyOutput);
+          });
+
+          it('exact output swap with hardcoded expected input', async function () {
+            await this.testAtm.setPair(this.testToken, this.testStable, this.contracts.oracle, oraclettl, true);
+
+            const stableOutputAmount = formatStable('5.0');
+
+            await time.setNextBlockTimestamp(this.swapTimestamp);
+
+            const aliceTokenBefore = await this.testToken.balanceOf(this.accounts.alice);
+            const aliceStableBefore = await this.testStable.balanceOf(this.accounts.alice);
+
+            await this.testAtm
+              .connect(this.accounts.alice)
+              .swapExactOutputSingle(
+                this.testToken,
+                this.testStable,
+                stableOutputAmount,
+                this.accounts.alice,
+                ethers.MaxUint256
+              );
+
+            const aliceTokenAfter = await this.testToken.balanceOf(this.accounts.alice);
+            const aliceStableAfter = await this.testStable.balanceOf(this.accounts.alice);
+
+            // Verify exact input matches HARDCODED expectation
+            const actualTokenSpent = aliceTokenBefore - aliceTokenAfter;
+            expect(actualTokenSpent).to.equal(expected.exactInput);
+            expect(aliceStableAfter - aliceStableBefore).to.equal(stableOutputAmount);
+          });
+        });
+      }
     }
   });
 
