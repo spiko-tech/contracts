@@ -21,8 +21,6 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
     using SafeCast for *;
 
     uint256 private constant _BASIS_POINT_SCALE = 1e4;
-    uint256 private constant _PRECISION = 1e18;
-    uint8 private constant _MAX_REGRESSION_POINTS = 30;
 
     struct Pair {
         IERC20 token1;
@@ -31,7 +29,6 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         uint256 oracleTTL;
         uint256 numerator;
         uint256 denominator;
-        uint8 accrualRounds;
     }
     // Numerator and denominator account for the difference in decimals between the two tokens AND for the decimals
     // of the oracle. They are used to scale the conversion rate between the two tokens.
@@ -69,8 +66,7 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         IERC20 indexed token1,
         IERC20 indexed token2,
         Oracle oracle,
-        uint256 oracleTTL,
-        uint8 accrualRounds
+        uint256 oracleTTL
     );
     event PairRemoved(bytes32 indexed id);
     event FeeUpdated(uint256 newFeeBasisPoints);
@@ -79,8 +75,6 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
     error OracleValueTooOld(Oracle oracle);
     error UnknownPair(IERC20 input, IERC20 output);
     error InvalidFee(uint256 feeBasisPoints);
-    error InvalidAccrualRounds(uint8 accrualRounds);
-    error InvalidOracleData();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -105,23 +99,13 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
             Oracle oracle,
             uint256 oracleTTL,
             uint256 numerator,
-            uint256 denominator,
-            uint8 accrualRounds
+            uint256 denominator
         )
     {
         id = hashPair(input, output);
         Pair storage pair = _pairs[id];
 
-        return (
-            id,
-            pair.token1,
-            pair.token2,
-            pair.oracle,
-            pair.oracleTTL,
-            pair.numerator,
-            pair.denominator,
-            pair.accrualRounds
-        );
+        return (id, pair.token1, pair.token2, pair.oracle, pair.oracleTTL, pair.numerator, pair.denominator);
     }
 
     function hashPair(IERC20 input, IERC20 output) public view virtual returns (bytes32) {
@@ -188,20 +172,14 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         IERC20 output,
         uint256 inputAmount
     ) internal view virtual returns (uint256 /*outputAmount*/) {
-        (
-            ,
-            IERC20 token1,
-            ,
-            Oracle oracle,
-            uint256 oracleTTL,
-            uint256 numerator,
-            uint256 denominator,
-            uint8 accrualRounds
-        ) = viewPairDetails(input, output);
+        (, IERC20 token1, , Oracle oracle, uint256 oracleTTL, uint256 numerator, uint256 denominator) = viewPairDetails(
+            input,
+            output
+        );
 
         require(address(oracle) != address(0), UnknownPair(input, output));
 
-        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL, accrualRounds);
+        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL);
         return
             inputAmount.mulDiv(
                 Math.ternary(input == token1, numerator * minPrice.toUint256(), denominator),
@@ -215,20 +193,14 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         IERC20 output,
         uint256 outputAmount
     ) internal view virtual returns (uint256 /*inputAmount*/) {
-        (
-            ,
-            IERC20 token1,
-            ,
-            Oracle oracle,
-            uint256 oracleTTL,
-            uint256 numerator,
-            uint256 denominator,
-            uint8 accrualRounds
-        ) = viewPairDetails(input, output);
+        (, IERC20 token1, , Oracle oracle, uint256 oracleTTL, uint256 numerator, uint256 denominator) = viewPairDetails(
+            input,
+            output
+        );
 
         require(address(oracle) != address(0), UnknownPair(input, output));
 
-        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL, accrualRounds);
+        (int256 minPrice, int256 maxPrice) = _getPrices(oracle, oracleTTL);
         return
             outputAmount.mulDiv(
                 Math.ternary(input == token1, denominator, numerator * maxPrice.toUint256()),
@@ -303,72 +275,12 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         emit SwapExact(input, output, inputAmount, outputAmount, from, to);
     }
 
-    function _computeSlope(int256 numerator, int256 denominator) private pure returns (int256) {
-        bool negative = (numerator < 0) != (denominator < 0);
-        uint256 absSlope = Math.mulDiv(SignedMath.abs(numerator), _PRECISION, SignedMath.abs(denominator));
-        return negative ? -absSlope.toInt256() : absSlope.toInt256();
-    }
-
-    function _computeLinearRegression(
-        Oracle oracle,
-        uint8 n
-    ) internal view returns (int256 slope, int256 intercept, uint48 baseTimestamp) {
-        require(n >= 2 && n <= _MAX_REGRESSION_POINTS, InvalidAccrualRounds(n));
-
-        uint80 latestRoundId;
-        (latestRoundId, , , , ) = oracle.latestRoundData();
-        require(latestRoundId > 0 && latestRoundId + 1 >= n, InvalidOracleData());
-
-        uint80 startRoundId = latestRoundId + 1 - n;
-        uint256 baseTs;
-        (, , baseTs, , ) = oracle.getRoundData(startRoundId);
-        baseTimestamp = uint48(baseTs);
-
-        int256 sumT;
-        int256 sumP;
-        int256 sumTP;
-        int256 sumT2;
-
-        for (uint8 i = 0; i < n; i++) {
-            (, int256 price, uint256 timestamp, , ) = oracle.getRoundData(startRoundId + i);
-            int256 t = (timestamp - baseTs).toInt256();
-            sumT += t;
-            sumP += price;
-            sumTP += t * price;
-            sumT2 += t * t;
-        }
-
-        int256 nInt = int256(uint256(n));
-        int256 denominator = nInt * sumT2 - sumT * sumT;
-
-        require(denominator > 0, InvalidOracleData());
-
-        slope = _computeSlope(nInt * sumTP - sumT * sumP, denominator);
-        intercept = (sumP - (slope * sumT) / int256(_PRECISION)) / nInt;
-    }
-
-    function _getPrices(
-        Oracle oracle,
-        uint256 oracleTTL,
-        uint8 accrualRounds
-    ) internal view virtual returns (int256 min, int256 max) {
-        (uint80 roundId, int256 latest, , uint256 updatedAt, ) = oracle.latestRoundData();
+    function _getPrices(Oracle oracle, uint256 oracleTTL) internal view virtual returns (int256 min, int256 max) {
+        (uint80 roundId, int256 latest, , , ) = oracle.latestRoundData();
+        (, int256 previous, , uint256 updatedAt, ) = oracle.getRoundData(roundId - 1);
         require(block.timestamp < updatedAt + oracleTTL, OracleValueTooOld(oracle));
-
-        if (accrualRounds == 0) {
-            require(roundId >= 1, InvalidOracleData());
-            (, int256 previous, , , ) = oracle.getRoundData(roundId - 1);
-            min = SignedMath.min(latest, previous);
-            max = SignedMath.max(latest, previous);
-        } else {
-            (int256 slope, int256 intercept, uint48 baseTimestamp) = _computeLinearRegression(oracle, accrualRounds);
-
-            // price = slope * (currentTime - baseTimestamp) / _PRECISION + intercept
-            uint256 absDeltaPrice = Math.mulDiv(SignedMath.abs(slope), block.timestamp - baseTimestamp, _PRECISION);
-            min = intercept + (slope < 0 ? -absDeltaPrice.toInt256() : absDeltaPrice.toInt256());
-            require(min > 0, InvalidOracleData());
-            max = min;
-        }
+        min = SignedMath.min(latest, previous);
+        max = SignedMath.max(latest, previous);
     }
 
     /****************************************************************************************************************
@@ -378,25 +290,19 @@ contract MultiATM is ERC2771Context, PermissionManaged, Multicall {
         IERC20Metadata token1,
         IERC20Metadata token2,
         Oracle oracle,
-        uint256 oracleTTL,
-        uint8 accrualRounds
+        uint256 oracleTTL
     ) public virtual restricted {
         bytes32 id = hashPair(token1, token2);
-        require(
-            accrualRounds == 0 || (accrualRounds >= 2 && accrualRounds <= _MAX_REGRESSION_POINTS),
-            InvalidAccrualRounds(accrualRounds)
-        );
         _pairs[id] = Pair({
             token1: token1,
             token2: token2,
             oracle: oracle,
             oracleTTL: oracleTTL,
             numerator: 10 ** token2.decimals(),
-            denominator: 10 ** (token1.decimals() + oracle.decimals()),
-            accrualRounds: accrualRounds
+            denominator: 10 ** (token1.decimals() + oracle.decimals())
         });
 
-        emit PairUpdated(id, token1, token2, oracle, oracleTTL, accrualRounds);
+        emit PairUpdated(id, token1, token2, oracle, oracleTTL);
     }
 
     function removePair(IERC20 token1, IERC20 token2) public virtual restricted {
