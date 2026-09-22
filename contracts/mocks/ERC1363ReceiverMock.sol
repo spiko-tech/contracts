@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
-import { IERC1363Spender  } from "@openzeppelin/contracts/interfaces/IERC1363Spender.sol";
+import { IERC1363Spender } from "@openzeppelin/contracts/interfaces/IERC1363Spender.sol";
 
 contract ERC1363ReceiverMock is IERC1363Receiver, IERC1363Spender {
     event TransferReceived(address operator, address from, uint256 value, bytes data);
@@ -28,11 +28,7 @@ contract ERC1363ReceiverMock is IERC1363Receiver, IERC1363Spender {
         return this.onTransferReceived.selector;
     }
 
-    function onApprovalReceived(
-        address owner,
-        uint256 value,
-        bytes memory data
-    ) external override returns (bytes4) {
+    function onApprovalReceived(address owner, uint256 value, bytes memory data) external override returns (bytes4) {
         if (data.length == 1) {
             if (data[0] == 0x00) {
                 revert("onApprovalReceived revert");

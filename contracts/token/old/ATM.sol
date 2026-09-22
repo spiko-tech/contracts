@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.20;
 
-import { IAuthority        } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
-import { IERC20            } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { IERC20Metadata    } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import { ERC2771Context    } from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import { SafeERC20         } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Math              } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { SafeCast          } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { Context           } from "@openzeppelin/contracts/utils/Context.sol";
-import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
-import { Oracle            } from "../../oracle/Oracle.sol";
+import { IAuthority } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import { ERC2771Context } from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { Oracle } from "../../oracle/Oracle.sol";
 import { PermissionManaged } from "../../permissions/PermissionManaged.sol";
 
 function tryFetchDecimals(IERC20 token) view returns (uint8) {
@@ -23,34 +23,38 @@ function tryFetchDecimals(IERC20 token) view returns (uint8) {
 }
 
 /// @custom:security-contact security@spiko.tech
-contract ATM is ERC2771Context, PermissionManaged, Multicall
-{
-    using Math     for *;
+contract ATM is ERC2771Context, PermissionManaged, Multicall {
+    using Math for *;
     using SafeCast for *;
 
-    IERC20  immutable public token;
-    IERC20  immutable public stable;
-    Oracle  immutable public oracle;
-    uint256 immutable private numerator;
-    uint256 immutable private denominator;
+    IERC20 public immutable token;
+    IERC20 public immutable stable;
+    Oracle public immutable oracle;
+    uint256 private immutable numerator;
+    uint256 private immutable denominator;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(Oracle _oracle, IERC20 _stable, IAuthority _authority, address _trustedForwarder)
-        PermissionManaged(_authority)
-        ERC2771Context(_trustedForwarder)
-    {
-        token             = _oracle.token();
-        stable            = _stable;
-        oracle            = _oracle;
+    constructor(
+        Oracle _oracle,
+        IERC20 _stable,
+        IAuthority _authority,
+        address _trustedForwarder
+    ) PermissionManaged(_authority) ERC2771Context(_trustedForwarder) {
+        token = _oracle.token();
+        stable = _stable;
+        oracle = _oracle;
 
         // rate correction
         uint256 x = tryFetchDecimals(token) + oracle.decimals();
         uint256 y = tryFetchDecimals(stable);
-        numerator   = x < y ? 10 ** (y - x) : 1;
+        numerator = x < y ? 10 ** (y - x) : 1;
         denominator = x > y ? 10 ** (x - y) : 1;
     }
 
-    function previewBuy(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
+    function previewBuy(
+        IERC20 input,
+        uint256 inputAmount
+    ) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
         int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
         if (input == token) {
             return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Ceil));
@@ -61,7 +65,10 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
         }
     }
 
-    function previewSell(IERC20 input, uint256 inputAmount) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
+    function previewSell(
+        IERC20 input,
+        uint256 inputAmount
+    ) public view virtual returns (uint256 tokenAmount, uint256 stableAmount) {
         int256 price = oracle.getHistoricalPrice(block.timestamp.toUint48());
         if (input == token) {
             return (inputAmount, _convertToStable(inputAmount, price, Math.Rounding.Floor));
@@ -86,25 +93,27 @@ contract ATM is ERC2771Context, PermissionManaged, Multicall
         return (tokenAmount, stableAmount);
     }
 
-    function _convertToStable(uint256 tokenAmount, int256 price, Math.Rounding rounding) internal view virtual returns (uint256) {
+    function _convertToStable(
+        uint256 tokenAmount,
+        int256 price,
+        Math.Rounding rounding
+    ) internal view virtual returns (uint256) {
         return tokenAmount.mulDiv(numerator * price.toUint256(), denominator, rounding);
     }
 
-    function _convertToToken(uint256 stableAmount, int256 price, Math.Rounding rounding) internal view virtual returns (uint256) {
+    function _convertToToken(
+        uint256 stableAmount,
+        int256 price,
+        Math.Rounding rounding
+    ) internal view virtual returns (uint256) {
         return stableAmount.mulDiv(denominator, numerator * price.toUint256(), rounding);
     }
 
     /****************************************************************************************************************
      *                                                 Admin drain                                                  *
      ****************************************************************************************************************/
-    function drain(IERC20 _token, address _to, uint256 _amount) public virtual restricted() {
-        SafeERC20.safeTransfer(
-            _token,
-            _to,
-            _amount == type(uint256).max
-                ? _token.balanceOf(address(this))
-                : _amount
-        );
+    function drain(IERC20 _token, address _to, uint256 _amount) public virtual restricted {
+        SafeERC20.safeTransfer(_token, _to, _amount == type(uint256).max ? _token.balanceOf(address(this)) : _amount);
     }
 
     /****************************************************************************************************************

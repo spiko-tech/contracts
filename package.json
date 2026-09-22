@@ -27,8 +27,8 @@
     "@chainlink/contracts": "^0.8.0",
     "@openzeppelin/contracts": "^5.4.0",
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
-    "chai": "4.2.0",
-    "hardhat-chai-matchers@2.0.6": "link:nomicfoundation/hardhat-chai-matchers@2.0.6"
+    "@spiko/erc-cross-chain-event-archive": "github:spiko-tech/erc-cross-chain-event-archive#a11a9e50852255aa0ae3a85a0ec5eea5a9983a99",
+    "chai": "4.2.0"
   },
   "devDependencies": {
     "@amxx/hre": "^0.2.1",
