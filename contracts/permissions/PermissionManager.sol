@@ -2,30 +2,25 @@
 
 pragma solidity ^0.8.20;
 
-import { IAuthority      } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
-import { Initializable   } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { IAuthority } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Multicall       } from "@openzeppelin/contracts/utils/Multicall.sol";
-import { Masks           } from "../utils/Masks.sol";
+import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { Masks } from "../utils/Masks.sol";
 
 /// @custom:security-contact security@spiko.tech
 /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-contract PermissionManager is
-    IAuthority,
-    Initializable,
-    UUPSUpgradeable,
-    Multicall
-{
+contract PermissionManager is IAuthority, Initializable, UUPSUpgradeable, Multicall {
     using Masks for *;
 
-    uint8      public constant  ADMIN       = 0x00;
-    uint8      public constant  PUBLIC      = 0xFF;
-    Masks.Mask public immutable ADMIN_MASK  = ADMIN.toMask();
+    uint8 public constant ADMIN = 0x00;
+    uint8 public constant PUBLIC = 0xFF;
+    Masks.Mask public immutable ADMIN_MASK = ADMIN.toMask();
     Masks.Mask public immutable PUBLIC_MASK = PUBLIC.toMask();
 
-    mapping(address =>                   Masks.Mask ) private _permissions;
+    mapping(address => Masks.Mask) private _permissions;
     mapping(address => mapping(bytes4 => Masks.Mask)) private _restrictions;
-    mapping(uint8   =>                   Masks.Mask ) private _admin;
+    mapping(uint8 => Masks.Mask) private _admin;
 
     event GroupAdded(address indexed user, uint8 indexed group);
     event GroupRemoved(address indexed user, uint8 indexed group);
@@ -49,7 +44,7 @@ contract PermissionManager is
         _disableInitializers();
     }
 
-    function initialize(address admin) public initializer() {
+    function initialize(address admin) public initializer {
         _addGroup(admin, 0);
     }
 
@@ -100,7 +95,11 @@ contract PermissionManager is
     }
 
     // Requirement management
-    function setRequirements(address target, bytes4[] calldata selectors, uint8[] calldata groups) public onlyRole(ADMIN_MASK) {
+    function setRequirements(
+        address target,
+        bytes4[] calldata selectors,
+        uint8[] calldata groups
+    ) public onlyRole(ADMIN_MASK) {
         Masks.Mask mask = groups.toMask();
         for (uint256 i = 0; i < selectors.length; ++i) {
             _setRequirements(target, selectors[i], mask);

@@ -2,26 +2,20 @@
 
 pragma solidity ^0.8.20;
 
-import { IAuthority        } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
-import { IERC20            } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { IERC1363Receiver  } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
-import { Initializable     } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { UUPSUpgradeable   } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { SafeERC20         } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast          } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { EnumerableSet     } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { Multicall         } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { IAuthority } from "@openzeppelin/contracts/access/manager/IAuthority.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { PermissionManaged } from "../permissions/PermissionManaged.sol";
-import { Token             } from "./Token.sol";
+import { Token } from "./Token.sol";
 
 /// @custom:security-contact security@spiko.tech
-contract Redemption is
-    IERC1363Receiver,
-    Initializable,
-    PermissionManaged,
-    UUPSUpgradeable,
-    Multicall
-{
+contract Redemption is IERC1363Receiver, Initializable, PermissionManaged, UUPSUpgradeable, Multicall {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for *;
     using SafeERC20 for Token;
@@ -38,12 +32,19 @@ contract Redemption is
         uint48 deadline;
     }
 
-    uint48                                       public constant MAX_DELAY = 14 days;
-    mapping(bytes32 => Details                 ) public          details;
-    mapping(IERC20  => uint256                 ) public          minimum;
-    mapping(IERC20  => EnumerableSet.AddressSet) private         _outputs;
+    uint48 public constant MAX_DELAY = 14 days;
+    mapping(bytes32 => Details) public details;
+    mapping(IERC20 => uint256) public minimum;
+    mapping(IERC20 => EnumerableSet.AddressSet) private _outputs;
 
-    event RedemptionInitiated(bytes32 indexed id, address indexed user, IERC20 indexed input, address output, uint256 inputValue, bytes32 salt);
+    event RedemptionInitiated(
+        bytes32 indexed id,
+        address indexed user,
+        IERC20 indexed input,
+        address output,
+        uint256 inputValue,
+        bytes32 salt
+    );
     event RedemptionExecuted(bytes32 indexed id, bytes data);
     event RedemptionCanceled(bytes32 indexed id);
     event EnableOutput(IERC20 indexed input, address output, bool enable);
@@ -67,7 +68,13 @@ contract Redemption is
     /**
      * @dev HELPER: produce redemption request hash from the input parameters
      */
-    function hashRedemptionId(address user, IERC20 input, address output, uint256 inputValue, bytes32 salt) public pure returns (bytes32) {
+    function hashRedemptionId(
+        address user,
+        IERC20 input,
+        address output,
+        uint256 inputValue,
+        bytes32 salt
+    ) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(user, input, output, inputValue, salt));
     }
 
@@ -113,12 +120,12 @@ contract Redemption is
      */
     function executeRedemption(
         address user,
-        Token   input,
+        Token input,
         address output,
         uint256 inputValue,
         bytes32 salt,
         bytes calldata data
-    ) external restricted() {
+    ) external restricted {
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, inputValue, salt);
 
@@ -140,13 +147,7 @@ contract Redemption is
      * @dev Cancel a redemption if the execution delay has passed. Can be performed by anyone. Input tokens are
      * refunded to the user and the operation is marked as `CANCELED`.
      */
-    function cancelRedemption(
-        address user,
-        Token   input,
-        address output,
-        uint256 inputValue,
-        bytes32 salt
-    ) external {
+    function cancelRedemption(address user, Token input, address output, uint256 inputValue, bytes32 salt) external {
         // Hash operation
         bytes32 id = hashRedemptionId(user, input, output, inputValue, salt);
 
@@ -170,7 +171,7 @@ contract Redemption is
     /**
      * @dev ADMIN: configure which output (stablecoin) is used for redemptions of a given input.
      */
-    function registerOutput(IERC20 input, address output, bool enable) external restricted() {
+    function registerOutput(IERC20 input, address output, bool enable) external restricted {
         if (enable) {
             _outputs[input].add(output);
         } else {
@@ -180,7 +181,7 @@ contract Redemption is
         emit EnableOutput(input, output, enable);
     }
 
-    function setMinimum(IERC20 input, uint256 amount) external restricted() {
+    function setMinimum(IERC20 input, uint256 amount) external restricted {
         minimum[input] = amount;
 
         emit MinimumUpdated(input, amount);

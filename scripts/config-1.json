@@ -54,7 +54,8 @@
       "redemption-executeRedemption": ["operator-daily"],
       "minter-initiateMint": ["mint-initiator"],
       "minter-approveMint": ["mint-approver"],
-      "minter-cancelMint": ["mint-approver"]
+      "minter-cancelMint": ["mint-approver"],
+      "archiver-archiveEvent": ["archiver"]
     }
   },
   "roles": {
@@ -98,6 +99,10 @@
       "members": []
     },
     "mint-initiator": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "archiver": {
       "admins": ["admin"],
       "members": []
     }

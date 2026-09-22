@@ -2,59 +2,13 @@ const { expect } = require('chai');
 const { ethers, upgrades } = require('hardhat');
 const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
 const { deploy } = require('@amxx/hre/scripts');
-const { migrate } = require('../scripts/migrate');
 const { Enum, toMask, combine, getDomain } = require('./helpers');
+const { fixture, getAddress } = require('./fixtures');
 
 const STATUS = Enum('NULL', 'PENDING', 'EXECUTED', 'CANCELED');
 
-const getAddress = (account) => account.address ?? account.target ?? account;
-
 const divUp = (numerator, denominator) =>
   (numerator / denominator) * denominator < numerator ? numerator / denominator + 1n : numerator / denominator;
-
-async function fixture() {
-  const accounts = await ethers.getSigners();
-  accounts.admin = accounts.shift();
-  accounts.operator = accounts.shift();
-  accounts.whitelister = accounts.shift();
-  accounts.alice = accounts.shift();
-  accounts.bruce = accounts.shift();
-  accounts.chris = accounts.shift();
-  accounts.other = accounts.shift();
-
-  const { contracts, config, roles } = await migrate(
-    {
-      deployer: accounts.admin,
-      roles: {
-        admin: { members: [accounts.admin].map(getAddress) },
-        'operator-exceptional': { members: [accounts.operator].map(getAddress) },
-        'operator-daily': { members: [accounts.operator, 'minter'].map(getAddress) },
-        'operator-oracle': { members: [accounts.operator].map(getAddress) },
-        burner: { members: ['redemption'].map(getAddress) },
-        whitelister: { members: [accounts.whitelister].map(getAddress) },
-        whitelisted: { members: [accounts.alice, accounts.bruce, 'redemption'].map(getAddress) },
-        'mint-initiator': { members: [accounts.operator].map(getAddress) },
-        'mint-approver': { members: [accounts.admin].map(getAddress) },
-      },
-    },
-    { noCache: true, noConfirm: true }
-  );
-
-  // get token + oracle
-  contracts.token = Object.values(contracts.tokens).find(Boolean);
-  contracts.oracle = Object.values(contracts.oracles).find(Boolean);
-
-  await expect(contracts.oracle.token()).to.eventually.equal(contracts.token, 'Invalid configuration for testing');
-
-  return {
-    accounts,
-    contracts,
-    config,
-    tokenConfig: config.contracts.tokens.find(Boolean),
-    oracleConfig: config.contracts.tokens.find(Boolean).oracle,
-    ...roles,
-  };
-}
 
 describe('Main', function () {
   beforeEach(async function () {
@@ -9233,6 +9187,34 @@ describe('Main', function () {
               this.accounts.other,
               this.contracts.redemption,
               this.contracts.redemption.interface.getFunction('upgradeToAndCall').selector
+            );
+        });
+      });
+
+      describe('archiver', async function () {
+        it('authorized', async function () {
+          await ethers.getContractFactory('Archiver', this.accounts.admin).then((factory) =>
+            upgrades.upgradeProxy(this.contracts.archiver, factory, {
+              redeployImplementation: 'always',
+              constructorArgs: [this.contracts.manager.target],
+            })
+          );
+        });
+
+        it('unauthorized', async function () {
+          await expect(
+            ethers.getContractFactory('Archiver', this.accounts.other).then((factory) =>
+              upgrades.upgradeProxy(this.contracts.archiver, factory, {
+                redeployImplementation: 'always',
+                constructorArgs: [this.contracts.manager.target],
+              })
+            )
+          )
+            .to.be.revertedWithCustomError(this.contracts.archiver, 'RestrictedAccess')
+            .withArgs(
+              this.accounts.other,
+              this.contracts.archiver,
+              this.contracts.archiver.interface.getFunction('upgradeToAndCall').selector
             );
         });
       });

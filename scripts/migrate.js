@@ -56,6 +56,7 @@ async function verifyContracts(contracts, chainName) {
   const permissionManagerAddress = contracts.manager.target;
   const redemptionAddress = contracts.redemption.target;
   const minterAddress = contracts.minter.target;
+  const archiverAddress = contracts.archiver.target;
   const forwarderAddress = contracts.forwarder.target;
   const tokenAddresses = Object.values(contracts.tokens).map((token) => token.target);
   // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
@@ -63,6 +64,7 @@ async function verifyContracts(contracts, chainName) {
   await verifyContract('PermissionManager', permissionManagerAddress, chainName);
   await verifyContract('Redemption', redemptionAddress, chainName, permissionManagerAddress);
   await verifyContract('Minter', minterAddress, chainName, permissionManagerAddress);
+  await verifyContract('Archiver', archiverAddress, chainName, permissionManagerAddress);
 
   for (const tokenAddress of tokenAddresses) {
     await verifyContract('Token', tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
@@ -81,6 +83,7 @@ const Role = {
   RedemptionExecutor: 'redemption-executor',
   MintInitiator: 'mint-initiator',
   MintApprover: 'mint-approver',
+  Archiver: 'archiver',
 };
 
 const PermissionedContracts = {
@@ -162,6 +165,15 @@ async function migrate(config = {}, opts = {}) {
     })
   );
   DEBUG(`minter: ${contracts.minter.target}`);
+
+  contracts.archiver = await ethers.getContractFactory('Archiver').then((factory) =>
+    migration.migrate('archiver', factory, [], {
+      ...opts,
+      kind: 'uups',
+      constructorArgs: [contracts.manager.target],
+    })
+  );
+  DEBUG(`archiver: ${contracts.archiver.target}`);
 
   for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
     // deploy token
