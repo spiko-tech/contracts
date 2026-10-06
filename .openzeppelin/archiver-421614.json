@@ -1,0 +1,44 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0x975bca7147B7E190c31627F3aA82ce7DFDEFd9C3",
+      "txHash": "0x17a1f861e91f0625fff4f93bde3ab98b2b542cba542dd94fa2ec05c8c4e4bc3e",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "5c26e4bf8757505a1c37fe7f1b25b640f3db89d57021a260558f49b228a8f2af": {
+      "address": "0x6348B4A4EABa912f02fbC43f973c1D63f0aA4efe",
+      "txHash": "0xbccbea28458bc8c7650995ea5c9ae00186f51e3bf5395a5648f25e8f114cc876",
+      "layout": {
+        "solcVersion": "0.8.27",
+        "storage": [
+          {
+            "label": "_versions",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_bytes32,t_uint256)",
+            "contract": "EventArchive",
+            "src": "@spiko/erc-cross-chain-event-archive/src/EventArchive.sol:9"
+          }
+        ],
+        "types": {
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {}
+      }
+    }
+  }
+}

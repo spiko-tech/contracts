@@ -50,7 +50,7 @@ pnpm test
 
 ```sh
 # Compilation
-COMPILER=0.8.24
+COMPILER=0.8.27
 EVM_VERSION=cancun
 MODE=production
 
@@ -58,19 +58,87 @@ MODE=production
 DEBUG=migration
 PRIVATE_KEY=
 MAINNET_NODE=
-GOERLI_NODE=
 SEPOLIA_NODE=
+ARBITRUM_ONE_NODE=
 ETHERSCAN=
 ```
 
-Note: The variable `ETHERSCAN` should be used also when deploying to polygonscan (polygon/polygonAmoy) with API key coming from polygonscan.
+Notes:
 
-- Add custom addresses in the `script/config.json` file for the different persmissions groups
+- `PRIVATE_KEY` must be given without the `0x` prefix. The config parser coerces `0x`-prefixed hex to a number and hardhat then rejects it (`Invalid account: Expected string, received number`).
+- `ETHERSCAN` is an Etherscan V2 multichain key and covers every chain listed in `hardhat.config.js`.
+- A network only exists if its `<NETWORK>_NODE` variable is set (for example `ARBITRUM_ONE_NODE` for `arbitrumOne`, `BASE_NODE` for `base`).
+- Never set `FORCE`: it clears the deployment cache and redeploys every contract.
+
+- Add custom addresses in `scripts/config-default.json` for the different permission groups
 
 - Deploy
 
 ```sh
 pnpm hardhat run scripts/migrate.js --network <sepolia or polygonAmoy>
+```
+
+`scripts/migrate.js` deploys the full stack from `scripts/config-default.json` and then writes permissions as the deployer. It only reads `config-default.json` (the `config-<chainId>.json` files are not loaded) and the permission writes require the deployer to be admin. It is therefore only suitable for a fresh deployment on a new network. To add one contract to an existing network, follow the next section.
+
+## Deploying a single contract to an existing network
+
+This example adds the `Archiver` on Arbitrum One (chain id 42161). The same steps apply to any network and any `PermissionManaged` UUPS contract.
+
+1. Look up the `PermissionManager` address in `.cache-<chainId>.json` under `manager.address`. On Arbitrum One it is `0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A`.
+
+2. Deploy the proxy from the hardhat console. `args` is empty because `Archiver` has no initializer; `constructorArgs` feeds `constructor(IAuthority)`.
+
+```sh
+pnpm hardhat console --network arbitrumOne
+```
+
+```js
+const managerAddress = '0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A';
+const factory = await ethers.getContractFactory('Archiver');
+const archiver = await upgrades.deployProxy(factory, [], { kind: 'uups', constructorArgs: [managerAddress] });
+await archiver.waitForDeployment();
+
+archiver.target; // proxy address
+archiver.deploymentTransaction().hash; // deployment tx hash
+await upgrades.erc1967.getImplementationAddress(archiver.target); // implementation address
+```
+
+3. Record the deployment in `.cache-<chainId>.json`, next to the existing entries:
+
+```json
+"archiver": {
+  "txHash": "<deployment tx hash>",
+  "address": "<proxy address>"
+}
+```
+
+The OpenZeppelin plugin has already added the proxy and implementation to `.openzeppelin/<network>.json`. Commit both files.
+
+4. Grant the permission from the admin Safe. `setRequirements` is admin-only and the deployer renounced admin at the end of the initial migration. Build the calldata in the same console:
+
+```js
+const manager = await ethers.getContractAt('PermissionManager', managerAddress);
+const selector = archiver.interface.getFunction('archiveEvent').selector; // 0x95499796
+const config = require('./scripts/config-42161.json');
+const groupId = Object.keys(config.roles).indexOf('archiver'); // 11
+manager.interface.encodeFunctionData('setRequirements', [archiver.target, [selector], [groupId]]);
+```
+
+Execute the resulting calldata against the `PermissionManager` from the Safe, or use the Safe Transaction Builder with `setRequirements(address,bytes4[],uint8[])` and the three values above. The group id is the position of the role in `roles` of the config file; `admin` is 0.
+
+Members are added afterwards with `addGroup(<address>, <groupId>)`, also from the Safe. Until then only the admin can call `archiveEvent`.
+
+5. Verify the implementation on the explorer (the implementation address, not the proxy):
+
+```sh
+pnpm hardhat verify --network arbitrumOne <implementation address> 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A
+```
+
+6. Read back on-chain:
+
+```js
+await archiver.supportsInterface('0x95499796'); // true
+await manager.getRequirements(archiver.target, '0x95499796'); // bits 0 and 11 set once the Safe tx has landed
 ```
 
 ## Verification
