@@ -57,6 +57,7 @@ async function verifyContracts(contracts, chainName) {
   const redemptionAddress = contracts.redemption.target;
   const minterAddress = contracts.minter.target;
   const archiverAddress = contracts.archiver.target;
+  const instantRedemptionAddress = contracts.instantRedemption.target;
   const forwarderAddress = contracts.forwarder.target;
   const tokenAddresses = Object.values(contracts.tokens).map((token) => token.target);
   // const oracleAddresses = Object.values(contracts.oracles).map(oracle => oracle.target);
@@ -65,6 +66,7 @@ async function verifyContracts(contracts, chainName) {
   await verifyContract('Redemption', redemptionAddress, chainName, permissionManagerAddress);
   await verifyContract('Minter', minterAddress, chainName, permissionManagerAddress);
   await verifyContract('Archiver', archiverAddress, chainName, permissionManagerAddress);
+  await verifyContract('InstantRedemption', instantRedemptionAddress, chainName, permissionManagerAddress);
 
   for (const tokenAddress of tokenAddresses) {
     await verifyContract('Token', tokenAddress, chainName, permissionManagerAddress, forwarderAddress);
@@ -84,11 +86,13 @@ const Role = {
   MintInitiator: 'mint-initiator',
   MintApprover: 'mint-approver',
   Archiver: 'archiver',
+  InstantRedeemer: 'instant-redeemer',
 };
 
 const PermissionedContracts = {
   Redemption: 'redemption',
   Minter: 'minter',
+  InstantRedemption: 'instantRedemption',
 };
 
 const sanityCheckConfig = (config) => {
@@ -174,6 +178,15 @@ async function migrate(config = {}, opts = {}) {
     })
   );
   DEBUG(`archiver: ${contracts.archiver.target}`);
+
+  contracts.instantRedemption = await ethers.getContractFactory('InstantRedemption').then((factory) =>
+    migration.migrate('instantRedemption', factory, [], {
+      ...opts,
+      kind: 'uups',
+      constructorArgs: [contracts.manager.target, contracts.redemption.target],
+    })
+  );
+  DEBUG(`instantRedemption: ${contracts.instantRedemption.target}`);
 
   for (const { name, symbol, decimals, oracle } of config?.contracts?.tokens || []) {
     // deploy token
