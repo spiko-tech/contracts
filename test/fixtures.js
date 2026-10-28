@@ -14,6 +14,7 @@ async function fixture() {
   accounts.chris = accounts.shift();
   accounts.other = accounts.shift();
   accounts.archiver = accounts.shift();
+  accounts.redeemer = accounts.shift();
 
   const { contracts, config, roles } = await migrate(
     {
@@ -25,10 +26,15 @@ async function fixture() {
         'operator-oracle': { members: [accounts.operator].map(getAddress) },
         burner: { members: ['redemption'].map(getAddress) },
         whitelister: { members: [accounts.whitelister].map(getAddress) },
-        whitelisted: { members: [accounts.alice, accounts.bruce, 'redemption'].map(getAddress) },
+        whitelisted: {
+          members: [accounts.alice, accounts.bruce, accounts.redeemer, 'redemption', 'instantRedemption'].map(
+            getAddress
+          ),
+        },
         'mint-initiator': { members: [accounts.operator].map(getAddress) },
         'mint-approver': { members: [accounts.admin].map(getAddress) },
         archiver: { members: [accounts.archiver].map(getAddress) },
+        'instant-redeemer': { members: [accounts.redeemer].map(getAddress) },
       },
     },
     { noCache: true, noConfirm: true }

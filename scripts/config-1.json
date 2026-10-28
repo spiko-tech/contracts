@@ -55,7 +55,8 @@
       "minter-initiateMint": ["mint-initiator"],
       "minter-approveMint": ["mint-approver"],
       "minter-cancelMint": ["mint-approver"],
-      "archiver-archiveEvent": ["archiver"]
+      "archiver-archiveEvent": ["archiver"],
+      "instantRedemption-redeem": ["instant-redeemer"]
     }
   },
   "roles": {
@@ -84,7 +85,7 @@
     },
     "whitelisted": {
       "admins": ["whitelister"],
-      "members": ["redemption"]
+      "members": ["redemption", "instantRedemption"]
     },
     "treasury-manager": {
       "admins": ["admin"],
@@ -103,6 +104,10 @@
       "members": []
     },
     "archiver": {
+      "admins": ["admin"],
+      "members": []
+    },
+    "instant-redeemer": {
       "admins": ["admin"],
       "members": []
     }
