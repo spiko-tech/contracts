@@ -73,7 +73,6 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
     );
 
     error UnknownPair(Token token, IERC20 stablecoin);
-    error OracleTokenMismatch(Oracle oracle, Token token);
     error OracleValueTooOld(Oracle oracle);
     error OutputAmountTooLow(uint256 outputAmount, uint256 minOutputAmount);
     error DailyLimitExceeded(address user, uint256 requested, uint256 remaining);
@@ -165,7 +164,6 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
      *                                               Admin operations                                               *
      ****************************************************************************************************************/
     function setPair(Token token, IERC20Metadata stablecoin, Oracle oracle, uint48 oracleTTL) external restricted {
-        require(address(oracle.token()) == address(token), OracleTokenMismatch(oracle, token));
         bytes32 pairId = hashPair(token, stablecoin);
         _pairs[pairId] = Pair({
             oracle: oracle,
