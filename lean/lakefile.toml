@@ -1,0 +1,5 @@
+name = "spiko"
+defaultTargets = ["Spiko"]
+
+[[lean_lib]]
+name = "Spiko"

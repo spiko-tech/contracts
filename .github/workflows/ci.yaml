@@ -34,3 +34,13 @@ jobs:
       - run: pnpm install -r
       - run: pnpm compile
       - run: pnpm coverage
+
+  lean:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean
