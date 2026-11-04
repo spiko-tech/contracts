@@ -191,4 +191,18 @@ theorem run_cases {c : Call} {r : Option Redeemed} (hc : c.run env w = .ok (w', 
     obtain ⟨-, -, -, rfl⟩ := erc20Transfer_ok.mp h
     exact ⟨rfl, rfl, rfl⟩
 
+-- A redeem only writes the caller's usage slot.
+theorem redeem_storage_ok (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
+    w'.ir.pairs = w.ir.pairs ∧ w'.ir.dailyLimit = w.ir.dailyLimit ∧
+      ∀ p u, (p, u) ≠ ((token, stablecoin), env.sender) → w'.ir.usage p u = w.ir.usage p u := by
+  obtain ⟨hir, -⟩ := redeem_usage h
+  refine ⟨by rw [hir], by rw [hir], fun p u hne => ?_⟩
+  rw [hir]; clear hir
+  simp only [upd2, upd]
+  split
+  · subst_vars; simp only [upd]; split
+    · subst_vars; exact absurd rfl hne
+    · rfl
+  · rfl
+
 end Spiko.InstantRedemption

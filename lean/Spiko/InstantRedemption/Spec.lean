@@ -1,5 +1,5 @@
 import Spiko.InstantRedemption.Trace
-import Spiko.InstantRedemption.Lemmas
+import Spiko.InstantRedemption.DailyLimit
 
 -- The specification. Every statement is proven in a later milestone; `sorry` marks the ones still open.
 
@@ -97,7 +97,10 @@ theorem daily_limit (w₀ : World) (h₀ : w₀.ir = State.init) (trace : List S
       let e := log[i]
       (((log.take (i + 1)).filter fun r => decide (r.pair = e.pair ∧ r.user = e.user ∧ r.day = e.day)).map
         (·.out)).sum ≤ e.limit := by
-  sorry
+  intro log i hi e
+  have := daily_limit_aux trace w₀ [] 0 (inv_init h₀) (fun _ _ => Nat.zero_le _) htime i hi
+  simp only [List.nil_append, total] at this
+  exact this
 
 /-! ## P3: conservation -/
 
@@ -128,16 +131,8 @@ theorem redeem_balances (h : redeem env w token stablecoin amount minOut salt = 
 /-- A redeem only changes the caller's usage on that pair. -/
 theorem redeem_storage (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
     w'.ir.pairs = w.ir.pairs ∧ w'.ir.dailyLimit = w.ir.dailyLimit ∧
-      ∀ p u, (p, u) ≠ ((token, stablecoin), env.sender) → w'.ir.usage p u = w.ir.usage p u := by
-  obtain ⟨hir, -⟩ := redeem_usage h
-  refine ⟨by rw [hir], by rw [hir], fun p u hne => ?_⟩
-  rw [hir]; clear hir
-  simp only [upd2, upd]
-  split
-  · subst_vars; simp only [upd]; split
-    · subst_vars; exact absurd rfl hne
-    · rfl
-  · rfl
+      ∀ p u, (p, u) ≠ ((token, stablecoin), env.sender) → w'.ir.usage p u = w.ir.usage p u :=
+  redeem_storage_ok h
 
 /-! ## Liveness -/
 
