@@ -5,4 +5,4 @@ import Spiko.InstantRedemption.Examples
 import Spiko.InstantRedemption.Trace
 import Spiko.InstantRedemption.Lemmas
 import Spiko.InstantRedemption.DailyLimit
-import Spiko.InstantRedemption.Spec
+import Spiko.InstantRedemption.Specifications

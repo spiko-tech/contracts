@@ -8,7 +8,7 @@ A Lean model of `contracts/token/InstantRedemption.sol` and proofs of its proper
 | `Spiko/InstantRedemption/Model.lean` | The contract, function by function |
 | `Spiko/InstantRedemption/Examples.lean` | Concrete runs checked at build time (`#guard`) |
 | `Spiko/InstantRedemption/Trace.lean` | Sequences of calls, interleaved with other contracts' actions |
-| `Spiko/InstantRedemption/Spec.lean` | The properties, all proven (lemmas in `Lemmas.lean`, `DailyLimit.lean`) |
+| `Spiko/InstantRedemption/Specifications/` | The properties, one theorem per file, all proven (index: `Specifications.lean`; lemmas in `Lemmas.lean`, `DailyLimit.lean`) |
 | `DiffTest.lean` | `difftest` executable: replays a call sequence on the model |
 
 ## Setup
