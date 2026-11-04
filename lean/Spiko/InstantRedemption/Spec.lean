@@ -1,7 +1,7 @@
 import Spiko.InstantRedemption.Trace
 import Spiko.InstantRedemption.DailyLimit
 
--- The specification. Every statement is proven in a later milestone; `sorry` marks the ones still open.
+-- The specification of InstantRedemption, with proofs.
 
 namespace Spiko.InstantRedemption
 open Spiko.EVM
@@ -113,7 +113,13 @@ theorem redeem_balances_exact (h : redeem env w token stablecoin amount minOut s
       - (if t = stablecoin ∧ holder = env.self then out else 0) + (if t = stablecoin ∧ holder = env.sender then out else 0)
       - (if t = token ∧ holder = env.self then amount else 0)
       + (if t = token ∧ holder = env.redemption then amount else 0) := by
-  sorry
+  intro t holder
+  obtain ⟨-, -, -, -, _, _, _, w₁, w₂, w₃, -, -, -, h₁, h₂, h₃, h₄⟩ := redeem_ok h
+  have k₁ := erc20TransferFrom_balances h₁
+  obtain ⟨-, -, -, rfl⟩ := erc20Transfer_ok.mp h₂
+  obtain ⟨-, -, -, rfl⟩ := erc20Transfer_ok.mp h₃
+  obtain ⟨-, -, -, -, rfl⟩ := redemptionOnTransferReceived_ok.mp h₄
+  simp only [transferBalances_apply, k₁]
 
 /-- Corollary for distinct addresses: a redeem moves exactly `amount` tokens from the user to Redemption and `out` stablecoins from the buffer to the
 user. No other balance changes. -/
@@ -126,7 +132,16 @@ theorem redeem_balances (h : redeem env w token stablecoin amount minOut salt = 
       w'.balances stablecoin env.self = w.balances stablecoin env.self - out ∧
       ∀ t h, ¬(t = token ∧ (h = env.sender ∨ h = env.redemption)) →
         ¬(t = stablecoin ∧ (h = env.sender ∨ h = env.self)) → w'.balances t h = w.balances t h := by
-  sorry
+  have hx := redeem_balances_exact h
+  have hd := And.intro hts (And.intro hts.symm (And.intro hus (And.intro hus.symm (And.intro hrs (And.intro hrs.symm (And.intro hur hur.symm))))))
+  refine ⟨?_, ?_, ?_, ?_, fun t h₁ h₂ h₃ => ?_⟩
+  · rw [hx]; simp [hd]
+  · rw [hx]; simp [hd]
+  · rw [hx]; simp [hd]
+  · rw [hx]; simp [hd]
+  · rw [hx]
+    by_cases ht : t = token <;> by_cases hs : t = stablecoin <;> simp_all
+    all_goals exact BitVec.add_sub_cancel _ _
 
 /-- A redeem only changes the caller's usage on that pair. -/
 theorem redeem_storage (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
@@ -138,10 +153,9 @@ theorem redeem_storage (h : redeem env w token stablecoin amount minOut salt = .
 
 /-- A redeem that meets every condition goes through and pays the exact price. Rules out a model (or a contract) that
 reverts too often, which all the safety theorems above would accept. The conditions are sufficient, not necessary:
-distinct addresses are assumed for readability. -/
+`token ≠ stablecoin` and `sender ≠ self` are assumed for readability. -/
 theorem redeem_succeeds
-    (hts : token ≠ stablecoin) (hus : env.sender ≠ env.self) (hrs : env.redemption ≠ env.self)
-    (hur : env.sender ≠ env.redemption) (hs0 : env.sender ≠ 0) (hself0 : env.self ≠ 0) (hr0 : env.redemption ≠ 0)
+    (hts : token ≠ stablecoin) (hus : env.sender ≠ env.self) (hs0 : env.sender ≠ 0) (hself0 : env.self ≠ 0) (hr0 : env.redemption ≠ 0)
     -- permission
     (hauth : env.canCall env.sender env.self .redeem = true)
     -- pricing
@@ -168,7 +182,59 @@ theorem redeem_succeeds
     (hunused : w.redemptionUsed (env.self, token, stablecoin, amount, salt) = false)
     (hrdeadline : env.timestamp.toNat + 14 * 86400 < 2 ^ 48) :
     ∃ w', redeem env w token stablecoin amount minOut salt = .ok (w', out) := by
-  sorry
+  have h86 : (86400 : U256).toNat = 86400 := rfl
+  have hday : (env.timestamp / 86400).toNat < 2 ^ 48 := by rw [BitVec.toNat_udiv, h86]; omega
+  -- the values the contract computes
+  let today : U48 := (env.timestamp / 86400).setWidth 48
+  let U := w.ir.usage (token, stablecoin) env.sender
+  let usage' : Usage := if U.day = today then U else { day := today, amount := 0 }
+  have htodayNat : today.toNat = env.timestamp.toNat / 86400 := by
+    show ((env.timestamp / 86400).setWidth 48).toNat = _
+    rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt hday, BitVec.toNat_udiv, h86]
+  have hused : usage'.amount.toNat = usedToday w.ir env.timestamp (token, stablecoin) env.sender := by
+    show (if U.day = today then U else { day := today, amount := 0 }).amount.toNat = _
+    unfold usedToday
+    split <;> split <;> rename_i h1 h2
+    · rfl
+    · exact absurd (by rw [h1, htodayNat]) h2
+    · exact absurd (BitVec.eq_of_toNat_eq (by rw [htodayNat, h2])) h1
+    · rfl
+  -- the daily limit leaves room: used + out ≤ limit < 2^208
+  rw [BitVec.le_def, remainingDailyLimit_toNat] at hlimit
+  rw [BitVec.lt_def] at hpos
+  have h0 : (0 : U256).toNat = 0 := rfl
+  have hout208 : out.toNat < 2 ^ 208 := by omega
+  have hadd208 : (out.setWidth 208).toNat = out.toNat := by rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt hout208]
+  have hsum : usage'.amount.toNat + (out.setWidth 208).toNat < 2 ^ 208 := by rw [hused, hadd208]; omega
+  let newU : Usage := { usage' with amount := usage'.amount + out.setWidth 208 }
+  let w₀ : World := { w with ir := { w.ir with usage := upd2 w.ir.usage (token, stablecoin) env.sender newU } }
+  -- the four external effects
+  obtain ⟨w₁, h₁, hb₁, hu₁⟩ := erc20TransferFrom_succeeds (w := w₀) hallow hself0 htr₁ hbal
+  have hbuf₁ : out ≤ w₁.balances stablecoin env.self := by
+    rw [hb₁, transferBalances_apply]; simp [hts.symm]; exact hbuffer
+  have h₂ := erc20Transfer_ok.mpr ⟨hs0, htr₂, hbuf₁, rfl⟩
+  have hbal₂ : amount ≤ transferBalances w₁.balances stablecoin env.self env.sender out token env.self := by
+    have hw₀ : w₀.balances = w.balances := rfl
+    rw [transferBalances_apply, hb₁, transferBalances_apply, hw₀]
+    simp [hts, hus.symm]
+    rw [BitVec.le_def, BitVec.toNat_add, Nat.mod_eq_of_lt hwrap]; omega
+  let w₂ : World := { w₁ with balances := transferBalances w₁.balances stablecoin env.self env.sender out }
+  let w₃ : World := { w₂ with balances := transferBalances w₂.balances token env.self env.redemption amount }
+  have h₃ := (erc20Transfer_ok (w := w₂) (w' := w₃)).mpr ⟨hr0, htr₃, hbal₂, rfl⟩
+  have hunused₃ : w₁.redemptionUsed (env.self, token, stablecoin, amount, salt) = false := by rw [hu₁]; exact hunused
+  have h₄ := (redemptionOnTransferReceived_ok (w := w₃) (w' := _)).mpr ⟨houtput, hminimum, hunused₃, hrdeadline, rfl⟩
+  -- assemble the run
+  refine ⟨{ w₃ with redemptionUsed := upd w₃.redemptionUsed (env.self, token, stablecoin, amount, salt) true }, ?_⟩
+  simp only [redeem, restricted, bind_ok, liftM_ok, ite_pure_throw_ok, ite_throw_ok, pure_ok]
+  refine ⟨(), hauth, out, previewRedeem_succeeds hp horacle hr hdeadline hfresh hprice hnum hden hout, ?_, ?_,
+    today, toUint_ok.mpr ⟨hday, rfl⟩, _, toUint_ok.mpr ⟨hout208, rfl⟩, _, checkedAdd_ok.mpr ⟨hsum, rfl⟩,
+    w₁, h₁, _, h₂, _, h₃, _, h₄, rfl⟩
+  · rw [BitVec.le_def] at hmin ⊢
+    split
+    · have : (1 : U256).toNat = 1 := rfl
+      omega
+    · exact hmin
+  · rw [BitVec.le_def, remainingDailyLimit_toNat]; exact hlimit
 
 /-! ## P4: access control -/
 

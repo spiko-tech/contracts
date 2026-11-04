@@ -6,7 +6,8 @@ import Spiko.Lemmas
 namespace Spiko.InstantRedemption
 open Spiko.EVM
 
-variable {env : Env} {w w' : World} {token stablecoin src dst : Address} {amount minOut salt out : U256}
+variable {env : Env} {s : State} {w w' : World} {pair : Pair} {round : OracleRound}
+  {token stablecoin src dst : Address} {amount minOut salt out : U256}
 
 theorem liftM_ok {α : Type} {x : Except Revert α} {a : α} :
     (liftM x : Except Error α) = .ok a ↔ x = .ok a := by
@@ -204,5 +205,52 @@ theorem redeem_storage_ok (h : redeem env w token stablecoin amount minOut salt 
     · subst_vars; exact absurd rfl hne
     · rfl
   · rfl
+
+-- One transfer's effect on any balance.
+theorem transferBalances_apply (b : Address → Address → U256) (tk src dst : Address) (x : U256) (t h : Address) :
+    transferBalances b tk src dst x t h =
+      b t h - (if t = tk ∧ h = src then x else 0) + (if t = tk ∧ h = dst then x else 0) := by
+  simp only [transferBalances, upd2, upd]
+  by_cases h1 : t = tk <;> by_cases h2 : h = src <;> by_cases h3 : h = dst <;> simp_all [upd]
+
+theorem erc20TransferFrom_balances {token src dst : Address} {amount : U256}
+    (h : erc20TransferFrom env w token src dst amount = .ok w') :
+    w'.balances = transferBalances w.balances token src dst amount := by
+  simp only [erc20TransferFrom] at h
+  split at h
+  · simp only [pure_bind, erc20Transfer_ok] at h
+    obtain ⟨-, -, -, rfl⟩ := h; rfl
+  · simp only [pure_bind, ite_throw_ok, erc20Transfer_ok] at h
+    obtain ⟨-, -, -, -, rfl⟩ := h; rfl
+
+-- Converses, used to build successful runs.
+theorem previewRedeem_succeeds (hp : s.pairs (token, stablecoin) = pair) (horacle : pair.oracle ≠ 0)
+    (hr : env.latestRoundData pair.oracle = .ok round)
+    (hdeadline : round.updatedAt.toNat + pair.oracleTTL.toNat < 2 ^ 256)
+    (hfresh : env.timestamp.toNat < round.updatedAt.toNat + pair.oracleTTL.toNat)
+    (hprice : 0 ≤ round.answer.toInt)
+    (hnum : pair.numerator.toNat * round.answer.toNat < 2 ^ 256) (hden : pair.denominator.toNat ≠ 0)
+    (hout : out.toNat = amount.toNat * (pair.numerator.toNat * round.answer.toNat) / pair.denominator.toNat) :
+    previewRedeem env s token stablecoin amount = .ok out := by
+  simp only [previewRedeem, getLatestPrice, hp, bind_ok, liftM_ok, checkedAdd_ok, checkedMul_ok, mulDiv_ok,
+    ite_throw_ok, ite_throw_ok', toUint256_ok]
+  refine ⟨horacle, round.answer, ⟨round, hr, _, ⟨by rw [toNat_setWidth_48]; exact hdeadline, rfl⟩, ?_, hprice, rfl⟩,
+    _, ⟨hnum, rfl⟩, hden, ?_⟩
+  · rw [BitVec.lt_def, BitVec.toNat_add, toNat_setWidth_48, Nat.mod_eq_of_lt hdeadline]; exact hfresh
+  · rw [hout, BitVec.toNat_mul, Nat.mod_eq_of_lt hnum]
+
+theorem erc20TransferFrom_succeeds {src dst : Address}
+    (hallow : w.allowances token src env.self = maxU256 ∨ amount ≤ w.allowances token src env.self)
+    (hdst : dst ≠ 0) (hc : env.canTransfer token src dst = true) (hb : amount ≤ w.balances token src) :
+    ∃ w', erc20TransferFrom env w token src dst amount = .ok w' ∧
+      w'.balances = transferBalances w.balances token src dst amount ∧ w'.redemptionUsed = w.redemptionUsed := by
+  by_cases hmax : w.allowances token src env.self = maxU256
+  · refine ⟨{ w with balances := transferBalances w.balances token src dst amount }, ?_, rfl, rfl⟩
+    simp only [erc20TransferFrom, hmax, ↓reduceIte, pure_bind]
+    exact erc20Transfer_ok.mpr ⟨hdst, hc, hb, rfl⟩
+  · let a' := upd w.allowances token (upd2 (w.allowances token) src env.self (w.allowances token src env.self - amount))
+    refine ⟨{ w with allowances := a', balances := transferBalances w.balances token src dst amount }, ?_, rfl, rfl⟩
+    simp only [erc20TransferFrom, hmax, ↓reduceIte, pure_bind, ite_throw_ok]
+    exact ⟨hallow.resolve_left hmax, erc20Transfer_ok.mpr ⟨hdst, hc, hb, rfl⟩⟩
 
 end Spiko.InstantRedemption
