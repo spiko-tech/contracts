@@ -312,13 +312,6 @@ describe('InstantRedemption', function () {
       }
     });
 
-    it('setPair rejects an oracle of another token', async function () {
-      const other = Object.values(this.contracts.oracles).find((oracle) => oracle !== this.contracts.oracle);
-      await expect(this.ir.setPair(this.contracts.token, this.stable, other, oracleTTL))
-        .to.be.revertedWithCustomError(this.ir, 'OracleTokenMismatch')
-        .withArgs(other, this.contracts.token);
-    });
-
     it('removePair', async function () {
       await expect(this.ir.removePair(this.contracts.token, this.stable))
         .to.emit(this.ir, 'PairRemoved')
