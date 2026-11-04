@@ -21,6 +21,12 @@ import { Token } from "./Token.sol";
  *
  * The user is paid immediately from a stablecoin buffer held by this contract. The fund tokens are then submitted to
  * the {Redemption} contract as a regular request owned by this contract, so that its settlement repays the buffer.
+ *
+ * A pair is only usable once both conditions hold, which {setPair} does not check:
+ * - the stablecoin is registered as an output of the fund token in {Redemption}, otherwise {redeem} reverts when the
+ *   request reaches {Redemption} while {previewRedeem} still returns an amount;
+ * - the oracle has published at least one price, otherwise {previewRedeem} and {redeem} revert without a
+ *   descriptive error.
  */
 /// @custom:security-contact security@spiko.tech
 contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable, Multicall {
@@ -177,6 +183,10 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
         emit PairUpdated(pairId, token, stablecoin, oracle, oracleTTL);
     }
 
+    /**
+     * @dev ADMIN: the daily limits and usage of the pair are kept. If the same pair is configured again, the previous
+     * limits apply immediately without a {DailyLimitUpdated} event; reset them with {setDailyLimit} if needed.
+     */
     function removePair(Token token, IERC20 stablecoin) external restricted {
         bytes32 pairId = hashPair(token, stablecoin);
         delete _pairs[pairId];
