@@ -44,3 +44,15 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install -r
+      - name: Differential test (model vs contracts)
+        run: pnpm hardhat test test/instantRedemption.difftest.js
+        env:
+          LEAN_DIFFTEST: lean/.lake/build/bin/difftest

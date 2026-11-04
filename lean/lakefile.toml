@@ -1,5 +1,9 @@
 name = "spiko"
-defaultTargets = ["Spiko"]
+defaultTargets = ["Spiko", "difftest"]
 
 [[lean_lib]]
 name = "Spiko"
+
+[[lean_exe]]
+name = "difftest"
+root = "DiffTest"
