@@ -85,12 +85,16 @@ structure Env where
 /-! ## External contracts -/
 
 -- OpenZeppelin ERC20._update: the credit reads the balance after the debit (src = dst is a no-op) and wraps.
+def transferBalances (balances : Address → Address → U256) (token src dst : Address) (amount : U256) :
+    Address → Address → U256 :=
+  let b := upd2 balances token src (balances token src - amount)
+  upd2 b token dst (b token dst + amount)
+
 def erc20Transfer (env : Env) (w : World) (token src dst : Address) (amount : U256) : Except Error World := do
   if dst = 0 then throw (Error.external token)
   unless env.canTransfer token src dst do throw (Error.external token)
   unless amount ≤ w.balances token src do throw (Error.external token)
-  let b := upd2 w.balances token src (w.balances token src - amount)
-  return { w with balances := upd2 b token dst (b token dst + amount) }
+  return { w with balances := transferBalances w.balances token src dst amount }
 
 def erc20TransferFrom (env : Env) (w : World) (token src dst : Address) (amount : U256) : Except Error World := do
   let allowed := w.allowances token src env.self

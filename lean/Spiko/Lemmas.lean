@@ -21,6 +21,17 @@ theorem ite_throw_ok {ε α : Type} {c : Prop} [Decidable c] {x : Except ε α} 
     {a : α} : (if c then x else (throw e >>= f)) = .ok a ↔ c ∧ x = .ok a := by
   split <;> simp_all [throw_bind_ne_ok]
 
+theorem pure_ok {ε α : Type} {x y : α} : (pure x : Except ε α) = .ok y ↔ x = y := by
+  simp [pure, Except.pure]
+
+theorem ite_pure_throw_ok {ε : Type} {c : Prop} [Decidable c] {e : ε} {u : PUnit} :
+    (if c then pure () else throw e : Except ε PUnit) = .ok u ↔ c := by
+  split <;> simp_all [pure, Except.pure, throw_ne_ok]
+
+theorem ite_throw_ok' {ε α : Type} {c : Prop} [Decidable c] {x : Except ε α} {e : ε} {f : PUnit → Except ε α}
+    {a : α} : (if c then (throw e >>= f) else x) = .ok a ↔ ¬c ∧ x = .ok a := by
+  split <;> simp_all [throw_bind_ne_ok]
+
 theorem checkedAdd_ok {n : Nat} {a b c : BitVec n} :
     checkedAdd a b = .ok c ↔ a.toNat + b.toNat < 2 ^ n ∧ c = a + b := by
   unfold checkedAdd; split
@@ -52,5 +63,16 @@ theorem toUint256_ok {v u : I256} : toUint256 v = .ok u ↔ 0 ≤ v.toInt ∧ u 
 
 theorem toNat_setWidth_48 (x : U48) : (x.setWidth 256).toNat = x.toNat := by
   simp only [BitVec.toNat_setWidth]; exact Nat.mod_eq_of_lt (by have := x.isLt; omega)
+
+theorem toUint_ok {bits : Nat} {v : U256} {r : BitVec bits} :
+    toUint bits v = .ok r ↔ v.toNat < 2 ^ bits ∧ r = v.setWidth bits := by
+  unfold toUint; split
+  · simp_all [eq_comm]
+  · simp only [reduceCtorEq, false_iff, not_and]; intro; omega
+
+theorem saturatingSub_toNat (a b : U256) : (saturatingSub a b).toNat = a.toNat - b.toNat := by
+  unfold saturatingSub; split
+  · rename_i h; rw [BitVec.le_def] at h; rw [BitVec.toNat_sub_of_le (BitVec.le_def.mpr h)]
+  · rename_i h; rw [BitVec.le_def] at h; show (0 : U256).toNat = _; simp; omega
 
 end Spiko.EVM

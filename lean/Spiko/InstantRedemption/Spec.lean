@@ -1,5 +1,5 @@
 import Spiko.InstantRedemption.Trace
-import Spiko.Lemmas
+import Spiko.InstantRedemption.Lemmas
 
 -- The specification. Every statement is proven in a later milestone; `sorry` marks the ones still open.
 
@@ -8,10 +8,6 @@ open Spiko.EVM
 
 variable {env env₁ env₂ : Env} {s : State} {w w' : World} {pair : Pair} {round round₁ round₂ : OracleRound}
   {token stablecoin : Address} {amount a₁ a₂ minOut salt out o₁ o₂ : U256}
-
-theorem liftM_ok {α : Type} {x : Except Revert α} {a : α} :
-    (liftM x : Except Error α) = .ok a ↔ x = .ok a := by
-  cases x <;> simp [liftM, monadLift, MonadLift.monadLift, Except.mapError]
 
 /-! ## P1: pricing -/
 
@@ -81,15 +77,16 @@ theorem previewRedeem_mono_price (hp : s.pairs (token, stablecoin) = pair)
 
 /-- A redeem pays at least `max(minOutputAmount, 1)`. -/
 theorem redeem_output_min (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
-    minOut ≤ out ∧ 0 < out := by
-  sorry
+    minOut ≤ out ∧ 0 < out :=
+  redeem_min h
 
 /-- After a redeem, today's usage is within the limit in force during the call. -/
 theorem redeem_within_limit (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
     let u := w'.ir.usage (token, stablecoin) env.sender
     u.day.toNat = env.timestamp.toNat / 86400 ∧
       u.amount.toNat ≤ (w.ir.dailyLimit (token, stablecoin) env.sender).toNat := by
-  sorry
+  obtain ⟨-, hday, hamount, hle⟩ := redeem_usage h
+  exact ⟨hday, by omega⟩
 
 /-- Over any sequence of calls from deployment, with time never going backwards: for every successful redeem, the
 total paid to that user, on that pair, that day, up to and including it, is within the limit in force at that call. -/
@@ -132,7 +129,15 @@ theorem redeem_balances (h : redeem env w token stablecoin amount minOut salt = 
 theorem redeem_storage (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
     w'.ir.pairs = w.ir.pairs ∧ w'.ir.dailyLimit = w.ir.dailyLimit ∧
       ∀ p u, (p, u) ≠ ((token, stablecoin), env.sender) → w'.ir.usage p u = w.ir.usage p u := by
-  sorry
+  obtain ⟨hir, -⟩ := redeem_usage h
+  refine ⟨by rw [hir], by rw [hir], fun p u hne => ?_⟩
+  rw [hir]; clear hir
+  simp only [upd2, upd]
+  split
+  · subst_vars; simp only [upd]; split
+    · subst_vars; exact absurd rfl hne
+    · rfl
+  · rfl
 
 /-! ## Liveness -/
 
@@ -175,23 +180,50 @@ theorem redeem_succeeds
 /-- Every call fails unless the authority allows the caller. -/
 theorem call_restricted (c : Call) {r : World × Option Redeemed} (h : c.run env w = .ok r) :
     env.canCall env.sender env.self c.selector = true := by
-  sorry
+  cases c <;> simp only [Call.run, Call.selector, bind_ok] at h ⊢
+  case redeem => obtain ⟨_, h, -⟩ := h; exact (redeem_ok h).1
+  all_goals
+    obtain ⟨_, h, -⟩ := h
+    simp only [setPair, removePair, setDailyLimit, withdraw, restricted, bind_ok, ite_pure_throw_ok] at h
+    obtain ⟨_, h, -⟩ := h
+    exact h
 
 /-! ## P5: salt -/
 
 /-- A redeem registers its request with this contract as the owner. -/
 theorem redeem_marks_used (h : redeem env w token stablecoin amount minOut salt = .ok (w', out)) :
     w'.redemptionUsed (env.self, token, stablecoin, amount, salt) = true := by
-  sorry
+  obtain ⟨-, -, -, -, _, _, _, _, _, _, -, -, -, -, -, -, h₄⟩ := redeem_ok h
+  obtain ⟨-, -, -, -, rfl⟩ := redemptionOnTransferReceived_ok.mp h₄
+  simp [upd]
 
 /-- A used request id makes any redeem with the same token, stablecoin, amount and salt fail, whoever calls. -/
 theorem redeem_rejects_used (hu : w.redemptionUsed (env.self, token, stablecoin, amount, salt) = true) :
     ∀ r, redeem env w token stablecoin amount minOut salt ≠ .ok r := by
-  sorry
+  rintro ⟨w', out⟩ h
+  obtain ⟨-, -, -, -, _, _, _, w₁, w₂, w₃, -, -, -, h₁, h₂, h₃, h₄⟩ := redeem_ok h
+  have k₁ := (erc20TransferFrom_keeps h₁).2
+  obtain ⟨-, -, -, rfl⟩ := erc20Transfer_ok.mp h₂
+  obtain ⟨-, -, -, rfl⟩ := erc20Transfer_ok.mp h₃
+  obtain ⟨-, -, hfree, -⟩ := redemptionOnTransferReceived_ok.mp h₄
+  simp_all
 
 /-- Used ids stay used over any sequence of calls and external actions. -/
 theorem exec_keeps_used (trace : List Step) (id : RedemptionId) (hu : w.redemptionUsed id = true) :
     (exec w trace).1.redemptionUsed id = true := by
-  sorry
+  induction trace generalizing w with
+  | nil => exact hu
+  | cons step rest ih =>
+    cases step with
+    | external e => exact ih (e.keepsUsed w id hu)
+    | call env c =>
+      simp only [exec]
+      split
+      · rename_i w₁ r hc
+        apply ih
+        rcases run_cases hc with ⟨_, _, _, _, _, _, rfl, hr, -⟩ | ⟨-, -, hused⟩
+        · exact redeem_keeps_used hr hu
+        · rw [hused]; exact hu
+      · exact ih hu
 
 end Spiko.InstantRedemption
