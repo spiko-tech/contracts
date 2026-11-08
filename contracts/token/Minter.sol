@@ -128,6 +128,14 @@ contract Minter is PermissionManaged, UUPSUpgradeable, Multicall {
         require(mintStateStatus(id) == Status.PENDING, "Operation is not pending");
         _mintDeadline[id] = type(uint256).max; // Mark as executed
 
+        DailyUsage storage tokenDailyUsage = _dailyUsage[token];
+        uint256 currentDay = getCurrentDay();
+        if (tokenDailyUsage.lastUsageDay != currentDay) {
+            tokenDailyUsage.dailyUsed = 0;
+            tokenDailyUsage.lastUsageDay = currentDay;
+        }
+        tokenDailyUsage.dailyUsed += amount;
+
         token.mint(user, amount);
 
         emit MintExecuted(id, user, token, amount, salt);
