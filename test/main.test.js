@@ -226,9 +226,15 @@ describe('Main', function () {
         });
 
         it('authorized', async function () {
+          const balanceBefore = await this.contracts.token.balanceOf(this.accounts.alice);
+          const supplyBefore = await this.contracts.token.totalSupply();
+
           await expect(this.contracts.token.connect(this.accounts.admin).burn(this.accounts.alice, 100))
             .to.emit(this.contracts.token, 'Transfer')
             .withArgs(this.accounts.alice, ethers.ZeroAddress, 100);
+
+          expect(await this.contracts.token.balanceOf(this.accounts.alice)).to.equal(balanceBefore - 100n);
+          expect(await this.contracts.token.totalSupply()).to.equal(supplyBefore - 100n);
         });
 
         it('unauthorized caller (need admin)', async function () {
@@ -253,9 +259,15 @@ describe('Main', function () {
               .remGroup(this.accounts.chris, this.IDS.whitelisted),
           ]);
 
+          const balanceBefore = await this.contracts.token.balanceOf(this.accounts.chris);
+          const supplyBefore = await this.contracts.token.totalSupply();
+
           await expect(this.contracts.token.connect(this.accounts.admin).burn(this.accounts.chris, 100))
             .to.emit(this.contracts.token, 'Transfer')
             .withArgs(this.accounts.chris, ethers.ZeroAddress, 100);
+
+          expect(await this.contracts.token.balanceOf(this.accounts.chris)).to.equal(balanceBefore - 100n);
+          expect(await this.contracts.token.totalSupply()).to.equal(supplyBefore - 100n);
         });
       });
 
@@ -661,6 +673,10 @@ describe('Main', function () {
 
         expect(await this.contracts.oracle.getLatestPrice()).to.equal(0);
         await expect(this.contracts.oracle.latestRoundData()).to.be.reverted;
+
+        expect(
+          await this.contracts.oracle.connect(this.accounts.operator).publishPrice.staticCall(timepoint, value)
+        ).to.equal(roundId);
 
         await expect(this.contracts.oracle.connect(this.accounts.operator).publishPrice(timepoint, value))
           .to.emit(this.contracts.oracle, 'Update')
@@ -8032,6 +8048,10 @@ describe('Main', function () {
         expect(statusBefore).to.equal(STATUS.NULL);
         expect(deadlineBefore).to.equal(0);
 
+        const userBefore = await op.input.balanceOf(op.user);
+        const escrowBefore = await op.input.balanceOf(this.contracts.redemption);
+        const supplyBefore = await op.input.totalSupply();
+
         await expect(
           op.input.connect(op.user).getFunction('transferAndCall(address,uint256,bytes)')(
             this.contracts.redemption,
@@ -8043,6 +8063,10 @@ describe('Main', function () {
           .withArgs(op.user, this.contracts.redemption, op.value)
           .to.emit(this.contracts.redemption, 'RedemptionInitiated')
           .withArgs(op.id, op.user, op.input, op.output, op.value, op.salt);
+
+        expect(await op.input.balanceOf(op.user)).to.equal(userBefore - BigInt(op.value));
+        expect(await op.input.balanceOf(this.contracts.redemption)).to.equal(escrowBefore + BigInt(op.value));
+        expect(await op.input.totalSupply()).to.equal(supplyBefore);
 
         const timepoint = await time.latest();
 
@@ -8199,6 +8223,9 @@ describe('Main', function () {
         const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
         expect(statusBefore).to.equal(STATUS.PENDING);
 
+        const escrowBefore = await this.operation.input.balanceOf(this.contracts.redemption);
+        const supplyBefore = await this.operation.input.totalSupply();
+
         await expect(
           this.contracts.redemption
             .connect(this.accounts.operator)
@@ -8215,6 +8242,11 @@ describe('Main', function () {
           .withArgs(this.contracts.redemption, ethers.ZeroAddress, this.operation.value)
           .to.emit(this.contracts.redemption, 'RedemptionExecuted')
           .withArgs(this.operation.id, data);
+
+        expect(await this.operation.input.balanceOf(this.contracts.redemption)).to.equal(
+          escrowBefore - BigInt(this.operation.value)
+        );
+        expect(await this.operation.input.totalSupply()).to.equal(supplyBefore - BigInt(this.operation.value));
 
         const { status: statusAfter } = await this.contracts.redemption.details(this.operation.id);
         expect(statusAfter).to.equal(STATUS.EXECUTED);
@@ -8297,6 +8329,10 @@ describe('Main', function () {
         const { status: statusBefore } = await this.contracts.redemption.details(this.operation.id);
         expect(statusBefore).to.equal(STATUS.PENDING);
 
+        const userBefore = await this.operation.input.balanceOf(this.operation.user);
+        const escrowBefore = await this.operation.input.balanceOf(this.contracts.redemption);
+        const supplyBefore = await this.operation.input.totalSupply();
+
         await expect(
           this.contracts.redemption
             .connect(this.accounts.other)
@@ -8312,6 +8348,14 @@ describe('Main', function () {
           .withArgs(this.contracts.redemption, this.operation.user, this.operation.value)
           .to.emit(this.contracts.redemption, 'RedemptionCanceled')
           .withArgs(this.operation.id);
+
+        expect(await this.operation.input.balanceOf(this.operation.user)).to.equal(
+          userBefore + BigInt(this.operation.value)
+        );
+        expect(await this.operation.input.balanceOf(this.contracts.redemption)).to.equal(
+          escrowBefore - BigInt(this.operation.value)
+        );
+        expect(await this.operation.input.totalSupply()).to.equal(supplyBefore);
 
         const { status: statusAfter } = await this.contracts.redemption.details(this.operation.id);
         expect(statusAfter).to.equal(STATUS.CANCELED);
