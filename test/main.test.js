@@ -8745,6 +8745,78 @@ describe('Main', function () {
       });
     });
 
+    describe('approveMint daily usage', function () {
+      beforeEach(async function () {
+        await this.contracts.minter.connect(this.accounts.admin).setDailyLimit(this.contracts.token, 100000);
+      });
+
+      it('counts an approved mint toward the daily limit', async function () {
+        const approved = this.makeMintOp({ amount: 120000, user: this.accounts.alice });
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(approved.user, approved.token, approved.amount, approved.salt)
+        ).to.emit(this.contracts.minter, 'MintBlocked');
+
+        await expect(this.contracts.minter.mintStateStatus(approved.id)).to.eventually.equal(MINTER_STATUS.PENDING);
+        await expect(approved.token.balanceOf(approved.user)).to.eventually.equal(0);
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.admin)
+            .approveMint(approved.user, approved.token, approved.amount, approved.salt)
+        ).to.emit(this.contracts.minter, 'MintExecuted');
+
+        await expect(this.contracts.minter.mintStateStatus(approved.id)).to.eventually.equal(MINTER_STATUS.DONE);
+        await expect(approved.token.balanceOf(approved.user)).to.eventually.equal(approved.amount);
+        await expect(this.contracts.minter.getMintedToday(approved.token)).to.eventually.equal(120000);
+
+        const followUp = this.makeMintOp({ amount: 90000, user: this.accounts.bruce });
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(followUp.user, followUp.token, followUp.amount, followUp.salt)
+        ).to.emit(this.contracts.minter, 'MintBlocked');
+
+        await expect(this.contracts.minter.mintStateStatus(followUp.id)).to.eventually.equal(MINTER_STATUS.PENDING);
+        await expect(followUp.token.balanceOf(followUp.user)).to.eventually.equal(0);
+        await expect(this.contracts.minter.getMintedToday(followUp.token)).to.eventually.equal(120000);
+      });
+
+      it('resets usage the day after an approved mint', async function () {
+        const approved = this.makeMintOp({ amount: 120000, user: this.accounts.alice });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(approved.user, approved.token, approved.amount, approved.salt);
+        await this.contracts.minter
+          .connect(this.accounts.admin)
+          .approveMint(approved.user, approved.token, approved.amount, approved.salt);
+
+        const followUp = this.makeMintOp({ amount: 90000, user: this.accounts.bruce });
+        await this.contracts.minter
+          .connect(this.accounts.operator)
+          .initiateMint(followUp.user, followUp.token, followUp.amount, followUp.salt);
+        await expect(this.contracts.minter.mintStateStatus(followUp.id)).to.eventually.equal(MINTER_STATUS.PENDING);
+        await expect(followUp.token.balanceOf(followUp.user)).to.eventually.equal(0);
+
+        await time.increase(86400);
+
+        const nextDay = this.makeMintOp({ amount: 90000, user: this.accounts.bruce });
+
+        await expect(
+          this.contracts.minter
+            .connect(this.accounts.operator)
+            .initiateMint(nextDay.user, nextDay.token, nextDay.amount, nextDay.salt)
+        ).to.emit(this.contracts.minter, 'MintExecuted');
+
+        await expect(this.contracts.minter.mintStateStatus(nextDay.id)).to.eventually.equal(MINTER_STATUS.DONE);
+        await expect(nextDay.token.balanceOf(nextDay.user)).to.eventually.equal(nextDay.amount);
+        await expect(this.contracts.minter.getMintedToday(nextDay.token)).to.eventually.equal(90000);
+      });
+    });
+
     describe('cancelMint', function () {
       beforeEach(async function () {
         // Block a mint operation first
