@@ -19,8 +19,13 @@ import { Token } from "./Token.sol";
 /**
  * @dev Instant redemption of fund tokens against stablecoins.
  *
- * The user is paid immediately from a stablecoin buffer held by this contract. The fund tokens are then submitted to
- * the {Redemption} contract as a regular request owned by this contract, so that its settlement repays the buffer.
+ * The stablecoin is paid immediately to a recipient from a buffer held by this contract. The fund tokens are then
+ * submitted to the {Redemption} contract as a regular request owned by this contract, so that its settlement repays
+ * the buffer.
+ *
+ * The recipient must be allowed to receive the fund token being redeemed: the same allowlist rule the {Token} applies
+ * to any transfer recipient (see {isAllowedRecipient}). As in {MultiATM}, the `recipient` argument comes right after
+ * the input amount and before `minOutputAmount`.
  *
  * A pair is only usable once both conditions hold, which {setPair} does not check:
  * - the stablecoin is registered as an output of the fund token in {Redemption}, otherwise {redeem} reverts when the
@@ -60,7 +65,8 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
         IERC20 stablecoin,
         uint256 inputAmount,
         uint256 outputAmount,
-        bytes32 redemptionId
+        bytes32 redemptionId,
+        address recipient
     );
     event PairUpdated(
         bytes32 indexed pairId,
@@ -82,6 +88,8 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
     error OracleValueTooOld(Oracle oracle);
     error OutputAmountTooLow(uint256 outputAmount, uint256 minOutputAmount);
     error DailyLimitExceeded(address user, uint256 requested, uint256 remaining);
+    error UnauthorizedRecipient(Token token, address recipient);
+    error AmountBelowRedemptionMinimum(uint256 amount, uint256 minimum);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAuthority _authority, Redemption _redemption) PermissionManaged(_authority) {
@@ -112,6 +120,14 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
         return _dailyLimit[pairId][user].saturatingSub(used);
     }
 
+    /**
+     * @dev Whether `recipient` can be paid for a redemption of `token`: it must be allowed to receive `token`, as
+     * checked by {Token} on every transfer. Admins of the permission manager always pass this check.
+     */
+    function isAllowedRecipient(Token token, address recipient) public view returns (bool) {
+        return authority.canCall(recipient, address(token), IERC20.transfer.selector);
+    }
+
     function previewRedeem(Token token, IERC20 stablecoin, uint256 amount) public view returns (uint256) {
         Pair memory pair = viewPair(token, stablecoin);
         require(address(pair.oracle) != address(0), UnknownPair(token, stablecoin));
@@ -136,34 +152,66 @@ contract InstantRedemption is Initializable, PermissionManaged, UUPSUpgradeable,
         Token token,
         IERC20 stablecoin,
         uint256 amount,
+        address recipient,
         uint256 minOutputAmount,
         bytes32 salt
     ) external restricted returns (uint256 outputAmount) {
-        bytes32 pairId = hashPair(token, stablecoin);
-        outputAmount = previewRedeem(token, stablecoin, amount);
-        // a zero output (zero price, zero or dust amount) would take the tokens for nothing
-        uint256 minimum = Math.max(minOutputAmount, 1);
-        require(outputAmount >= minimum, OutputAmountTooLow(outputAmount, minimum));
+        require(isAllowedRecipient(token, recipient), UnauthorizedRecipient(token, recipient));
 
-        // Check and consume the daily limit
-        uint256 remaining = remainingDailyLimit(token, stablecoin, msg.sender);
-        require(outputAmount <= remaining, DailyLimitExceeded(msg.sender, outputAmount, remaining));
-        Usage storage usage = _usage[pairId][msg.sender];
-        uint48 today = (block.timestamp / 1 days).toUint48();
-        if (usage.day != today) (usage.day, usage.amount) = (today, 0);
-        usage.amount += outputAmount.toUint208();
+        outputAmount = previewRedeem(token, stablecoin, amount);
+        {
+            // a zero output (zero price, zero or dust amount) would take the tokens for nothing
+            uint256 minimum = Math.max(minOutputAmount, 1);
+            require(outputAmount >= minimum, OutputAmountTooLow(outputAmount, minimum));
+        }
+
+        _checkRedemptionMinimum(token, amount);
+        _consumeDailyLimit(token, stablecoin, msg.sender, outputAmount);
 
         // Advance: fund tokens in, stablecoin out of the buffer
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        stablecoin.safeTransfer(msg.sender, outputAmount);
+        stablecoin.safeTransfer(recipient, outputAmount);
 
-        // Repayment: Redemption request owned by this contract, settled in stablecoin back to this contract.
-        // Reverts (bubbled up) if the output is not registered, the amount is below Redemption's minimum, or the
-        // request id is already used. All requests are owned by this contract, so salts are shared across callers.
+        // Repayment: Redemption request owned by this contract, settled in stablecoin back to this contract
+        bytes32 redemptionId = _requestRepayment(token, stablecoin, amount, salt);
+
+        emit InstantRedemptionExecuted(
+            hashPair(token, stablecoin),
+            msg.sender,
+            token,
+            stablecoin,
+            amount,
+            outputAmount,
+            redemptionId,
+            recipient
+        );
+    }
+
+    /**
+     * @dev Same check as {Redemption}, done before any transfer so that the caller gets a typed error.
+     */
+    function _checkRedemptionMinimum(Token token, uint256 amount) private view {
+        uint256 minimum = redemption.minimum(token);
+        require(amount >= minimum, AmountBelowRedemptionMinimum(amount, minimum));
+    }
+
+    function _consumeDailyLimit(Token token, IERC20 stablecoin, address user, uint256 outputAmount) private {
+        uint256 remaining = remainingDailyLimit(token, stablecoin, user);
+        require(outputAmount <= remaining, DailyLimitExceeded(user, outputAmount, remaining));
+
+        Usage storage usage = _usage[hashPair(token, stablecoin)][user];
+        uint48 today = (block.timestamp / 1 days).toUint48();
+        if (usage.day != today) (usage.day, usage.amount) = (today, 0);
+        usage.amount += outputAmount.toUint208();
+    }
+
+    /**
+     * @dev Reverts (bubbled up from {Redemption}) if the output is not registered or the request id is already used.
+     * All requests are owned by this contract, so salts are shared across callers.
+     */
+    function _requestRepayment(Token token, IERC20 stablecoin, uint256 amount, bytes32 salt) private returns (bytes32) {
         token.transferAndCall(address(redemption), amount, abi.encode(stablecoin, salt));
-        bytes32 redemptionId = redemption.hashRedemptionId(address(this), token, address(stablecoin), amount, salt);
-
-        emit InstantRedemptionExecuted(pairId, msg.sender, token, stablecoin, amount, outputAmount, redemptionId);
+        return redemption.hashRedemptionId(address(this), token, address(stablecoin), amount, salt);
     }
 
     /****************************************************************************************************************
