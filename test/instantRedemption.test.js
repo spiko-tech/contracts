@@ -22,6 +22,7 @@ describe('InstantRedemption', function () {
     await loadFixture(fixture).then((results) => Object.assign(this, results));
 
     this.ir = this.contracts.instantRedemption;
+    this.recipient = this.accounts.chris; // not allowed to hold fund tokens
     this.stable = await deploy('ERC20DecimalsMock', [stableDecimals]);
     this.pairId = ethers.keccak256(
       ethers.AbiCoder.defaultAbiCoder().encode(
@@ -46,8 +47,8 @@ describe('InstantRedemption', function () {
         [this.ir, this.contracts.token, this.stable, amount, salt].map(getAddress)
       );
 
-    this.redeem = (amount, minOut = 0n, signer = this.accounts.redeemer, salt = randomSalt()) =>
-      this.ir.connect(signer).redeem(this.contracts.token, this.stable, amount, minOut, salt);
+    this.redeem = (amount, minOut = 0n, signer = this.accounts.redeemer, salt = randomSalt(), recipient = signer) =>
+      this.ir.connect(signer).redeem(this.contracts.token, this.stable, amount, getAddress(recipient), minOut, salt);
   });
 
   it('functions have requirements', async function () {
@@ -121,7 +122,16 @@ describe('InstantRedemption', function () {
           .to.emit(this.contracts.redemption, 'RedemptionInitiated')
           .withArgs(id, this.ir, this.contracts.token, this.stable, amount, salt)
           .to.emit(this.ir, 'InstantRedemptionExecuted')
-          .withArgs(this.pairId, this.accounts.redeemer, this.contracts.token, this.stable, amount, expected, id);
+          .withArgs(
+            this.pairId,
+            this.accounts.redeemer,
+            this.contracts.token,
+            this.stable,
+            amount,
+            expected,
+            id,
+            this.accounts.redeemer
+          );
 
         const { status } = await this.contracts.redemption.details(id);
         expect(status).to.equal(STATUS.PENDING);
@@ -153,7 +163,8 @@ describe('InstantRedemption', function () {
             this.stable,
             amount,
             expected,
-            this.redemptionId(amount, salt)
+            this.redemptionId(amount, salt),
+            this.accounts.redeemer
           );
       }
     });
@@ -162,6 +173,78 @@ describe('InstantRedemption', function () {
       const salt = randomSalt();
       await this.redeem(amount, 0n, undefined, salt);
       await expect(this.redeem(amount, 0n, undefined, salt)).to.be.revertedWith('ID already used');
+    });
+
+    describe('recipient', function () {
+      it('recipient not on the fund token allowlist reverts', async function () {
+        await expect(this.ir.isAllowedRecipient(this.contracts.token, this.recipient)).to.eventually.be.false;
+        await expect(this.redeem(amount, 0n, undefined, undefined, this.recipient))
+          .to.be.revertedWithCustomError(this.ir, 'UnauthorizedRecipient')
+          .withArgs(this.contracts.token, this.recipient);
+      });
+
+      describe('on the fund token allowlist', function () {
+        beforeEach(async function () {
+          await this.contracts.manager
+            .connect(this.accounts.whitelister)
+            .addGroup(this.recipient, this.IDS.whitelisted);
+        });
+
+        it('pays the recipient, takes the tokens and the daily limit of the caller', async function () {
+          await expect(this.ir.isAllowedRecipient(this.contracts.token, this.recipient)).to.eventually.be.true;
+
+          const salt = randomSalt();
+          const tx = this.redeem(amount, 0n, undefined, salt, this.recipient);
+          await expect(tx).to.changeTokenBalances(
+            this.stable,
+            [this.accounts.redeemer, this.recipient, this.ir],
+            [0n, expected, -expected]
+          );
+          await expect(tx).to.changeTokenBalances(
+            this.contracts.token,
+            [this.accounts.redeemer, this.recipient, this.contracts.redemption],
+            [-amount, 0n, amount]
+          );
+          await expect(tx)
+            .to.emit(this.ir, 'InstantRedemptionExecuted')
+            .withArgs(
+              this.pairId,
+              this.accounts.redeemer,
+              this.contracts.token,
+              this.stable,
+              amount,
+              expected,
+              this.redemptionId(amount, salt),
+              this.recipient
+            );
+
+          await expect(
+            this.ir.remainingDailyLimit(this.contracts.token, this.stable, this.accounts.redeemer)
+          ).to.eventually.equal(formatStable('5000') - expected);
+        });
+
+        it('can be paid by any caller', async function () {
+          await this.contracts.manager.addGroup(this.accounts.alice, this.IDS['instant-redeemer']);
+          await this.ir.setDailyLimit(this.contracts.token, this.stable, this.accounts.alice, formatStable('5000'));
+          await this.contracts.token.mint(this.accounts.alice, amount);
+          await this.contracts.token.connect(this.accounts.alice).approve(this.ir, amount);
+
+          await expect(this.redeem(amount, 0n, this.accounts.alice, undefined, this.recipient)).to.changeTokenBalance(
+            this.stable,
+            this.recipient,
+            expected
+          );
+        });
+
+        it('removed from the allowlist reverts', async function () {
+          await this.contracts.manager
+            .connect(this.accounts.whitelister)
+            .remGroup(this.recipient, this.IDS.whitelisted);
+          await expect(this.redeem(amount, 0n, undefined, undefined, this.recipient))
+            .to.be.revertedWithCustomError(this.ir, 'UnauthorizedRecipient')
+            .withArgs(this.contracts.token, this.recipient);
+        });
+      });
     });
 
     describe('reverts', function () {
@@ -200,9 +283,16 @@ describe('InstantRedemption', function () {
         await expect(this.redeem(amount)).to.be.revertedWithCustomError(this.ir, 'OutputAmountTooLow').withArgs(0n, 1n);
       });
 
-      it('amount below the Redemption minimum (bubbled up)', async function () {
+      it('amount below the Redemption minimum', async function () {
         await this.contracts.redemption.setMinimum(this.contracts.token, amount + 1n);
-        await expect(this.redeem(amount)).to.be.revertedWith('Minimum redemption amount  not reached');
+        await expect(this.redeem(amount))
+          .to.be.revertedWithCustomError(this.ir, 'AmountBelowRedemptionMinimum')
+          .withArgs(amount, amount + 1n);
+      });
+
+      it('amount equal to the Redemption minimum passes', async function () {
+        await this.contracts.redemption.setMinimum(this.contracts.token, amount);
+        await expect(this.redeem(amount)).to.emit(this.ir, 'InstantRedemptionExecuted');
       });
 
       it('stablecoin not registered as a Redemption output (bubbled up)', async function () {
